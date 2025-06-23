@@ -34,7 +34,13 @@ export default class BotLogger {
     }
 
     private webhook_formatter(incoming: BotLog | BotError): string {
-        return `\`\`\`json\n${JSON.stringify(incoming, null, 2)}\n\`\`\``;
+        const formatted = `\`\`\`json\n${JSON.stringify(incoming, null, 2)}\n\`\`\``;
+        // Truncate if too long for Discord (2000 char limit)
+        if (formatted.length > 1900) {
+            const truncated = formatted.substring(0, 1850) + '\n... (truncated)\n```';
+            return truncated;
+        }
+        return formatted;
     }
 
     get id() {

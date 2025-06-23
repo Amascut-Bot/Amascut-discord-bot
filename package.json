@@ -4,7 +4,7 @@
     "description": "A bot made to help Solak Administration",
     "scripts": {
         "build": "tsc --watch",
-        "start": "ts-node index.ts",
+        "start": "ts-node --transpile-only index.ts",
         "start-js": "node ./dist/index.js"
     },
     "author": "Fate",
@@ -14,7 +14,7 @@
         "bufferutil": "^4.0.5",
         "count-interval": "^1.0.1",
         "discord-api-types": "^0.37.8",
-        "discord.js": "^14.6.0",
+        "discord.js": "^14.20.0",
         "dotenv": "^16.0.2",
         "indomitable": "^2.0.2",
         "petitio": "^1.4.0",

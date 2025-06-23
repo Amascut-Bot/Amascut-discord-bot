@@ -1,4 +1,4 @@
-import { ApplicationCommandOption, SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder } from 'discord.js';
+import { ApplicationCommandOption, SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder, SlashCommandOptionsOnlyBuilder, ChatInputCommandInteraction } from 'discord.js';
 // import { APIApplicationCommandOptionBase, APIApplicationCommandOption } from 'discord-api-types/v10';
 // import { ApplicationCommandOption } from 'discord.js'
 import * as uuid from 'uuid';
@@ -11,9 +11,9 @@ export default interface BotInteraction {
     category: string;
     get name(): string;
     get description(): string;
-    get slashData(): SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder | Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
+    get slashData(): SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder | SlashCommandOptionsOnlyBuilder | Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
     get permissions(): ApplicationCommandOption[] | string;
-    run(args: unknown): Promise<any>;
+    run(interaction: ChatInputCommandInteraction | unknown): Promise<any>;
 }
 
 export default class BotInteraction {
