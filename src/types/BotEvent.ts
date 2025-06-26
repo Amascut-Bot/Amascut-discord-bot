@@ -22,9 +22,8 @@ export default class BotEvent extends EventEmitter {
         });
     }
 
-    exec(...args: any) {
-        const _args = args.length ? args.shift() : args;
+    exec(args: any[]) {
         type EmittedError = typeof Object;
-        this.run(_args).catch((error: EmittedError) => this.emit('error', error));
+        this.run(args).catch((error: EmittedError) => this.emit('error', error));
     }
 }

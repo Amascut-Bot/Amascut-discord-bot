@@ -218,6 +218,11 @@ export default class Pass extends BotInteraction {
 
         const roleInfo = await this.getTrialledRole(interaction, info.teamSize, info.rank);
 
+        if (!roleInfo) {
+            errorEmbed.setDescription(`Could not find a valid trialled role for this user. Their rank of **${info.rank}** may not be applicable for **${info.teamSize}** trials.`)
+            return await interaction.editReply({ embeds: [errorEmbed] });
+        }
+
         const duoButtonRow = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
                 new ButtonBuilder()

@@ -1,6 +1,6 @@
-import * as config from '../../config.json';
 import { EmbedBuilder, ChatInputCommandInteraction, Interaction, APIEmbedField } from 'discord.js';
 import Bot from '../Bot';
+import * as config from '../../config.json';
 import { Override } from '../entity/Override';
 
 export default interface UtilityHandler {
@@ -46,23 +46,11 @@ export default class UtilityHandler {
     }
 
     get colours() {
+        const configColours = this.config.colours;
         return {
-            green: 2067276,
-            aqua: 1146986,
-            blue: 2123412,
-            red: 10038562,
-            lightgrey: 10070709,
-            gold: 12745742,
-            default: 5198940,
-            lightblue: 302332,
-            darkgrey: 333333,
-            tan: 10588508, // Reaper
-            darkPurple: 7157747, // Trial Team
-            discord: {
-                green: 5763719,
-                red: 15548997
-            }
-        }
+            ...configColours,
+            discord: configColours
+        };
     }
 
     get emojis(): Emojis {
@@ -86,6 +74,7 @@ export default class UtilityHandler {
                 trialScheduling: '1051512803485286481',
                 reaperScheduling: '1043923759763034194',
                 reaperSquad: '1043923759763034197',
+                uploadLogChannel: '1387201503428870399',
             }
         }
         return {
@@ -99,6 +88,7 @@ export default class UtilityHandler {
             trialScheduling: '1050019465993142412',
             reaperScheduling: '1079703262040707164',
             reaperSquad: '922046772958859274',
+            uploadLogChannel: '1387201503428870399',
         }
     }
 

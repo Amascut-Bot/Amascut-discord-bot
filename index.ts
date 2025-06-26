@@ -1,27 +1,35 @@
 import 'dotenv/config';
-import { GatewayIntentBits } from 'discord.js';
+import { GatewayIntentBits, Partials } from 'discord.js';
 import { Indomitable, IndomitableOptions } from 'indomitable';
 import Bot from './src/Bot';
 
 if (!process.env.TOKEN) throw new Error('Token Missing');
 if (!process.env.ENVIRONMENT) throw new Error('Environment Missing');
 
-const { Guilds, GuildMembers, GuildBans, GuildVoiceStates, GuildMessages, GuildMessageReactions, MessageContent } = GatewayIntentBits;
-
-const sharderOptions: IndomitableOptions = {
+const options: IndomitableOptions = {
+    token: process.env.TOKEN,
     clientOptions: {
-        // disableMentions: 'everyone',
-        // restRequestTimeout: 30000,
-        intents: [Guilds, GuildMembers, GuildBans, GuildVoiceStates, GuildMessages, GuildMessageReactions, MessageContent, Guilds, GuildVoiceStates],
+        intents: [
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildMembers,
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.GuildMessageReactions,
+            GatewayIntentBits.GuildVoiceStates,
+            GatewayIntentBits.MessageContent,
+        ],
+        partials: [Partials.Message, Partials.Channel, Partials.Reaction],
     },
-    client: Bot as any,
     autoRestart: true,
-    token: process.env.TOKEN ?? '',
-    clusterCount: 1,
+    spawnTimeout: 60000,
+    client: Bot as any,
 };
 
-const manager = new Indomitable(sharderOptions).on('error', console.error).on('debug', (message) => {
-    console.log(`[ClusterHandler] [Main] ${message}`);
-});
+const manager = new Indomitable(options)
+    .on('error', (err) => {
+        console.log(`[ClusterHandler] [Main] ${err}`);
+    })
+    .on('debug', (message) => {
+        console.log(`[ClusterHandler] [Main] ${message}`);
+    });
 
 manager.spawn();

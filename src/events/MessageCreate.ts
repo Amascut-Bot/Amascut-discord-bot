@@ -18,7 +18,8 @@ export default class MessageCreate extends BotEvent {
 
     static ryChooseMatch = new RegExp(/(?:[^\s('|")]+|(?:'|")[^('|")]*(?:'|"))+/g);
 
-    async run(message: Message): Promise<any> {
+    async run(args: any[]): Promise<any> {
+        const message = args[0] as Message;
         if (message.author.bot) return;
         if (!message.inGuild()) return;
         if (this.client.util.config.guildMessageDisabled.includes(message.guild.id)) return;

@@ -34,31 +34,24 @@ export default class EventHandler {
     //     this.built = true;
     //     return this;
     // }
-    build() {
+    async build() {
         if (this.built) return this;
-        const events = readdirSync(this.client.location + '/src/events').filter((file) => file.endsWith('.ts'));
-        const client = this.client;
-        const name = this.constructor.name;
-        load();
-
-        async function load() {
-            if (!events.length) return;
-            await actuallyLoad(events[0]);
-            (events as string[]).shift();
-            load();
-        }
-
-        async function actuallyLoad(event: string) {
-            return new Promise(async (resolve) => {
-                const handler = await import(`${client.location}/src/events/${event}`);
-                const botEvent: BotEvent = new handler.default(client);
-                client.logger.log({ message: `Event '${botEvent.name}' loaded.`, handler: name, uid: `(@${botEvent.uid})` }, false);
+        const eventFiles = readdirSync(`${this.client.location}/src/events`).filter((file) => file.endsWith('.ts'));
+        
+        for (const file of eventFiles) {
+            try {
+                const { default: EventClass } = await import(`${this.client.location}/src/events/${file}`);
+                const botEvent: BotEvent = new EventClass(this.client);
+                
+                this.client.logger.log({ message: `Event '${botEvent.name}' loaded.`, handler: this.constructor.name, uid: `(@${botEvent.uid})` }, false);
+                
                 if (botEvent.enabled) {
-                    const exec = botEvent.exec.bind(botEvent);
-                    client[botEvent.fireOnce ? 'once' : 'on'](botEvent.name, exec);
+                    this.client[botEvent.fireOnce ? 'once' : 'on'](botEvent.name, (...args) => botEvent.exec(args));
+                    this.client.logger.log({ message: `Listener attached for event '${botEvent.name}'.`, handler: this.constructor.name }, false);
                 }
-                resolve(!0);
-            });
+            } catch (error) {
+                this.client.logger.error({ message: `Error loading event from file ${file}`, error });
+            }
         }
 
         this.built = true;

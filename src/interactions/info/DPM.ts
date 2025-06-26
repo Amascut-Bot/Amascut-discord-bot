@@ -41,8 +41,8 @@ export default class Say extends BotInteraction {
 
     async run(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ ephemeral: true });
-        const time = (interaction.options as any).getString('time', true);
-        const damage = (interaction.options as any).getString('damage', true);
+        const time: string = interaction.options.getString('time', true);
+        const damage: string = interaction.options.getString('damage', true);
 
         const { colours, channels, calcDPMInThousands, isValidDamage, isValidTime } = this.client.util;
 

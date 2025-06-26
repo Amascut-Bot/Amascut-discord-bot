@@ -111,7 +111,13 @@ export default class InteractionHandler extends EventEmitter {
         if (interaction.isButton() && interaction.inCachedGuild()) {
             return new ButtonHandler(this.client, interaction.customId, interaction);
         }
-        if (interaction.isCommand() && interaction.isRepliable() && interaction.inCachedGuild()) {
+        if (interaction.isAutocomplete()) {
+            const command = this.commands.get(interaction.commandName);
+            if (command && command.autocomplete) {
+                return command.autocomplete(interaction);
+            }
+        }
+        if (interaction.isChatInputCommand()) {
             try {
                 const command = this.commands.get(interaction.commandName);
                 if (!command) return;
@@ -202,29 +208,25 @@ export default class InteractionHandler extends EventEmitter {
                         break;
                 }
                 this.client.logger.log(
-                    {
-                        handler: this.constructor.name,
-                        user: `${interaction.user.username} | ${interaction.user.id}`,
-                        message: `Executing Command ${command.name}`,
-                        uid: `(@${command.uid})`,
-                    },
-                    true
+                    { handler: this.constructor.name, user: `${interaction.user.username} | ${interaction.user.id}`, message: `Executing Command ${command.name}`, uid: `(@${command.uid})` },
+                    false
                 );
                 await command.run(interaction);
                 this.client.commandsRun++;
             } catch (error: any) {
-                const embed = new EmbedBuilder()
+                const _error = error as Error;
+                const errorEmbed = new EmbedBuilder()
                     .setColor(0xff99cc)
                     .setTitle('Something errored!')
-                    .setDescription(`\`\`\`js\n ${error.toString()}\`\`\``)
+                    .setDescription(`\`\`\`js\n ${_error.toString()}\`\`\``)
                     .setTimestamp()
                     .setFooter({ text: this.client.user?.username ?? '', iconURL: this.client.user?.displayAvatarURL() });
                 this.client.logger.error({
                     handler: this.constructor.name,
                     message: 'Something errored!',
-                    error: error.stack,
+                    error: _error.stack,
                 });
-                interaction.editReply({ embeds: [embed] });
+                interaction.editReply({ embeds: [errorEmbed] });
             }
         }
     }

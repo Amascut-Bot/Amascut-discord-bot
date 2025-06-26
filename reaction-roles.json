@@ -1,0 +1,50 @@
+{
+  "Kill Count": [
+    {
+      "emoji": "Perdita9",
+      "roleId": "1050066067503984670",
+      "hierarchy": 1,
+      "requiredRoleId": null
+    },
+    {
+      "emoji": "perdita5",
+      "roleId": "988209716570230804",
+      "hierarchy": 2,
+      "requiredRoleId": "1038656621812916317"
+    },
+    {
+      "emoji": "perdita_blackwood_red",
+      "roleId": "1038557474770407464",
+      "hierarchy": 3,
+      "requiredRoleId": "1038656621812916317"
+    },
+    {
+      "emoji": "perdita_black",
+      "roleId": "1038557504428310578",
+      "hierarchy": 4,
+      "requiredRoleId": "1038656621812916317"
+    },
+    {
+      "emoji": "perdita6",
+      "roleId": "1038656630901985401",
+      "hierarchy": 5,
+      "requiredRoleId": "1038656621812916317"
+    }
+  ],
+  "Gradient Roles": [
+    {
+      "emoji": "Perdita13",
+      "roleId": "1387109059534258329",
+      "hierarchy": 1,
+      "requiredRoleId": null
+    }
+  ],
+  "TEST": [
+    {
+      "emoji": "Solak",
+      "roleId": "1387596042978988163",
+      "hierarchy": 1,
+      "requiredRoleId": null
+    }
+  ]
+}
