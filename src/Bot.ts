@@ -70,7 +70,6 @@ export default class Bot extends Client {
 
         // Direct Reaction Role Listeners
         this.on('messageReactionAdd', async (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => {
-            this.logger.log({ message: `[ReactionAdd] Event triggered for user ${user.id}` }, true);
             if (user.bot) return;
 
             if (reaction.partial) {
@@ -83,11 +82,9 @@ export default class Bot extends Client {
             }
     
             const activeMessages = await readJsonFile<ActiveMessages>(activeMessagesFilePath);
-            this.logger.log({ message: `[ReactionAdd] Active messages file content: ${JSON.stringify(activeMessages)}`}, true);
             const category = activeMessages[reaction.message.id];
 
             if (!category) {
-                this.logger.log({ message: `[ReactionAdd] Message ${reaction.message.id} is not an active reaction role message. Aborting.` }, true);
                 return;
             }
             this.logger.log({ message: `[ReactionAdd] Found category '${category}' for message ${reaction.message.id}` }, true);
@@ -164,7 +161,6 @@ export default class Bot extends Client {
         });
 
         this.on('messageReactionRemove', async (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => {
-            this.logger.log({ message: `[ReactionRemove] Event triggered for user ${user.id}` }, true);
             if (user.bot) return;
 
             if (reaction.partial) {
