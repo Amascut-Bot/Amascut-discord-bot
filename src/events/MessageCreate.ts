@@ -28,7 +28,7 @@ export default class MessageCreate extends BotEvent {
         if (message.content.startsWith(`<@${this.client.user?.id}> boop`)) {
             this.client.commandsRun++;
             this.client.logger.log({ message: `${message.author.username} booped the bot.`, uid: `(@${this.uid})` }, true);
-            return message.reply({ content: '<a:majjnow:1006284731928805496>' });
+            return message.reply({ content: '<a:majjnow:1387622420445139005>' });
         }
 
         // slash command handler
