@@ -1,5 +1,5 @@
 import { Dirent, readdirSync } from 'fs';
-import { EmbedBuilder, Collection, Interaction } from 'discord.js';
+import { EmbedBuilder, Collection, Interaction, ModalSubmitInteraction } from 'discord.js';
 import Bot from '../Bot';
 import BotInteraction from '../types/BotInteraction';
 import ButtonHandler from './ButtonHandler';
@@ -23,6 +23,7 @@ export default class InteractionHandler extends EventEmitter {
         });
     }
 
+    // old synchronous version - keeping commented for reference
     // build() {
     //     if (this.built) return this;
     //     const directories = readdirSync(`${this.client.location}/src/interactions`, { withFileTypes: true });
@@ -42,6 +43,8 @@ export default class InteractionHandler extends EventEmitter {
     //     }
     //     return this;
     // }
+    
+    // async version - probably overkill but works
     build() {
         if (this.built) return this;
         const dirs = readdirSync(`${this.client.location}/src/interactions`, { withFileTypes: true });
@@ -73,7 +76,7 @@ export default class InteractionHandler extends EventEmitter {
                     const interaction = await import(`${client.location}/src/interactions/${dir}/${command.name}`);
                     const Command: BotInteraction = new interaction.default(client);
                     commands.set(Command.name, Command);
-                    client.logger.log({ message: `Command '${Command.name}' loaded`, handler: name, uid: `(@${Command.uid})` }, false);
+                    client.logger.log({ message: `Command '${Command.name}' loaded`, handler: name, uid: `(@${Command.uid})` }, true);
                 }
                 resolve(!0);
             });
@@ -90,7 +93,7 @@ export default class InteractionHandler extends EventEmitter {
     //     return _check;
     // }
 
-    // This method will check a `string[]` for name strings
+    // role name checker
     public checkPermissionName(interaction: Interaction, role_name: string[]): boolean {
         if (!interaction.inCachedGuild()) return false;
         if (this.client.util.config.owners.includes(interaction.user.id)) return true; // if any owner bypass perms check
@@ -99,6 +102,7 @@ export default class InteractionHandler extends EventEmitter {
         return _containsRole;
     }
 
+    // role id checker
     public checkPermissionID(interaction: Interaction, role_id: string[]): boolean {
         if (!interaction.inCachedGuild()) return false;
         if (this.client.util.config.owners.includes(interaction.user.id)) return true; // if any owner bypass perms check
@@ -110,6 +114,20 @@ export default class InteractionHandler extends EventEmitter {
     async exec(interaction: Interaction): Promise<any> {
         if (interaction.isButton() && interaction.inCachedGuild()) {
             return new ButtonHandler(this.client, interaction.customId, interaction);
+        }
+        if (interaction.isModalSubmit()) {
+            // Handle modal submissions
+            if (interaction.customId.startsWith('dpm_screenshots_')) {
+                const command = this.commands.get('dpm-submit');
+                if (command && 'handleModalSubmit' in command && typeof command.handleModalSubmit === 'function') {
+                    return command.handleModalSubmit(interaction);
+                }
+            }
+            
+            // Handle ticket modal submissions
+            if (interaction.customId.startsWith('ticket_')) {
+                return this.handleTicketModalSubmit(interaction);
+            }
         }
         if (interaction.isAutocomplete()) {
             const command = this.commands.get(interaction.commandName);
@@ -209,7 +227,7 @@ export default class InteractionHandler extends EventEmitter {
                 }
                 this.client.logger.log(
                     { handler: this.constructor.name, user: `${interaction.user.username} | ${interaction.user.id}`, message: `Executing Command ${command.name}`, uid: `(@${command.uid})` },
-                    false
+                    true
                 );
                 await command.run(interaction);
                 this.client.commandsRun++;
@@ -228,6 +246,93 @@ export default class InteractionHandler extends EventEmitter {
                 });
                 interaction.editReply({ embeds: [errorEmbed] });
             }
+        }
+    }
+    
+    async handleTicketModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
+        if (!interaction.inCachedGuild()) return;
+        
+        await interaction.deferReply({ ephemeral: true });
+        
+        try {
+            // Extract ticket type and user ID from customId
+            const customIdParts = interaction.customId.split('_');
+            const ticketType = customIdParts[1]; // 'report', 'suggestion', etc.
+            const userId = customIdParts[2];
+            
+            // Verify the user matches
+            if (userId !== interaction.user.id) {
+                await interaction.editReply({ content: 'This modal is not for you.' });
+                return;
+            }
+            
+            // Get form data
+            const formData: any = {};
+            
+            // Common fields
+            formData.rsn = interaction.fields.getTextInputValue('rsn');
+            
+            // Ticket-specific fields
+            switch (ticketType) {
+                case 'report':
+                    formData.reported_user = interaction.fields.getTextInputValue('reported_user');
+                    formData.reason = interaction.fields.getTextInputValue('reason');
+                    formData.description = interaction.fields.getTextInputValue('description');
+                    break;
+                case 'suggestion':
+                    formData.suggestion = interaction.fields.getTextInputValue('suggestion');
+                    formData.reason = interaction.fields.getTextInputValue('reason');
+                    break;
+                case 'contentcreator':
+                    formData.platform_url = interaction.fields.getTextInputValue('platform_url');
+                    formData.additional = interaction.fields.getTextInputValue('additional');
+                    break;
+                case 'other':
+                    formData.assistance = interaction.fields.getTextInputValue('assistance');
+                    break;
+            }
+            
+            // Get next ticket number
+            const ticketNumber = await this.client.util.getNextTicketNumber(ticketType);
+            
+            // Create ticket channel
+            const ticketChannel = await this.client.util.createTicketChannel(
+                interaction.guild,
+                ticketType,
+                interaction.user.id,
+                ticketNumber
+            );
+            
+            if (!ticketChannel) {
+                await interaction.editReply({ 
+                    content: 'Failed to create ticket channel. Please try again or contact an administrator.' 
+                });
+                return;
+            }
+            
+            // Send welcome message to ticket channel
+            await this.client.util.sendTicketWelcomeMessage(
+                ticketChannel,
+                interaction.user.id,
+                ticketType,
+                formData
+            );
+            
+            // Reply to user
+            await interaction.editReply({
+                content: `Your ticket has been created! Please check <#${ticketChannel.id}> for further assistance.`
+            });
+            
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to handle ticket modal submission',
+                error,
+                handler: 'InteractionHandler'
+            });
+            
+            await interaction.editReply({
+                content: 'An error occurred while creating your ticket. Please try again or contact an administrator.'
+            });
         }
     }
 }

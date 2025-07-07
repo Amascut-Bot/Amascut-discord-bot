@@ -1,3 +1,4 @@
+// all the RuneScape emojis we use - there's a lot lol
 export const Emojis = {
     gem1: '<:gem1:1024939203160711209>',
     gem2: '<:gem2:1024939217895297084>',

@@ -1,7 +1,12 @@
-import { EmbedBuilder, ChatInputCommandInteraction, Interaction, APIEmbedField } from 'discord.js';
+import { EmbedBuilder, ChatInputCommandInteraction, Interaction, APIEmbedField, AttachmentBuilder, TextChannel, PermissionFlagsBits, ChannelType, GuildMember, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import Bot from '../Bot';
 import * as config from '../../config.json';
 import { Override } from '../entity/Override';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import { DpmSubmission } from '../entity/DpmSubmission';
+import { KillTimeSubmission } from '../entity/KillTimeSubmission';
+import fetch from 'node-fetch';
 
 export default interface UtilityHandler {
     client: Bot;
@@ -9,10 +14,13 @@ export default interface UtilityHandler {
     random(array: Array<any>): Array<number>;
     loadingEmbed: EmbedBuilder;
     loadingText: string;
+    imageUrlCache: Map<string, string>;
+    reuploadImage(url: string): Promise<string>;
 }
 
 interface Channels {
     [channelName: string]: string;
+    botAssetChannel: string;
 }
 
 interface Roles {
@@ -43,6 +51,11 @@ export default class UtilityHandler {
         this.deleteMessage = this.deleteMessage;
         this.loadingEmbed = new EmbedBuilder().setAuthor({ name: 'Loading...' });
         this.loadingText = '<a:Typing:598682375303593985> **Loading...**';
+        this.imageUrlCache = new Map<string, string>();
+    }
+
+    get ignoredChannels(): string[] {
+        return ['1387800391449579610', '1387800453303144478'];
     }
 
     get colours() {
@@ -64,147 +77,260 @@ export default class UtilityHandler {
     get channels(): Channels {
         if (process.env.ENVIRONMENT === 'DEVELOPMENT') {
             return {
-                roleConfirmations: '1043923758781571126',
-                achievementsAndLogs: '1043923759280697405',
-                botRoleLog: '1044636757808922766',
-                reportLog: '1047434337647329330',
-                tempVCCategory: '1043923758781571128',
-                tempVCCreate: '1044828975106641920',
-                dpmCalc: '1043923759280697406',
-                trialScheduling: '1051512803485286481',
-                reaperScheduling: '1043923759763034194',
-                reaperSquad: '1043923759763034197',
-                uploadLogChannel: '1387201503428870399',
+                roleConfirmations: process.env.DEV_ROLE_CONFIRMATIONS_CHANNEL!,
+                achievementsAndLogs: process.env.DEV_ACHIEVEMENTS_LOG_CHANNEL!,
+                botRoleLog: process.env.DEV_BOT_ROLE_LOG_CHANNEL!,
+                reportLog: process.env.DEV_REPORT_LOG_CHANNEL!,
+                tempVCCategory: process.env.DEV_TEMP_VC_CATEGORY!,
+                tempVCCreate: process.env.DEV_TEMP_VC_CREATE_CHANNEL!,
+                dpmCalc: process.env.DEV_DPM_CALC_CHANNEL!,
+                trialScheduling: process.env.DEV_TRIAL_SCHEDULING_CHANNEL!,
+                reaperScheduling: process.env.DEV_REAPER_SCHEDULING_CHANNEL!,
+                reaperSquad: process.env.DEV_REAPER_SQUAD_CHANNEL!,
+                uploadLogChannel: process.env.DEV_UPLOAD_LOG_CHANNEL!,
+                botAssetChannel: process.env.DEV_BOT_ASSET_CHANNEL!,
             }
         }
         return {
-            roleConfirmations: '846853673476685824',
-            achievementsAndLogs: '429378540115329044',
-            botRoleLog: '1045192967754883172',
-            reportLog: '1046699857433342103',
-            tempVCCategory: '429001601089536007',
-            tempVCCreate: '934588464068968479',
-            dpmCalc: '927485855625515039',
-            trialScheduling: '1050019465993142412',
-            reaperScheduling: '1079703262040707164',
-            reaperSquad: '922046772958859274',
-            uploadLogChannel: '1387201503428870399',
+            roleConfirmations: process.env.PROD_ROLE_CONFIRMATIONS_CHANNEL!,
+            achievementsAndLogs: process.env.PROD_ACHIEVEMENTS_LOG_CHANNEL!,
+            botRoleLog: process.env.PROD_BOT_ROLE_LOG_CHANNEL!,
+            reportLog: process.env.PROD_REPORT_LOG_CHANNEL!,
+            tempVCCategory: process.env.PROD_TEMP_VC_CATEGORY!,
+            tempVCCreate: process.env.PROD_TEMP_VC_CREATE_CHANNEL!,
+            dpmCalc: process.env.PROD_DPM_CALC_CHANNEL!,
+            trialScheduling: process.env.PROD_TRIAL_SCHEDULING_CHANNEL!,
+            reaperScheduling: process.env.PROD_REAPER_SCHEDULING_CHANNEL!,
+            reaperSquad: process.env.PROD_REAPER_SQUAD_CHANNEL!,
+            uploadLogChannel: process.env.PROD_UPLOAD_LOG_CHANNEL!,
+            botAssetChannel: process.env.PROD_BOT_ASSET_CHANNEL!,
         }
     }
 
+    // DPM thresholds - now reads from configuration file
+    private _dpmCache: any = null;
+    private _dpmCacheTime: number = 0;
+    private readonly DPM_CACHE_DURATION = 30000; // 30 seconds cache
+
+    async getDpm() {
+        // Check cache first
+        const now = Date.now();
+        if (this._dpmCache && (now - this._dpmCacheTime) < this.DPM_CACHE_DURATION) {
+            return this._dpmCache;
+        }
+
+        try {
+            const dpmConfigPath = path.join(process.cwd(), 'dpm-thresholds.json');
+            const configData = await fs.readFile(dpmConfigPath, 'utf-8');
+            const config = JSON.parse(configData);
+            
+            this._dpmCache = config.thresholds;
+            this._dpmCacheTime = now;
+            
+            return config.thresholds;
+        } catch (error) {
+            // Fallback to hardcoded values if file doesn't exist or is invalid
+            this.client.logger.error({
+                message: 'Failed to read DPM thresholds config, using defaults',
+                error,
+                handler: 'UtilityHandler'
+            });
+            
+            const defaultThresholds = {
+                'adept': 400,
+                'mastery': 475,
+                'extreme': 590
+            };
+            
+            this._dpmCache = defaultThresholds;
+            this._dpmCacheTime = now;
+            
+            return defaultThresholds;
+        }
+    }
+
+    // Synchronous getter for backward compatibility (will be deprecated)
     get dpm() {
+        // If cache exists and is fresh, return it
+        const now = Date.now();
+        if (this._dpmCache && (now - this._dpmCacheTime) < this.DPM_CACHE_DURATION) {
+            return this._dpmCache;
+        }
+
+        // Return default values for immediate use
         return {
-            'initiate': 300,
             'adept': 400,
             'mastery': 475,
             'extreme': 590
+        };
+    }
+
+    // Method to update DPM thresholds
+    async updateDpmThresholds(newThresholds: any, updatedBy: string) {
+        const dpmConfigPath = path.join(process.cwd(), 'dpm-thresholds.json');
+        
+        // Validate thresholds
+        const validatedThresholds = this.validateDpmThresholds(newThresholds);
+        if (!validatedThresholds.isValid) {
+            throw new Error(validatedThresholds.error);
         }
+
+        const config = {
+            thresholds: newThresholds,
+            lastUpdated: new Date().toISOString(),
+            updatedBy: updatedBy
+        };
+
+        await fs.writeFile(dpmConfigPath, JSON.stringify(config, null, 2));
+        
+        // Clear cache to force reload
+        this._dpmCache = null;
+        this._dpmCacheTime = 0;
+        
+        this.client.logger.log({
+            message: `DPM thresholds updated by ${updatedBy}`,
+            handler: 'UtilityHandler'
+        }, true);
+    }
+
+    // Validate DPM thresholds
+    private validateDpmThresholds(thresholds: any): { isValid: boolean, error?: string } {
+        const requiredKeys = ['adept', 'mastery', 'extreme'];
+        
+        for (const key of requiredKeys) {
+            if (!thresholds.hasOwnProperty(key)) {
+                return { isValid: false, error: `Missing required threshold: ${key}` };
+            }
+            if (typeof thresholds[key] !== 'number' || thresholds[key] < 0) {
+                return { isValid: false, error: `Invalid threshold value for ${key}: must be a positive number` };
+            }
+        }
+
+        // Check ordering: adept < mastery < extreme
+        if (thresholds.adept >= thresholds.mastery ||
+            thresholds.mastery >= thresholds.extreme) {
+            return { isValid: false, error: 'Thresholds must be in ascending order: adept < mastery < extreme' };
+        }
+
+        return { isValid: true };
+    }
+
+    // Get DPM role ID based on DPM value
+    public async getDpmRole(dpm: number): Promise<string> {
+        let roleToAssign;
+        const { stripRole, roles } = this;
+        const { adept, mastery, extreme } = await this.getDpm();
+        
+        if (dpm >= extreme) {
+            roleToAssign = 'extreme';
+        } else if (dpm >= mastery) {
+            roleToAssign = 'mastery';
+        } else if (dpm >= adept) {
+            roleToAssign = 'adept';
+        }
+
+        if (!roleToAssign) return '';
+
+        return stripRole(roles[roleToAssign]);
     }
 
     get roles(): Roles {
         if (process.env.ENVIRONMENT === 'DEVELOPMENT') {
             return {
-                duoMaster: '<@&1043923757732999218>',
-                threeSevenMaster: '<@&1043923757707829449>',
-                master: '<@&1043923757732999219>',
-                solakAddict: '<@&1043923757665890440>',
-                trialTeam: '<@&1043923757783326780>',
-                admin: '<@&1043923757783326788>',
-                owner: '<@&1043923757783326789>',
-                duoRootskips: '<@&1043923757707829443>',
-                threeSevenRootskips: '<@&1043923757707829442>',
-                rootskips: '<@&1043923757707829444>',
-                noRealm: '<@&1043923757707829441>',
-                duoExperienced: '<@&1043923757707829446>',
-                threeSevenExperienced: '<@&1043923757707829445>',
-                experienced: '<@&1043923757707829447>',
-                duoGrandmaster: '<@&1043923757732999225>',
-                threeSevenGrandmaster: '<@&1043923757732999224>',
-                fours: '<@&1077211897931235339>',
-                grandmaster: '<@&1043923757732999226>',
-                erethdorsBane: '<@&1043923757758156862>',
-                solakRookie: '<@&1043923757665890437>',
-                solakCasual: '<@&1043923757665890438>',
-                solakEnthusiast: '<@&1043923757665890439>',
-                unlockedPerdita: '<@&1043923757665890441>',
-                solakFanatic: '<@&1043923757665890442>',
-                solakSlave: '<@&1043923757665890443>',
-                solakSimp: '<@&1044291432531369994>',
-                solakLegend: '<@&1044291464898822204>',
-                nightOutWithMyRightHand: '<@&1043923757619744831>',
-                probablyUsesSpecialScissors: '<@&1043923757619744830>',
-                oneForTheBooks: '<@&1043923757619744829>',
-                brokenPrinter: '<@&1043923757619744828>',
-                merethielsSimp: '<@&1043923757598781470>',
-                shroomDealer: '<@&1043923757598781469>',
-                verifiedLearner: '<@&1043923757707829440>',
-                solakWRHolder: '<@&1043923757732999223>',
-                guardianOfTheGrove: '<@&1043923757691047936>',
-                initiate: '<@&1043923757691047943>',
-                adept: '<@&1043923757691047945>',
-                mastery: '<@&1043923757691047944>',
-                extreme: '<@&1043923757732999222>',
-                moderator: '<@&1050759587898339409>',
-                notifyExperienced: '<@&1077221105498066974>',
-                notifyMaster: '<@&1077221066587512852>',
-                notifyGM: '<@&1077221033322500096>',
-                notify4s: '<@&1077228261131698316>',
-                teacher: '<@&1043923757758156867>',
-                reaper: '<@&1043923757758156866>',
+                duoMaster: `<@&${process.env.DEV_DUO_MASTER_ROLE!}>`,
+                threeSevenMaster: `<@&${process.env.DEV_3_7_MASTER_ROLE!}>`,
+                master: `<@&${process.env.DEV_MASTER_ROLE!}>`,
+                solakAddict: `<@&${process.env.DEV_SOLAK_ADDICT_ROLE!}>`,
+                trialTeam: `<@&${process.env.DEV_TRIAL_TEAM_ROLE!}>`,
+                            admin: `<@&${process.env.DEV_ADMIN_ROLE!}>`,
+            owner: `<@&${process.env.DEV_OWNER_ROLE!}>`,
+                duoRootskips: `<@&${process.env.DEV_DUO_ROOTSKIPS_ROLE!}>`,
+                threeSevenRootskips: `<@&${process.env.DEV_3_7_ROOTSKIPS_ROLE!}>`,
+                rootskips: `<@&${process.env.DEV_ROOTSKIPS_ROLE!}>`,
+                noRealm: `<@&${process.env.DEV_NO_REALM_ROLE!}>`,
+                duoExperienced: `<@&${process.env.DEV_DUO_EXPERIENCED_ROLE!}>`,
+                threeSevenExperienced: `<@&${process.env.DEV_3_7_EXPERIENCED_ROLE!}>`,
+                experienced: `<@&${process.env.DEV_EXPERIENCED_ROLE!}>`,
+                teacher: `<@&${process.env.DEV_TEACHER_ROLE!}>`,
+                learner: `<@&${process.env.DEV_LEARNER_ROLE!}>`,
+                community: `<@&${process.env.DEV_COMMUNITY_ROLE!}>`,
+                booster: `<@&${process.env.DEV_BOOSTER_ROLE!}>`,
+                nitroBooster: `<@&${process.env.DEV_NITRO_BOOSTER_ROLE!}>`,
+                cosmetic: `<@&${process.env.DEV_COSMETIC_ROLE!}>`,
+                participant: `<@&${process.env.DEV_PARTICIPANT_ROLE!}>`,
+                reaper: `<@&${process.env.DEV_REAPER_ROLE!}>`,
+                tank: `<@&${process.env.DEV_TANK_ROLE!}>`,
+                dps: `<@&${process.env.DEV_DPS_ROLE!}>`,
+                support: `<@&${process.env.DEV_SUPPORT_ROLE!}>`,
+                learnerOfTheWeek: `<@&${process.env.DEV_LEARNER_OF_THE_WEEK_ROLE!}>`,
+                staff: `<@&${process.env.DEV_STAFF_ROLE!}>`,
+                moderator: `<@&${process.env.DEV_MODERATOR_ROLE!}>`,
+                solak: `<@&${process.env.DEV_SOLAK_ROLE!}>`,
+                tempRole: `<@&${process.env.DEV_TEMP_ROLE!}>`,
+                tankNotNeeded: `<@&${process.env.DEV_TANK_NOT_NEEDED_ROLE!}>`,
+                dpsNotNeeded: `<@&${process.env.DEV_DPS_NOT_NEEDED_ROLE!}>`,
+                supportNotNeeded: `<@&${process.env.DEV_SUPPORT_NOT_NEEDED_ROLE!}>`,
+                learners: `<@&${process.env.DEV_LEARNERS_ROLE!}>`,
+                learnersNotNeeded: `<@&${process.env.DEV_LEARNERS_NOT_NEEDED_ROLE!}>`,
+                adept: `<@&${process.env.DEV_ADEPT_ROLE!}>`,
+                mastery: `<@&${process.env.DEV_MASTERY_ROLE!}>`,
+                extreme: `<@&${process.env.DEV_EXTREME_ROLE!}>`,
             }
         }
         return {
-            duoMaster: '<@&1074344442355535872>',
-            threeSevenMaster: '<@&1119368648482623559>',
-            master: '<@&1119368608116641873>',
-            solakAddict: '<@&553715068273950751>',
-            trialTeam: '<@&488073429975826452>',
-            admin: '<@&519490446368571392>',
-            owner: '<@&553738397848698882>',
-            duoRootskips: '<@&1007584848719912973>',
-            threeSevenRootskips: '<@&931903313144848394>',
-            rootskips: '<@&1037493398220841060>',
-            noRealm: '<@&931903143279755306>',
-            duoExperienced: '<@&931903449396834364>',
-            threeSevenExperienced: '<@&981579337159565383>',
-            experienced: '<@&981581909387800586>',
-            duoGrandmaster: '<@&1119368333129691177>',
-            threeSevenGrandmaster: '<@&1119368483608727703>',
-            fours: '<@&1074344307068252210>',
-            grandmaster: '<@&1119365076743360674>',
-            erethdorsBane: '<@&793913994980491344>',
-            solakRookie: '<@&553714327740481536>',
-            solakCasual: '<@&553714447231877130>',
-            solakEnthusiast: '<@&553714570145955892>',
-            unlockedPerdita: '<@&493153184995606558>',
-            solakFanatic: '<@&553716549593202732>',
-            solakSlave: '<@&932238504958771201>',
-            solakSimp: '<@&1038562094112587887>',
-            solakLegend: '<@&1038562124311564420>',
-            nightOutWithMyRightHand: '<@&862278802083676181>',
-            probablyUsesSpecialScissors: '<@&862278416060514314>',
-            oneForTheBooks: '<@&858689534300389416>',
-            brokenPrinter: '<@&858690604656885770>',
-            merethielsSimp: '<@&862276498098749440>',
-            shroomDealer: '<@&862276579727114250>',
-            verifiedLearner: '<@&935257969552142339>',
-            solakWRHolder: '<@&926057875367952394>',
-            guardianOfTheGrove: '<@&452531368132345866>',
-            initiate: '<@&927278371862380575>',
-            adept: '<@&927278601735397427>',
-            mastery: '<@&927278888403480668>',
-            extreme: '<@&793847049841279007>',
-            moderator: '<@&1050111253185568788>',
-            notifyExperienced: '<@&1070733909119209512>',
-            notifyMaster: '<@&1070734914716172390>',
-            notifyGM: '<@&1070734957426786324>',
-            notify4s: '<@&1077226312277692466>',
-            teacher: '<@&782012576279429174>',
-            reaper: '<@&922061359926104095>',
+            duoMaster: `<@&${process.env.PROD_DUO_MASTER_ROLE!}>`,
+            threeSevenMaster: `<@&${process.env.PROD_3_7_MASTER_ROLE!}>`,
+            master: `<@&${process.env.PROD_MASTER_ROLE!}>`,
+            solakAddict: `<@&${process.env.PROD_SOLAK_ADDICT_ROLE!}>`,
+            trialTeam: `<@&${process.env.PROD_TRIAL_TEAM_ROLE!}>`,
+            admin: `<@&${process.env.PROD_ADMIN_ROLE!}>`,
+            owner: `<@&${process.env.PROD_OWNER_ROLE!}>`,
+            duoRootskips: `<@&${process.env.PROD_DUO_ROOTSKIPS_ROLE!}>`,
+            threeSevenRootskips: `<@&${process.env.PROD_3_7_ROOTSKIPS_ROLE!}>`,
+            rootskips: `<@&${process.env.PROD_ROOTSKIPS_ROLE!}>`,
+            noRealm: `<@&${process.env.PROD_NO_REALM_ROLE!}>`,
+            duoExperienced: `<@&${process.env.PROD_DUO_EXPERIENCED_ROLE!}>`,
+            threeSevenExperienced: `<@&${process.env.PROD_3_7_EXPERIENCED_ROLE!}>`,
+            experienced: `<@&${process.env.PROD_EXPERIENCED_ROLE!}>`,
+            teacher: `<@&${process.env.PROD_TEACHER_ROLE!}>`,
+            learner: `<@&${process.env.PROD_LEARNER_ROLE!}>`,
+            community: `<@&${process.env.PROD_COMMUNITY_ROLE!}>`,
+            booster: `<@&${process.env.PROD_BOOSTER_ROLE!}>`,
+            nitroBooster: `<@&${process.env.PROD_NITRO_BOOSTER_ROLE!}>`,
+            cosmetic: `<@&${process.env.PROD_COSMETIC_ROLE!}>`,
+            participant: `<@&${process.env.PROD_PARTICIPANT_ROLE!}>`,
+            reaper: `<@&${process.env.PROD_REAPER_ROLE!}>`,
+            tank: `<@&${process.env.PROD_TANK_ROLE!}>`,
+            dps: `<@&${process.env.PROD_DPS_ROLE!}>`,
+            support: `<@&${process.env.PROD_SUPPORT_ROLE!}>`,
+            learnerOfTheWeek: `<@&${process.env.PROD_LEARNER_OF_THE_WEEK_ROLE!}>`,
+            staff: `<@&${process.env.PROD_STAFF_ROLE!}>`,
+            moderator: `<@&${process.env.PROD_MODERATOR_ROLE!}>`,
+            solak: `<@&${process.env.PROD_SOLAK_ROLE!}>`,
+            tempRole: `<@&${process.env.PROD_TEMP_ROLE!}>`,
+            tankNotNeeded: `<@&${process.env.PROD_TANK_NOT_NEEDED_ROLE!}>`,
+            dpsNotNeeded: `<@&${process.env.PROD_DPS_NOT_NEEDED_ROLE!}>`,
+            supportNotNeeded: `<@&${process.env.PROD_SUPPORT_NOT_NEEDED_ROLE!}>`,
+            learners: `<@&${process.env.PROD_LEARNERS_ROLE!}>`,
+            learnersNotNeeded: `<@&${process.env.PROD_LEARNERS_NOT_NEEDED_ROLE!}>`,
+            adept: `<@&${process.env.PROD_ADEPT_ROLE!}>`,
+            mastery: `<@&${process.env.PROD_MASTERY_ROLE!}>`,
+            extreme: `<@&${process.env.PROD_EXTREME_ROLE!}>`,
         }
     }
 
     get categories(): Categories {
+        if (process.env.ENVIRONMENT === 'DEVELOPMENT') {
+            return {
+                killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend'],
+                collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
+                matchmaking: {
+                    threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
+                    duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
+                    combined: ['rootskips', 'experienced', 'master', 'grandmaster']
+                }
+            }
+        }
         return {
             killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend'],
             collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
@@ -260,6 +386,7 @@ export default class UtilityHandler {
     }
 
     public hasRolePermissions = async (client: Bot, roleList: string[], interaction: Interaction) => {
+        if (this.config.owners.includes(interaction.user.id)) return true;
         if (!interaction.inCachedGuild()) return;
         const validRoleIds = roleList.map((key) => this.stripRole(this.roles[key]));
         const user = await interaction.guild.members.fetch(interaction.user.id);
@@ -358,11 +485,388 @@ export default class UtilityHandler {
     }
 
     public isTeamFull(players: APIEmbedField[]): boolean {
-        for (const player of players) {
-            if (player.value === '`Empty`') {
-                return false;
+        return players.every(player => !player.value.includes('Empty'));
+    }
+
+    public async generateDpmLeaderboardEmbeds(): Promise<EmbedBuilder[]> {
+        const dpmSubmissionRepository = this.client.dataSource.getRepository(DpmSubmission);
+
+        const submissions = await dpmSubmissionRepository.find({
+            where: { status: 'approved' },
+            order: { dpm: "DESC" }
+        });
+
+        const rankEmojis: { [key: number]: string } = {
+            1: this.emojis.gem1,
+            2: this.emojis.gem2,
+            3: this.emojis.gem3,
+        };
+        
+        // Only these styles are eligible for the leaderboard
+        // Magic, Ranged, and Melee submissions are accepted but not displayed here
+        const leaderboardEligibleStyles = ['Hybrid', 'Tribrid', 'Necromancy'];
+        const teamSizes = ['Duo', '4 man'];
+        
+        // Group submissions by team size first, then by style
+        const groupedSubmissions: { [teamSize: string]: { [style: string]: DpmSubmission[] } } = {};
+
+        // Initialize groups
+        teamSizes.forEach(teamSize => {
+            groupedSubmissions[teamSize] = {};
+            leaderboardEligibleStyles.forEach(style => {
+                groupedSubmissions[teamSize][style] = [];
+            });
+        });
+
+        // Group submissions by team size and style (only leaderboard-eligible ones)
+        submissions.forEach(submission => {
+            if (groupedSubmissions[submission.teamSize] && 
+                groupedSubmissions[submission.teamSize][submission.style]) {
+                groupedSubmissions[submission.teamSize][submission.style].push(submission);
+            }
+        });
+
+        const embeds: EmbedBuilder[] = [];
+
+        teamSizes.forEach(teamSize => {
+            const teamSubmissions = groupedSubmissions[teamSize];
+            let teamHasSubmissions = false;
+
+            // Check if this team size has any submissions
+            for (const style of leaderboardEligibleStyles) {
+                if (teamSubmissions[style].length > 0) {
+                    teamHasSubmissions = true;
+                    break;
+                }
+            }
+
+            const embed = new EmbedBuilder()
+                .setTitle(`\`DPM Leaderboard - ${teamSize}\``)
+                .setColor(this.client.util.colours.lightblue);
+
+            let description = '';
+
+            if (teamHasSubmissions) {
+                leaderboardEligibleStyles.forEach(style => {
+                    const styleSubmissions = teamSubmissions[style];
+                    if (styleSubmissions.length > 0) {
+                        description += `\n**${style}**\n`;
+                        description += styleSubmissions
+                            .slice(0, 3) // Limit to top 3 per style
+                            .map((submission, index) => {
+                                const rank = index + 1;
+                                const rankDisplay = rankEmojis[rank] || `**${rank}.**`;
+                                return `${rankDisplay} ${submission.rsn} - ${submission.dpm.toFixed(2)}k`;
+                            }).join('\n');
+                        description += '\n';
+                    }
+                });
+            }
+
+            if (description === '') {
+                description = `No ${teamSize} DPM submissions yet.`;
+            }
+
+            embed.setDescription(description.trim());
+            embed.setTimestamp();
+            embed.setFooter({
+                text: "To submit your DPM to the leaderboard use '/dpm-submit'"
+            });
+
+            embeds.push(embed);
+        });
+
+        return embeds;
+    }
+
+    public async generateKillTimeLeaderboardEmbed(): Promise<EmbedBuilder> {
+        const killTimeSubmissionRepository = this.client.dataSource.getRepository(KillTimeSubmission);
+        const submissions = await killTimeSubmissionRepository.find();
+
+        const embed = new EmbedBuilder()
+            .setTitle('`Kill Time Leaderboard`')
+            .setColor(this.client.util.colours.lightblue)
+            .setTimestamp()
+            .setFooter({
+                text: "To submit your kill time to the leaderboard use '/killtime-submit'"
+            });
+
+        if (submissions.length === 0) {
+            embed.setDescription('No kill time submissions yet.');
+            return embed;
+        }
+
+        const parseTimeToSeconds = (time: string): number => {
+            const parts = time.split(':');
+            const minutes = parseInt(parts[0], 10);
+            const seconds = parseFloat(parts[1]);
+            return (minutes * 60) + seconds;
+        };
+
+        submissions.sort((a, b) => parseTimeToSeconds(a.killTime) - parseTimeToSeconds(b.killTime));
+
+        const rankEmojis: { [key: number]: string } = {
+            1: this.emojis.gem1,
+            2: this.emojis.gem2,
+            3: this.emojis.gem3,
+        };
+        
+        const groupedSubmissions: { [key: string]: KillTimeSubmission[] } = {
+            'Duo': [],
+            '4 man': [],
+        };
+
+        submissions.forEach(submission => {
+            if (groupedSubmissions[submission.teamSize]) {
+                groupedSubmissions[submission.teamSize].push(submission);
+            }
+        });
+
+        let description = '';
+
+        for (const teamSize in groupedSubmissions) {
+            const styleSubmissions = groupedSubmissions[teamSize];
+            if (styleSubmissions.length > 0) {
+                description += `\n**${teamSize}**\n`;
+                description += styleSubmissions
+                    .slice(0, 3)
+                    .map((submission, index) => {
+                        const rank = index + 1;
+                        const rankDisplay = rankEmojis[rank] || `**${rank}.**`;
+                        const team = [submission.base, submission.dps1, submission.dps2, submission.dps3].filter(Boolean).join(', ');
+                        return `${rankDisplay} [**${submission.killTime}**](${submission.vodLink}) - ${team}`;
+                    }).join('\n');
+                description += '\n';
             }
         }
-        return true;
+        
+        if (description === '') {
+            description = 'No kill time submissions yet.';
+        }
+
+        embed.setDescription(description.trim());
+        return embed;
+    }
+
+    public async reuploadImage(url: string): Promise<string> {
+        console.log(`--- DEBUG: Entered reuploadImage function for URL: ${url}`);
+        
+        const assetChannelId = this.channels.botAssetChannel;
+        console.log(`--- DEBUG: Read assetChannelId from this.channels. It is: ${assetChannelId}`);
+
+        if (!assetChannelId || assetChannelId === 'YOUR_CHANNEL_ID_HERE') {
+            console.error('--- DEBUG: FATAL: botAssetChannel is not configured in the environment variables or is set to placeholder.');
+            this.client.logger.error({
+                message: 'botAssetChannel is not configured!',
+                error: new Error('Asset channel not set or is placeholder.'),
+                handler: 'UtilityHandler'
+            });
+            return url;
+        }
+        
+        try {
+            console.log(`--- DEBUG: Attempting to fetch channel ${assetChannelId}`);
+            const botAssetChannel = await this.client.channels.fetch(assetChannelId) as TextChannel;
+            if (!botAssetChannel) {
+                throw new Error(`Could not find the asset channel with ID: ${assetChannelId}`);
+            }
+
+            console.log(`--- DEBUG: Fetching image from ${url}`);
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch image: ${response.statusText}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+
+            const attachment = new AttachmentBuilder(buffer, { name: 'image.png' });
+            
+            console.log(`--- DEBUG: Sending attachment to Discord channel...`);
+            const message = await botAssetChannel.send({ files: [attachment] });
+            const newUrl = message.attachments.first()!.url;
+            
+            console.log(`--- DEBUG: Successfully re-uploaded. New URL: ${newUrl}`);
+            return newUrl;
+        } catch (error: any) {
+            this.client.logger.error({
+                message: `--- DEBUG: FAILED during reuploadImage for URL: ${url}`,
+                error: error,
+                handler: 'UtilityHandler'
+            });
+            console.error(error);
+            return url;
+        }
+    }
+
+    // Ticket System Utilities
+    public async getNextTicketNumber(ticketType: string): Promise<number> {
+        const ticketNumbersPath = path.join(process.cwd(), 'ticket-numbers.json');
+        
+        try {
+            const data = await fs.readFile(ticketNumbersPath, 'utf-8');
+            const ticketNumbers = JSON.parse(data);
+            
+            // Increment the number for this ticket type
+            ticketNumbers[ticketType] = (ticketNumbers[ticketType] || 0) + 1;
+            
+            // Save back to file
+            await fs.writeFile(ticketNumbersPath, JSON.stringify(ticketNumbers, null, 4));
+            
+            return ticketNumbers[ticketType];
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to read/write ticket numbers file',
+                error,
+                handler: 'UtilityHandler'
+            });
+            
+            // Fallback to 1 if file doesn't exist or is corrupted
+            return 1;
+        }
+    }
+
+    public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number): Promise<TextChannel | null> {
+        try {
+            const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
+            
+            // Get admin and owner role IDs
+            const adminRoleId = this.stripRole(this.roles.admin);
+            const ownerRoleId = this.stripRole(this.roles.owner);
+            
+            // Create the channel with proper permissions
+            const channel = await guild.channels.create({
+                name: channelName,
+                type: ChannelType.GuildText,
+                parent: null, // No category as requested
+                permissionOverwrites: [
+                    {
+                        id: guild.roles.everyone.id,
+                        deny: [PermissionFlagsBits.ViewChannel]
+                    },
+                    {
+                        id: userId,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                            PermissionFlagsBits.AttachFiles,
+                            PermissionFlagsBits.EmbedLinks
+                        ]
+                    },
+                    {
+                        id: adminRoleId,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                            PermissionFlagsBits.AttachFiles,
+                            PermissionFlagsBits.EmbedLinks,
+                            PermissionFlagsBits.ManageMessages,
+                            PermissionFlagsBits.ManageChannels
+                        ]
+                    },
+                    {
+                        id: ownerRoleId,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                            PermissionFlagsBits.AttachFiles,
+                            PermissionFlagsBits.EmbedLinks,
+                            PermissionFlagsBits.ManageMessages,
+                            PermissionFlagsBits.ManageChannels
+                        ]
+                    }
+                ]
+            });
+
+            this.client.logger.log({
+                message: `Created ticket channel: ${channelName} for user ${userId}`,
+                handler: 'UtilityHandler'
+            }, true);
+
+            return channel;
+        } catch (error) {
+            this.client.logger.error({
+                message: `Failed to create ticket channel for type: ${ticketType}`,
+                error,
+                handler: 'UtilityHandler'
+            });
+            return null;
+        }
+    }
+
+    public async sendTicketWelcomeMessage(channel: TextChannel, userId: string, ticketType: string, formData: any): Promise<void> {
+        try {
+            const adminRole = this.roles.admin;
+            const ownerRole = this.roles.owner;
+            
+            // Create welcome message
+            const welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
+            
+            // Create embed with form data using fields for better organization
+            const embed = new EmbedBuilder()
+                .setTitle(`${this.capitalizeFirstLetter(ticketType)} Ticket`)
+                .setColor(this.colours.lightblue)
+                .setTimestamp()
+                .setAuthor({ 
+                    name: `User: ${channel.guild.members.cache.get(userId)?.user.username || 'Unknown User'}`,
+                    iconURL: channel.guild.members.cache.get(userId)?.user.displayAvatarURL() || undefined
+                });
+
+            // Format the form data based on ticket type using fields
+            switch (ticketType) {
+                case 'suggestion':
+                    embed.addFields(
+                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Suggestion', value: `\`\`\`${formData.suggestion}\`\`\``, inline: false },
+                        { name: 'Why would this work?', value: `\`\`\`${formData.reason}\`\`\``, inline: false }
+                    );
+                    break;
+                case 'report':
+                    embed.addFields(
+                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Reported User', value: `\`\`\`${formData.reported_user}\`\`\``, inline: false },
+                        { name: 'Reason', value: `\`\`\`${formData.reason}\`\`\``, inline: false },
+                        { name: 'Description', value: `\`\`\`${formData.description}\`\`\``, inline: false }
+                    );
+                    break;
+                case 'contentcreator':
+                    embed.addFields(
+                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Platform URL', value: `\`\`\`${formData.platform_url}\`\`\``, inline: false },
+                        { name: 'Additional Information', value: `\`\`\`${formData.additional}\`\`\``, inline: false }
+                    );
+                    break;
+                case 'other':
+                    embed.addFields(
+                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'How can we assist?', value: `\`\`\`${formData.assistance}\`\`\``, inline: false }
+                    );
+                    break;
+            }
+            
+            // Create close button
+            const closeButton = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('ticket_close')
+                        .setLabel('Close')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+
+            await channel.send({ content: welcomeMessage, embeds: [embed], components: [closeButton] });
+            
+            this.client.logger.log({
+                message: `Sent welcome message to ticket channel: ${channel.name}`,
+                handler: 'UtilityHandler'
+            }, true);
+        } catch (error) {
+            this.client.logger.error({
+                message: `Failed to send welcome message to ticket channel: ${channel.name}`,
+                error,
+                handler: 'UtilityHandler'
+            });
+        }
     }
 }

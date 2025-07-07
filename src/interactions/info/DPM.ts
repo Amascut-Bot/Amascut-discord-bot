@@ -1,7 +1,7 @@
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, EmbedBuilder, Role, SlashCommandBuilder, TextChannel } from 'discord.js';
 
-export default class Say extends BotInteraction {
+export default class DPM extends BotInteraction {
     get name() {
         return 'dpm';
     }
@@ -21,15 +21,15 @@ export default class Say extends BotInteraction {
     public getRole = async (interaction: ChatInputCommandInteraction, damage: number) => {
         let roleToAssign;
         const { stripRole, roles } = this.client.util;
-        const { initiate, adept, mastery, extreme } = this.client.util.dpm
+        const { adept, mastery, extreme } = await this.client.util.getDpm();
+        
+        // check thresholds from highest to lowest
         if (damage >= extreme) {
             roleToAssign = 'extreme';
         } else if (damage >= mastery) {
             roleToAssign = 'mastery';
         } else if (damage >= adept) {
             roleToAssign = 'adept'
-        } else if (damage >= initiate) {
-            roleToAssign = 'initiate'
         }
 
         if (!roleToAssign) return;
@@ -71,6 +71,7 @@ export default class Say extends BotInteraction {
 
         const channel = await this.client.channels.fetch(channels.dpmCalc) as TextChannel;
         await channel.send({ embeds: [DPMEmbed] });
+        
         const successEmbed = new EmbedBuilder()
             .setColor(colours.discord.green)
             .setDescription(`

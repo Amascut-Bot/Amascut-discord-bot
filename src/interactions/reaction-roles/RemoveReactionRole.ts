@@ -19,7 +19,7 @@ interface ReactionRolesData {
 }
 
 interface ActiveMessages {
-    [messageId: string]: string;
+    [messageId: string]: string | string[];
 }
 
 async function readJsonFile<T>(filePath: string): Promise<T> {
@@ -127,10 +127,33 @@ export default class RemoveReactionRole extends BotInteraction {
         const [removedRole] = reactionRoles[category].splice(roleIndex, 1);
         const removedEmoji = removedRole.emoji;
 
-        if (reactionRoles[category].length === 0) {
+        const activeMessages = await readJsonFile<ActiveMessages>(activeMessagesFilePath);
+        
+        const messagesToUpdate = Object.keys(activeMessages).filter(msgId => {
+            const categories = activeMessages[msgId];
+            if (Array.isArray(categories)) {
+                return categories.includes(category);
+            }
+            return categories === category;
+        });
+
+        if (reactionRoles[category] && reactionRoles[category].length === 0) {
             delete reactionRoles[category];
-        } else {
-            // Re-order the hierarchy
+            for (const msgId in activeMessages) {
+                let categories = activeMessages[msgId];
+                if (Array.isArray(categories)) {
+                    const index = categories.indexOf(category);
+                    if (index > -1) {
+                        categories.splice(index, 1);
+                    }
+                    if (categories.length === 0) {
+                        delete activeMessages[msgId];
+                    }
+                } else if (categories === category) {
+                    delete activeMessages[msgId];
+                }
+            }
+        } else if (reactionRoles[category]) {
             reactionRoles[category].sort((a, b) => a.hierarchy - b.hierarchy);
             reactionRoles[category].forEach((role, index) => {
                 role.hierarchy = index + 1;
@@ -138,9 +161,7 @@ export default class RemoveReactionRole extends BotInteraction {
         }
 
         await writeJsonFile(reactionRolesFilePath, reactionRoles);
-
-        const activeMessages = await readJsonFile<ActiveMessages>(activeMessagesFilePath);
-        const messagesToUpdate = Object.keys(activeMessages).filter(msgId => activeMessages[msgId] === category);
+        await writeJsonFile(activeMessagesFilePath, activeMessages);
 
         for (const messageId of messagesToUpdate) {
             try {
@@ -159,7 +180,7 @@ export default class RemoveReactionRole extends BotInteraction {
                             }
                             break; 
                         } catch (e) {
-                            // Message not in this channel, continue
+                            console.error(e);
                         }
                     }
                 }

@@ -1,6 +1,8 @@
-import { ActivityType } from 'discord.js';
+import { ActivityType, DiscordAPIError } from 'discord.js';
+import { TempChannelsManagerEvents } from '@hunteroi/discord-temp-channels';
 import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
+import TempChannelManager from '../modules/TempVCHandler';
 export default class Ready extends BotEvent {
     get name(): string {
         return 'ready';
@@ -15,15 +17,45 @@ export default class Ready extends BotEvent {
     }
 
     private get statuses(): string[] {
-        return ['Apply to trial today!'];
+        return ['Release August 4th!'];
     }
 
     async run(client: Bot) {
         this.client.logger.log({ message: `[${this.client.user?.username}] Ready! Serving ${this.client.guilds.cache.size} guild(s) with ${this.client.users.cache.size} user(s)` }, true);
+        
+        // Build the global emoji cache
+        this.client.emojiCache.clear();
+        for (const guild of this.client.guilds.cache.values()) {
+            for (const emoji of guild.emojis.cache.values()) {
+                if (emoji.name) {
+                    this.client.emojiCache.set(emoji.name, emoji);
+                }
+            }
+        }
+        this.client.logger.log({ message: `Built global cache with ${this.client.emojiCache.size} emojis.` }, true);
+
+        // Cache reaction role messages now that guilds are available
+        this.client.cacheTrackedMessages();
+
+        this.client.tempManager = new TempChannelManager(this.client);
+        this.client.tempManager.on(TempChannelsManagerEvents.error, (error) => {
+            if (error instanceof DiscordAPIError && error.code === 40032) {
+                return this.client.logger.log({
+                    handler: 'TempChannelManager',
+                    message: 'Caught a non-critical "Target user is not connected to voice" error. This is likely due to a user leaving the creation channel too quickly. The bot will not crash.'
+                }, true);
+            }
+            this.client.logger.error({
+                handler: 'TempChannelManager',
+                message: 'An unhandled error occurred in the temp channel manager.',
+                error: error
+            });
+        });
+        
         this.client.tempManager.__initParentListener(this.client.util.channels.tempVCCreate);
         this.client.logger.log({ message: `Running on the ${process.env.ENVIRONMENT} environment` }, true);
         this.client.user?.setPresence({
-            activities: [{ name: `you kill Solak!`, type: ActivityType.Watching }]
+            activities: [{ name: `Release August 4th!`, type: ActivityType.Watching }]
         });
         setInterval((): void => {
             const current = this.statuses.shift() ?? '';
@@ -32,5 +64,9 @@ export default class Ready extends BotEvent {
             });
             this.statuses.push(current);
         }, 300000);
+        this.client.logger.log({ message: `Startup complete. Amascut Bot is now online and operational.` }, true);
+
+        // Start Twitch Monitoring
+        this.client.twitchHandler.startMonitoring();
     }
 }

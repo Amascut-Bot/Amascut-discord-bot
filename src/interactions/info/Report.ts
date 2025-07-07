@@ -70,8 +70,6 @@ export default class Say extends BotInteraction {
 
         const { colours, roles, channels, stripRole } = this.client.util;
 
-        // Check if user can even be removed from these roles.
-
         let success = true;
         let errorMessage = 'An error has occurred!';
 

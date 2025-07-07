@@ -39,7 +39,6 @@ export default class StartReaper extends BotInteraction {
             .addStringOption((option) => option.setName('region').setDescription('Reaper world').addChoices(
                 ...this.regionOptions
             ).setRequired(true))
-            .addStringOption((option) => option.setName('time').setDescription('Time of Reaper event. Must be in the format YYYY-MM-DD HH:MM in Gametime. e.g. 2022-11-05 06:00').setRequired(false))
     }
 
     public ticketToolEmbedContent = async (interaction: ChatInputCommandInteraction) => {
@@ -80,24 +79,13 @@ export default class StartReaper extends BotInteraction {
         return content
     }
 
-    public parseTime = (timeString: string): string => {
-        const [date, time] = timeString.split(' ');
-        const [year, month, day] = date.split('-').map(Number);
-        const [hours, minutes] = time.split(':').map(Number);
-        const gametime = new Date(Date.UTC(year, month - 1, day, hours, minutes))
-        return `<t:${Math.round(gametime.getTime() / 1000)}:f>`;
-    }
-
     async run(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ ephemeral: true });
         const region: string = interaction.options.getString('region', true);
-        const time: string | null = interaction.options.getString('time', false);
 
         const { roles, colours, channels } = this.client.util;
 
         const info = await this.ticketToolEmbedContent(interaction);
-
-        const expression = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
 
         let errorMessage = '';
 
@@ -105,25 +93,11 @@ export default class StartReaper extends BotInteraction {
             errorMessage += 'There was an issue with grabbing **Ticket Tool** data. Please check if the message is pinned.'
         }
 
-        if (time) {
-            const isValid = expression.test(time);
-            if (!isValid) {
-                errorMessage += '\n\nThe reaper `time` was not in the expected format.'
-            }
-        }
-
         const errorEmbed = new EmbedBuilder()
             .setTitle('Something went wrong!')
             .setColor(colours.discord.red)
             .setDescription(errorMessage || 'No error message.');
         if (!info) return await interaction.editReply({ embeds: [errorEmbed] });
-        if (time) {
-            const isValid = expression.test(time);
-            console.log(isValid)
-            if (!isValid) {
-                return await interaction.editReply({ embeds: [errorEmbed] });
-            }
-        }
 
         const groupButtonRow = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
@@ -166,11 +140,7 @@ export default class StartReaper extends BotInteraction {
             .setDescription(`
             > **General**\n
             \`Host:\` <@${interaction.user.id}>
-            ${time ?
-                    `\`Game Time:\` \`${time}\`
-            \`Local Time:\` ${this.parseTime(time)}`
-                    :
-                    `\`Time:\` \`ASAP\``}
+            \`Time:\` \`ASAP\`
             \`Region:\` ${region}
             \`Ticket:\` <#${interaction.channel?.id}>\n
             > **Recipient**\n

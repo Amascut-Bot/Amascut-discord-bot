@@ -19,7 +19,16 @@ interface ReactionRolesData {
 }
 
 interface ActiveMessages {
-    [messageId: string]: string; // messageId: category
+    [messageId: string]: string | string[];
+}
+
+interface NewActiveMessage {
+    channelId: string;
+    categories: string[];
+}
+
+interface NewActiveMessages {
+    [messageId:string]: NewActiveMessage;
 }
 
 async function readJsonFile<T>(filePath: string): Promise<T> {
@@ -117,7 +126,7 @@ export default class PostReactionRole extends BotInteraction {
             }
 
         } catch (error) {
-            const activeMessages = await readJsonFile<ActiveMessages>(activeMessagesFilePath);
+            const activeMessages = await readJsonFile<NewActiveMessages>(activeMessagesFilePath);
             if (activeMessages[messageId]) {
                 delete activeMessages[messageId];
                 await writeJsonFile(activeMessagesFilePath, activeMessages);
@@ -128,20 +137,33 @@ export default class PostReactionRole extends BotInteraction {
 
         for (const role of categoryRoles) {
             try {
-                // Find the emoji in the guild's cache.
-                const emoji = interaction.guild.emojis.cache.find(e => e.name === role.emoji) || role.emoji;
+                const emoji = this.client.emojis.cache.find(e => e.name === role.emoji) || role.emoji;
                 await message.react(emoji);
             } catch (e) {
                 this.client.logger.error({ message: `Failed to react with emoji: ${role.emoji}`, error: e });
-                // Continue trying to add other reactions
             }
         }
 
-        const activeMessages = await readJsonFile<ActiveMessages>(activeMessagesFilePath);
-        activeMessages[messageId] = category;
-        await writeJsonFile(activeMessagesFilePath, activeMessages);
+        const activeMessages = await readJsonFile<NewActiveMessages>(activeMessagesFilePath);
+        
+        const messageData = activeMessages[messageId] || {
+            channelId: message.channel.id,
+            categories: [],
+        };
 
-        this.client.logger.log({ message: `[ReactionRole] Wrote to active-reaction-messages.json. Tracked messages: ${Object.keys(activeMessages).length}` }, false);
+        if (!messageData.categories.includes(category)) {
+            messageData.categories.push(category);
+        }
+
+        activeMessages[messageId] = messageData;
+
+        try {
+            await fs.writeFile(activeMessagesFilePath, JSON.stringify(activeMessages, null, 2));
+            this.client.logger.log({ message: `[ReactionRole] Wrote to active-reaction-messages.json. Tracked messages: ${Object.keys(activeMessages).length}` }, true);
+        } catch (error) {
+            this.client.logger.error({ message: '[ReactionRole] Failed to write to active-reaction-messages.json:', error });
+            await interaction.followUp({ content: 'An error occurred while saving the active message data.', ephemeral: true });
+        }
 
         await interaction.editReply({ content: `Successfully posted reaction roles for category '${category}' on message ${messageId}.` });
     }

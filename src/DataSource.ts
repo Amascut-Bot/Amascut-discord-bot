@@ -6,11 +6,24 @@ import { Trial } from "./entity/Trial"
 import { TrialParticipation } from "./entity/TrialParticipation"
 import { Reaper } from "./entity/Reaper"
 import { ReaperParticipation } from "./entity/ReaperParticipation"
+import { DpmSubmission } from "./entity/DpmSubmission"
+import { KillTimeSubmission } from './entity/KillTimeSubmission'
 
 export const AppDataSource = new DataSource({
     type: "sqlite",
     database: "db.sqlite",
     synchronize: true,
     logging: false,
-    entities: [Override, Report, Trial, TrialParticipation, Reaper, ReaperParticipation],
+    entities: [
+        Reaper,
+        ReaperParticipation,
+        Trial,
+        TrialParticipation,
+        Report,
+        Override,
+        DpmSubmission,
+        KillTimeSubmission
+    ],
+    migrations: [],
+    subscribers: [],
 })

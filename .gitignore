@@ -27,3 +27,23 @@ config.json
 db.json
 db-backups*
 *.sqlite
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Bot Archives
+/upload_archives/
+/message-tags.json

@@ -16,24 +16,6 @@ export default class EventHandler {
         client.on('shardReady', (id) => this.client.logger.log({ message: `Shard ${id} | Shard Ready`, handler: this.constructor.name, uid: `Internal Cluster` }, true));
     }
 
-    // build() {
-    //     if (this.built) return this;
-    //     const events = readdirSync(this.client.location + '/src/events');
-    //     for (let event of events) {
-    //         if (event.endsWith('.ts')) {
-    //             import(`${this.client.location}/src/events/${event}`).then((event) => {
-    //                 const botEvent: BotEvent = new event.default(this.client);
-    //                 this.client.logger.log({ message: `Event '${botEvent.name}' loaded.`, handler: this.constructor.name, uid: `(@${botEvent.uid})` }, false);
-    //                 if (botEvent.enabled) {
-    //                     const exec = botEvent.exec.bind(botEvent);
-    //                     this.client[botEvent.fireOnce ? 'once' : 'on'](botEvent.name, exec);
-    //                 }
-    //             });
-    //         }
-    //     }
-    //     this.built = true;
-    //     return this;
-    // }
     async build() {
         if (this.built) return this;
         const eventFiles = readdirSync(`${this.client.location}/src/events`).filter((file) => file.endsWith('.ts'));
@@ -43,11 +25,11 @@ export default class EventHandler {
                 const { default: EventClass } = await import(`${this.client.location}/src/events/${file}`);
                 const botEvent: BotEvent = new EventClass(this.client);
                 
-                this.client.logger.log({ message: `Event '${botEvent.name}' loaded.`, handler: this.constructor.name, uid: `(@${botEvent.uid})` }, false);
+                this.client.logger.log({ message: `Event '${botEvent.name}' loaded.`, handler: this.constructor.name, uid: `(@${botEvent.uid})` }, true);
                 
                 if (botEvent.enabled) {
-                    this.client[botEvent.fireOnce ? 'once' : 'on'](botEvent.name, (...args) => botEvent.exec(args));
-                    this.client.logger.log({ message: `Listener attached for event '${botEvent.name}'.`, handler: this.constructor.name }, false);
+                    this.client[botEvent.fireOnce ? 'once' : 'on'](botEvent.name, (...args) => botEvent.exec(...args));
+                    this.client.logger.log({ message: `Listener attached for event '${botEvent.name}'.`, handler: this.constructor.name }, true);
                 }
             } catch (error) {
                 this.client.logger.error({ message: `Error loading event from file ${file}`, error });

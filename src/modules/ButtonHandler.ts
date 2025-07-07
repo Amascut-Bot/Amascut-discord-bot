@@ -1,12 +1,17 @@
-import { ActionRowBuilder, APIEmbedField, ButtonBuilder, ButtonInteraction, ButtonStyle, Embed, EmbedBuilder, GuildMember, InteractionResponse, Message, Role, TextChannel } from 'discord.js';
+import { ActionRowBuilder, APIEmbedField, ButtonBuilder, ButtonInteraction, ButtonStyle, Embed, EmbedBuilder, GuildMember, InteractionResponse, Message, Role, TextChannel, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder } from 'discord.js';
+import { DpmSubmission } from '../entity/DpmSubmission';
+import { KillTimeSubmission } from '../entity/KillTimeSubmission';
 import { Report } from '../entity/Report';
 import { Trial } from '../entity/Trial';
 import { TrialParticipation } from '../entity/TrialParticipation';
 import { Reaper } from '../entity/Reaper';
 import { ReaperParticipation } from '../entity/ReaperParticipation';
 import Bot from '../Bot';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
-export default interface ButtonHandler { client: Bot; id: string; interaction: ButtonInteraction }
+const leaderboardConfigPath = path.join(process.cwd(), 'leaderboard-config.json');
+const killTimeLeaderboardConfigPath = path.join(process.cwd(), 'killtime-leaderboard-config.json');
 
 interface RemoveHierarchy {
     [key: string]: string[];
@@ -25,6 +30,10 @@ interface Prerequisite {
 }
 
 export default class ButtonHandler {
+    client: Bot;
+    id: string;
+    interaction: ButtonInteraction<'cached'>;
+
     constructor(client: Bot, id: string, interaction: ButtonInteraction<'cached'>) {
         this.client = client;
         this.id = id;
@@ -35,6 +44,8 @@ export default class ButtonHandler {
             case 'rejectReport': this.rejectReport(interaction); break;
             case 'approveDPM': this.approveDPM(interaction); break;
             case 'rejectDPM': this.rejectDPM(interaction); break;
+            case 'approveKillTime': this.approveKillTime(interaction); break;
+            case 'rejectKillTime': this.rejectKillTime(interaction); break;
             case 'selectBase': this.selectBase(interaction); break;
             case 'selectDPS': this.selectDPS(interaction); break;
             case 'selectOutside': this.selectOutside(interaction); break;
@@ -48,6 +59,17 @@ export default class ButtonHandler {
             case 'failTrialee': this.failTrialee(interaction); break;
             case 'nextUpkeep': this.nextUpkeep(interaction); break;
             case 'prevUpkeep': this.prevUpkeep(interaction); break;
+            case 'ticket_suggestion': this.handleTicketSuggestion(interaction); break;
+            case 'ticket_report': this.handleTicketReport(interaction); break;
+            case 'ticket_contentcreator': this.handleTicketContentCreator(interaction); break;
+            case 'ticket_other': this.handleTicketOther(interaction); break;
+            case 'ticket_close': this.handleTicketClose(interaction); break;
+            case 'ticket_close_confirm': this.handleTicketCloseConfirm(interaction); break;
+            case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction); break;
+            case 'ticket_open': this.handleTicketOpen(interaction); break;
+            case 'ticket_delete': this.handleTicketDelete(interaction); break;
+            case 'ticket_delete_confirm': this.handleTicketDeleteConfirm(interaction); break;
+            case 'ticket_delete_cancel': this.handleTicketDeleteCancel(interaction); break;
             default: break;
         }
     }
@@ -993,31 +1015,47 @@ export default class ButtonHandler {
 
 
     private async rejectDPM(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
-
-        const { colours } = this.client.util;
-
         await interaction.deferReply({ ephemeral: true });
-        const hasRolePermissions = await this.client.util.hasRolePermissions(this.client, ['moderator', 'admin', 'owner'], interaction);
-        if (hasRolePermissions) {
-            const messageEmbed = interaction.message.embeds[0];
-            const messageContent = messageEmbed.data.description;
-            const oldTimestamp = messageEmbed.timestamp ? new Date(messageEmbed.timestamp) : new Date();
+        const { colours, hasRolePermissions, hasOverridePermissions } = this.client.util;
+        const rolePermissions = await hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        const overridePermissions = await hasOverridePermissions(interaction, 'dpm');
+        const replyEmbed: EmbedBuilder = new EmbedBuilder();
 
-            const newEmbed = new EmbedBuilder()
-                .setTimestamp(oldTimestamp)
-                .setColor(messageEmbed.color)
-                .setDescription(`
-                ${messageContent}\n
-                > Application rejected by <@${this.userId}> <t:${this.currentTime}:R>.`);
-            await interaction.message.edit({ embeds: [newEmbed], components: [] })
-            const replyEmbed = new EmbedBuilder()
-                .setColor(colours.discord.green)
-                .setDescription('Application successfully rejected!');
+        if (rolePermissions || overridePermissions) {
+            const messageEmbed: Embed = interaction.message.embeds[0];
+            const footer = messageEmbed.footer;
+            const submissionIdMatch = footer?.text.match(/Submission ID: (\d+)/);
+            const submissionId = submissionIdMatch ? parseInt(submissionIdMatch[1], 10) : null;
+
+            if (!submissionId) {
+                replyEmbed.setColor(colours.discord.red).setDescription('Could not find a submission ID in the embed footer.');
+                return await interaction.editReply({ embeds: [replyEmbed] });
+            }
+
+            const dpmSubmissionRepository = this.client.dataSource.getRepository(DpmSubmission);
+            const submission = await dpmSubmissionRepository.findOneBy({ id: submissionId });
+
+            if (!submission) {
+                replyEmbed.setColor(colours.discord.red).setDescription(`A submission with the ID \`${submissionId}\` was not found.`);
+                return await interaction.editReply({ embeds: [replyEmbed] });
+            }
+
+            submission.status = 'rejected';
+            await dpmSubmissionRepository.save(submission);
+
+            const originalEmbed = new EmbedBuilder(messageEmbed.data)
+                .setColor(colours.discord.red)
+                .setFooter({ text: `Rejected by ${interaction.user.username} | Submission ID: ${submission.id}` })
+                .setTimestamp();
+
+            await interaction.message.edit({ embeds: [originalEmbed], components: [] });
+
+            replyEmbed.setColor(colours.discord.green).setDescription('Submission rejected.');
             return await interaction.editReply({ embeds: [replyEmbed] });
         } else {
             this.client.logger.log(
                 {
-                    message: `Attempted restricted permissions. { command: Reject DPM Application, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                    message: `Attempted restricted permissions. { command: Reject DPM, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
                     handler: this.constructor.name,
                 },
                 true
@@ -1026,68 +1064,148 @@ export default class ButtonHandler {
         }
     }
 
-    private async approveDPM(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
-
-        const removeHierarchy: RemoveHierarchy = {
-            'adept': ['initiate'],
-            'mastery': ['initiate', 'adept'],
-            'extreme': ['mastery', 'initiate', 'adept'],
+    private async checkDpmLeaderboardPosition(submission: DpmSubmission): Promise<{ position: number; totalInCategory: number } | null> {
+        const dpmSubmissionRepository = this.client.dataSource.getRepository(DpmSubmission);
+        const leaderboardEligibleStyles = ['Hybrid', 'Tribrid', 'Necromancy'];
+        
+        // Only check position for leaderboard-eligible styles
+        if (!leaderboardEligibleStyles.includes(submission.style)) {
+            return null;
         }
 
-        const { colours, roles, channels, stripRole, getKeyFromValue } = this.client.util;
+        // Get all approved submissions for the same team size and style, ordered by DPM descending
+        const submissions = await dpmSubmissionRepository.find({
+            where: { 
+                status: 'approved',
+                teamSize: submission.teamSize,
+                style: submission.style
+            },
+            order: { dpm: "DESC" }
+        });
 
+        const position = submissions.findIndex(s => s.id === submission.id) + 1;
+        return position > 0 ? { position, totalInCategory: submissions.length } : null;
+    }
+
+    private async approveDPM(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
         await interaction.deferReply({ ephemeral: true });
-        const hasRolePermissions = await this.client.util.hasRolePermissions(this.client, ['moderator', 'admin', 'owner'], interaction);
-        if (hasRolePermissions) {
-            const messageEmbed = interaction.message.embeds[0];
-            const messageContent = messageEmbed.data.description;
-            const oldTimestamp = messageEmbed.timestamp ? new Date(messageEmbed.timestamp) : new Date();
-            const userIdRegex = messageContent?.match(/<@\d*\>/gm);
-            const assignedRoles = messageContent?.match(/<@&\d*\>/gm)?.map(unstrippedRole => stripRole(unstrippedRole));
+        const { colours, channels, hasRolePermissions, hasOverridePermissions } = this.client.util;
+        const rolePermissions = await hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        const overridePermissions = await hasOverridePermissions(interaction, 'dpm');
+        const replyEmbed: EmbedBuilder = new EmbedBuilder();
 
-            const errorEmbed = new EmbedBuilder()
-                .setColor(this.client.util.colours.discord.red)
-                .setDescription('Something went wrong with detecting either the role or user.');
-            if (!assignedRoles || !userIdRegex) return await interaction.editReply({ embeds: [errorEmbed] });
+        if (rolePermissions || overridePermissions) {
+            const messageEmbed: Embed = interaction.message.embeds[0];
+            const footer = messageEmbed.footer;
+            const submissionIdMatch = footer?.text.match(/Submission ID: (\d+)/);
+            const submissionId = submissionIdMatch ? parseInt(submissionIdMatch[1], 10) : null;
 
-            const userId = userIdRegex[0].slice(2, -1);
-            const user = await interaction.guild?.members.fetch(userId);
-            const userRoles = user?.roles.cache.map(role => role.id) || [];
-            await user?.roles.add(assignedRoles[0]);
-
-            // Remove inferior roles
-            const roleKey = getKeyFromValue(roles, `<@&${assignedRoles[0]}>`);
-            if (roleKey in removeHierarchy) {
-                for await (const roleToRemove of removeHierarchy[roleKey]) {
-                    const removeRoleId = stripRole(roles[roleToRemove]);
-                    if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
-                };
+            if (!submissionId) {
+                replyEmbed.setColor(colours.discord.red).setDescription('Could not find a submission ID in the embed footer.');
+                return await interaction.editReply({ embeds: [replyEmbed] });
             }
 
+            const dpmSubmissionRepository = this.client.dataSource.getRepository(DpmSubmission);
+            const submission = await dpmSubmissionRepository.findOneBy({ id: submissionId });
+
+            if (!submission) {
+                replyEmbed.setColor(colours.discord.red).setDescription(`A submission with the ID \`${submissionId}\` was not found.`);
+                return await interaction.editReply({ embeds: [replyEmbed] });
+                }
+
+            // Role assignment logic
+            const removeHierarchy: RemoveHierarchy = {
+                'adept': ['initiate'],
+                'mastery': ['initiate', 'adept'],
+                'extreme': ['mastery', 'initiate', 'adept'],
+            };
+
+            const { roles, stripRole, getKeyFromValue } = this.client.util;
+            const user = await interaction.guild?.members.fetch(submission.userId);
+            let userAlreadyHadRole = false;
+            
+            if (user && submission.roleId) {
+                // Check if user already has this role
+                userAlreadyHadRole = user.roles.cache.has(submission.roleId);
+                
+                await user.roles.add(submission.roleId);
+
+                // Remove inferior roles
+                const roleKey = getKeyFromValue(roles, `<@&${submission.roleId}>`);
+                if (roleKey in removeHierarchy) {
+                    for await (const roleToRemove of removeHierarchy[roleKey]) {
+                        const removeRoleId = stripRole(roles[roleToRemove]);
+                        if (user.roles.cache.has(removeRoleId)) await user.roles.remove(removeRoleId);
+                    };
+                }
+            }
+            
+            submission.status = 'approved';
+            submission.approvedBy = interaction.user.id;
+            await dpmSubmissionRepository.save(submission);
+
+            const originalEmbed = new EmbedBuilder(messageEmbed.data)
+                .setColor(colours.discord.green)
+                .setFooter({ text: `Approved by ${interaction.user.username} | Submission ID: ${submission.id}` })
+                .setTimestamp();
+
+            await interaction.message.edit({ embeds: [originalEmbed], components: [] });
+
+                // Update the leaderboard
+            const dpmLeaderboards = await this.client.util.generateDpmLeaderboardEmbeds();
+                try {
+                const config = JSON.parse(await fs.readFile(leaderboardConfigPath, 'utf-8'));
+                const message = await (this.client.channels.cache.get(config.channelId) as TextChannel).messages.fetch(config.messageId);
+                await message.edit({ embeds: dpmLeaderboards });
+            } catch (err) {
+                this.client.logger.error({
+                    message: 'Failed to update DPM leaderboard.',
+                    error: err,
+                    handler: this.constructor.name,
+                });
+                }
+
+            // Check leaderboard position for top 3 announcement
+            const positionInfo = await this.checkDpmLeaderboardPosition(submission);
             const announcementChannel = await this.client.channels.fetch(channels.roleConfirmations) as TextChannel;
-            const embed = new EmbedBuilder()
+
+            if (announcementChannel) {
+                // Send role confirmation only if user didn't already have the role
+                if (submission.roleId && !userAlreadyHadRole) {
+                    const roleEmbed = new EmbedBuilder()
                 .setAuthor({ name: interaction.user.username, iconURL: interaction.user.avatarURL() || this.client.user?.avatarURL() || 'https://media.discordapp.net/attachments/1027186342620299315/1047598720834875422/618px-Solly_pet_1.png' })
                 .setTimestamp()
-                .setColor(messageEmbed.color || colours.lightblue)
-                .setDescription(`Congratulations to <@${userId}> on achieving <@&${assignedRoles[0]}>!`);
+                        .setColor(colours.lightblue)
+                        .setDescription(`Congratulations to <@${submission.userId}> on achieving <@&${submission.roleId}>!`);
 
-            await announcementChannel.send({ embeds: [embed] });
+                    await announcementChannel.send({ embeds: [roleEmbed] });
+                }
 
-            const newEmbed = new EmbedBuilder()
-                .setTimestamp(oldTimestamp)
-                .setColor(messageEmbed.color)
-                .setDescription(`
-                ${messageContent}\n
-                > Application approved by <@${this.userId}> <t:${this.currentTime}:R>.`);
-            await interaction.message.edit({ embeds: [newEmbed], components: [] })
-            const replyEmbed = new EmbedBuilder()
-                .setColor(colours.discord.green)
-                .setDescription('Role successfully approved!');
+                // Send leaderboard position announcement for top 3
+                if (positionInfo && positionInfo.position <= 3) {
+                    const positionEmojis = [this.client.util.emojis.gem1, this.client.util.emojis.gem2, this.client.util.emojis.gem3];
+                    const leaderboardName = `\`${submission.teamSize} ${submission.style} DPM Leaderboard\``;
+                    const submissionUser = await interaction.guild?.members.fetch(submission.userId);
+                    
+                    const positionEmbed = new EmbedBuilder()
+                        .setAuthor({ 
+                            name: submissionUser?.user.username || 'Unknown User', 
+                            iconURL: submissionUser?.user.avatarURL() || undefined 
+                        })
+                        .setDescription(`Congratulations to <@${submission.userId}> on achieving **Rank** ${positionEmojis[positionInfo.position - 1]} on the ${leaderboardName} with a DPM of **${submission.dpm.toFixed(2)}k**`)
+                        .setTimestamp()
+                        .setColor(0xFFD700);
+
+                    await announcementChannel.send({ embeds: [positionEmbed] });
+                }
+            }
+
+            replyEmbed.setColor(colours.discord.green).setDescription('Submission approved.');
             return await interaction.editReply({ embeds: [replyEmbed] });
         } else {
             this.client.logger.log(
                 {
-                    message: `Attempted restricted permissions. { command: Approve DPM Application, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                    message: `Attempted restricted permissions. { command: Approve DPM, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
                     handler: this.constructor.name,
                 },
                 true
@@ -1523,5 +1641,818 @@ export default class ButtonHandler {
             );
             return await interaction.editReply({ content: 'You do not have permissions to run this command. This incident has been logged.' });
         }
+    }
+
+    private async rejectKillTime(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
+        await interaction.deferReply({ ephemeral: true });
+        const { colours, hasRolePermissions, hasOverridePermissions } = this.client.util;
+        const rolePermissions = await hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        const overridePermissions = await hasOverridePermissions(interaction, 'killtime');
+        const replyEmbed: EmbedBuilder = new EmbedBuilder();
+        
+        if (rolePermissions || overridePermissions) {
+            const messageEmbed: Embed = interaction.message.embeds[0];
+            const footer = messageEmbed.footer;
+            const submissionIdMatch = footer?.text.match(/Submission ID: (\d+)/);
+            const submissionId = submissionIdMatch ? parseInt(submissionIdMatch[1], 10) : null;
+
+            if (!submissionId) {
+                replyEmbed.setColor(colours.discord.red).setDescription('Could not find a submission ID in the embed footer.');
+                return await interaction.editReply({ embeds: [replyEmbed] });
+            }
+
+            const killTimeSubmissionRepository = this.client.dataSource.getRepository(KillTimeSubmission);
+            const submission = await killTimeSubmissionRepository.findOneBy({ id: submissionId });
+
+            if (!submission) {
+                replyEmbed.setColor(colours.discord.red).setDescription(`A submission with the ID \`${submissionId}\` was not found.`);
+                return await interaction.editReply({ embeds: [replyEmbed] });
+            }
+
+            submission.status = 'rejected';
+            submission.approvedBy = interaction.user.id;
+            await killTimeSubmissionRepository.save(submission);
+
+            const originalEmbed = new EmbedBuilder(messageEmbed.data)
+                .setColor(colours.discord.red)
+                .setFooter({ text: `Rejected by ${interaction.user.username} | Submission ID: ${submission.id}` })
+                .setTimestamp();
+
+            await interaction.message.edit({ embeds: [originalEmbed], components: [] });
+
+            replyEmbed.setColor(colours.discord.green).setDescription('Submission rejected.');
+            return await interaction.editReply({ embeds: [replyEmbed] });
+        } else {
+            this.client.logger.log(
+                {
+                    message: `Attempted restricted permissions. { command: Reject DPM, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                    handler: this.constructor.name,
+                },
+                true
+            );
+            return await interaction.editReply({ content: 'You do not have permissions to run this command. This incident has been logged.' });
+        }
+    }
+
+    private async approveKillTime(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
+        await interaction.deferReply({ ephemeral: true });
+        const { colours, channels, hasRolePermissions, hasOverridePermissions } = this.client.util;
+        const rolePermissions = await hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        const overridePermissions = await hasOverridePermissions(interaction, 'killtime');
+        const replyEmbed: EmbedBuilder = new EmbedBuilder();
+
+        if (rolePermissions || overridePermissions) {
+            const messageEmbed: Embed = interaction.message.embeds[0];
+            const footer = messageEmbed.footer;
+            const submissionIdMatch = footer?.text.match(/Submission ID: (\d+)/);
+            const submissionId = submissionIdMatch ? parseInt(submissionIdMatch[1], 10) : null;
+            
+            if (!submissionId) {
+                replyEmbed.setColor(colours.discord.red).setDescription('Could not find a submission ID in the embed footer.');
+                return await interaction.editReply({ embeds: [replyEmbed] });
+            }
+
+            const killTimeSubmissionRepository = this.client.dataSource.getRepository(KillTimeSubmission);
+            const submission = await killTimeSubmissionRepository.findOneBy({ id: submissionId });
+
+            if (!submission) {
+                replyEmbed.setColor(colours.discord.red).setDescription(`A submission with the ID \`${submissionId}\` was not found.`);
+                return await interaction.editReply({ embeds: [replyEmbed] });
+            }
+
+            submission.status = 'approved';
+            submission.approvedBy = interaction.user.id;
+            await killTimeSubmissionRepository.save(submission);
+
+            const originalEmbed = new EmbedBuilder(messageEmbed.data)
+                .setColor(colours.discord.green)
+                .setFooter({ text: `Approved by ${interaction.user.username} | Submission ID: ${submission.id}` })
+                .setTimestamp();
+
+            await interaction.message.edit({ embeds: [originalEmbed], components: [] });
+
+            const killTimeLeaderboard = await this.client.util.generateKillTimeLeaderboardEmbed();
+                try {
+                const config = JSON.parse(await fs.readFile(killTimeLeaderboardConfigPath, 'utf-8'));
+                const message = await (this.client.channels.cache.get(config.channelId) as TextChannel).messages.fetch(config.messageId);
+                await message.edit({ embeds: [killTimeLeaderboard] });
+            } catch (err) {
+                this.client.logger.error({
+                    message: 'Failed to update Kill Time leaderboard.',
+                    error: err,
+                    handler: this.constructor.name,
+                });
+            }
+
+            replyEmbed.setColor(colours.discord.green).setDescription('Submission approved.');
+            return await interaction.editReply({ embeds: [replyEmbed] });
+        } else {
+            this.client.logger.log(
+                {
+                    message: `Attempted restricted permissions. { command: Approve DPM, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                    handler: this.constructor.name,
+                },
+                true
+            );
+            return await interaction.editReply({ content: 'You do not have permissions to run this command. This incident has been logged.' });
+        }
+    }
+
+    public async grantTrialRole(interaction: ButtonInteraction<'cached'>, cleanRoleId: string, trialeeId: string) {
+        const { roles, stripRole, getKeyFromValue } = this.client.util;
+        const roleKey = getKeyFromValue(roles, `<@&${cleanRoleId}>`);
+        const roleId = stripRole(roles[roleKey]);
+        const user = await interaction.guild.members.fetch(trialeeId);
+        if (!user.roles.cache.has(roleId)) {
+            await user.roles.add(roleId);
+        }
+    }
+
+    // Ticket System Handlers
+    private async handleTicketSuggestion(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket_suggestion_${interaction.user.id}`)
+            .setTitle('Submit a Suggestion');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const suggestionInput = new TextInputBuilder()
+            .setCustomId('suggestion')
+            .setLabel('Briefly describe your suggestion')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const reasonInput = new TextInputBuilder()
+            .setCustomId('reason')
+            .setLabel('Why do you think your suggestion would work?')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(suggestionInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow);
+        await interaction.showModal(modal);
+    }
+
+    private async handleTicketReport(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket_report_${interaction.user.id}`)
+            .setTitle('Submit a Report');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const reportedUserInput = new TextInputBuilder()
+            .setCustomId('reported_user')
+            .setLabel('RSN/Discord User you are reporting')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(100);
+
+        const reasonInput = new TextInputBuilder()
+            .setCustomId('reason')
+            .setLabel('What is the reason for your report?')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(200);
+
+        const descriptionInput = new TextInputBuilder()
+            .setCustomId('description')
+            .setLabel('Briefly describe the issue')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reportedUserInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonInput);
+        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
+        await interaction.showModal(modal);
+    }
+
+    private async handleTicketContentCreator(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket_contentcreator_${interaction.user.id}`)
+            .setTitle('Content Creator Application');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const platformInput = new TextInputBuilder()
+            .setCustomId('platform_url')
+            .setLabel("What's your streaming platform URL?")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(200);
+
+        const additionalInput = new TextInputBuilder()
+            .setCustomId('additional')
+            .setLabel("Anything else you'd like to add?")
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(platformInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(additionalInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow);
+        await interaction.showModal(modal);
+    }
+
+    private async handleTicketOther(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket_other_${interaction.user.id}`)
+            .setTitle('Other Support Request');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const assistanceInput = new TextInputBuilder()
+            .setCustomId('assistance')
+            .setLabel('How can we assist you?')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(assistanceInput);
+
+        modal.addComponents(firstRow, secondRow);
+        await interaction.showModal(modal);
+    }
+
+    // Ticket Close Handlers
+    private async handleTicketClose(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        // Check if user has permission to close ticket (user who opened it, admin, or owner)
+        const channelName = interaction.channel?.name;
+        if (!channelName || !channelName.includes('-')) {
+            await interaction.reply({ content: 'This command can only be used in ticket channels.', ephemeral: true });
+            return;
+        }
+
+        // Extract user ID from the channel's first message or footer
+        const hasPermission = await this.canCloseTicket(interaction);
+        if (!hasPermission) {
+            await interaction.reply({ content: 'You do not have permission to close this ticket.', ephemeral: true });
+            return;
+        }
+
+        // Create confirmation embed and buttons
+        const confirmEmbed = new EmbedBuilder()
+            .setTitle('Close Ticket')
+            .setDescription('Are you sure you would like to close this ticket?')
+            .setColor(0xff9999);
+
+        const confirmButtons = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('ticket_close_confirm')
+                    .setLabel('Close')
+                    .setStyle(ButtonStyle.Danger),
+                new ButtonBuilder()
+                    .setCustomId('ticket_close_cancel')
+                    .setLabel('Cancel')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+
+        await interaction.reply({ embeds: [confirmEmbed], components: [confirmButtons], ephemeral: true });
+    }
+
+    private async handleTicketCloseConfirm(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            const channel = interaction.channel as TextChannel;
+            
+            // Find the ticket opener using multiple methods
+            let ticketUserId: string | null = null;
+            
+            // Method 1: Look for welcome message
+            const messages = await channel.messages.fetch({ limit: 20 });
+            const welcomeMessage = messages.find(msg => 
+                msg.content && (
+                    msg.content.includes('your ticket has been created') ||
+                    msg.content.includes('ticket has been created')
+                ) && msg.content.match(/<@(\d+)>/)
+            );
+            
+            if (welcomeMessage) {
+                const userIdMatch = welcomeMessage.content.match(/<@(\d+)>/);
+                if (userIdMatch) {
+                    ticketUserId = userIdMatch[1];
+                }
+            }
+            
+            // Method 2: Look at channel permissions (fallback)
+            if (!ticketUserId) {
+                for (const [id, overwrite] of channel.permissionOverwrites.cache) {
+                    if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
+                        // Skip admin and owner roles by checking if it's a user ID format
+                        const adminRoleId = this.client.util.stripRole(this.client.util.roles.admin);
+                        const ownerRoleId = this.client.util.stripRole(this.client.util.roles.owner);
+                        
+                        if (id !== adminRoleId && id !== ownerRoleId && id !== this.client.user?.id) {
+                            ticketUserId = id;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Method 3: Extract from channel name (last resort)
+            if (!ticketUserId) {
+                // If channel name format is like "suggestion-0001", we can't get user ID this way
+                // So we'll have to fail gracefully
+                await interaction.editReply({ 
+                    content: 'Could not identify ticket opener. Please use the Delete button instead to remove this ticket, or contact an administrator.' 
+                });
+                return;
+            }
+
+            // Remove user's permissions from the channel
+            await channel.permissionOverwrites.delete(ticketUserId);
+
+            // Update the confirmation message to show ticket closed
+            const closedEmbed = new EmbedBuilder()
+                .setTitle('Ticket Closed')
+                .setDescription(`Ticket Closed by <@${interaction.user.id}>`)
+                .setColor(0xff0000)
+                .setTimestamp();
+
+            // Create support team controls embed
+            const controlsEmbed = new EmbedBuilder()
+                .setTitle('Support team ticket controls')
+                .setColor(0x99ccff);
+
+            const controlButtons = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('ticket_open')
+                        .setLabel('Open')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId('ticket_delete')
+                        .setLabel('Delete')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+            // Update the confirmation interaction to show completion
+            await interaction.editReply({ content: 'Ticket has been closed successfully.' });
+            
+            // Send the closure message and controls to the channel
+            await channel.send({ embeds: [closedEmbed] });
+            await channel.send({ embeds: [controlsEmbed], components: [controlButtons] });
+
+            this.client.logger.log({
+                message: `Ticket ${channel.name} closed by ${interaction.user.username} (${interaction.user.id})`,
+                handler: this.constructor.name
+            }, true);
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to close ticket',
+                error,
+                handler: this.constructor.name
+            });
+
+            await interaction.editReply({ content: 'An error occurred while closing the ticket. Please try again.' });
+        }
+    }
+
+    private async handleTicketCloseCancel(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        await interaction.update({ content: 'Ticket closure cancelled.', embeds: [], components: [] });
+    }
+
+    private async canCloseTicket(interaction: ButtonInteraction<'cached'>): Promise<boolean> {
+        // Check if user is admin or owner
+        const hasRolePermissions = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        if (hasRolePermissions) return true;
+
+        // Check if user is the ticket opener by looking at channel permissions
+        const channel = interaction.channel as TextChannel;
+        const userPermissions = channel.permissionOverwrites.cache.get(interaction.user.id);
+        
+        // If user has explicit permissions on this channel, they likely opened the ticket
+        return userPermissions !== undefined;
+    }
+
+    // Support Team Control Handlers
+    private async logTicketToForum(channel: TextChannel, user: any, logReason: string): Promise<string> {
+        const forumChannelId = '1390801555724308591';
+        
+        // Fetch all messages in the channel
+        const messages = await channel.messages.fetch({ limit: 100 });
+        const messageArray = Array.from(messages.values()).reverse();
+        
+        // Get ticket information from the welcome message
+        const welcomeMessage = messages.find(msg => 
+            msg.content.includes('your ticket has been created') && 
+            msg.content.match(/<@(\d+)>,/)
+        );
+        
+        let ticketOpener = 'Unknown';
+        let ticketType = 'unknown';
+        
+        if (welcomeMessage) {
+            const userIdMatch = welcomeMessage.content.match(/<@(\d+)>,/);
+            if (userIdMatch) {
+                const userId = userIdMatch[1];
+                try {
+                    const guildUser = await channel.guild.members.fetch(userId);
+                    ticketOpener = guildUser.user.username;
+                } catch {
+                    ticketOpener = `User ID: ${userId}`;
+                }
+            }
+        }
+        
+        // Extract ticket type from channel name
+        const channelNameParts = channel.name.split('-');
+        if (channelNameParts.length > 0) {
+            ticketType = channelNameParts[0];
+        }
+        
+        // Get the original ticket embed (the one with form responses, not the closed embed)
+        const ticketEmbedMessage = messages.find(msg => 
+            msg.author.id === this.client.user?.id && 
+            msg.embeds.length > 0 &&
+            msg.embeds[0].title?.includes('Ticket') &&
+            !msg.embeds[0].title?.includes('Closed') &&
+            msg.embeds[0].fields && msg.embeds[0].fields.length > 0 // Has form response fields
+        );
+        const originalTicketEmbed = ticketEmbedMessage?.embeds[0];
+        
+        // Create forum post title with special handling for report tickets
+        let forumTitle = `${ticketType}-${ticketOpener}`;
+        
+        if (ticketType === 'report' && originalTicketEmbed?.fields) {
+            // Find the "Reported User" field from the embed
+            const reportedUserField = originalTicketEmbed.fields.find(field => 
+                field.name === 'Reported User'
+            );
+            
+            if (reportedUserField) {
+                // Extract the reported user from the field value (remove backticks)
+                const reportedUser = reportedUserField.value.replace(/```/g, '').trim();
+                forumTitle = `Report-${ticketOpener}-${reportedUser}`;
+            }
+        }
+        
+        // Create summary embed (non-inline fields)
+        const summaryEmbed = new EmbedBuilder()
+            .setTitle(`Ticket Log: ${channel.name}`)
+            .setColor(0x99ccff)
+            .addFields(
+                { name: 'Ticket Opener', value: ticketOpener, inline: false },
+                { name: 'Ticket Type', value: ticketType, inline: false },
+                { name: 'Log Generated By', value: `${user.username} (${user.id})`, inline: false },
+                { name: 'Log Reason', value: logReason, inline: false },
+                { name: 'Generated At', value: new Date().toISOString(), inline: false },
+                { name: 'Channel', value: channel.name, inline: false },
+                { name: 'Message Count', value: messageArray.length.toString(), inline: false }
+            );
+        
+        // Get forum channel
+        const forumChannel = await channel.guild.channels.fetch(forumChannelId);
+        if (!forumChannel || !forumChannel.isThreadOnly()) {
+            throw new Error('Could not find or access the forum channel.');
+        }
+        
+        // Get the appropriate forum tag based on ticket type
+        const tagName = ticketType === 'contentcreator' ? 'Content Creator' : 
+                       ticketType.charAt(0).toUpperCase() + ticketType.slice(1);
+        
+        // Find the matching tag in the forum channel
+        const availableTags = forumChannel.availableTags;
+        const matchingTag = availableTags.find(tag => 
+            tag.name.toLowerCase() === tagName.toLowerCase() ||
+            (ticketType === 'contentcreator' && tag.name.toLowerCase() === 'content creator') ||
+            (ticketType === 'report' && tag.name.toLowerCase() === 'reports')
+        );
+        
+        // Create forum post with summary, original ticket embed, and appropriate tag
+        const forumPost = await forumChannel.threads.create({
+            name: forumTitle,
+            message: {
+                embeds: originalTicketEmbed ? [summaryEmbed, originalTicketEmbed] : [summaryEmbed]
+            },
+            appliedTags: matchingTag ? [matchingTag.id] : []
+        });
+        
+        // Send conversation messages as separate posts
+        let currentBlock = '';
+        const maxLength = 1900; // Leave room for formatting
+        
+        let currentDate = '';
+        
+        for (const message of messageArray) {
+            // Skip bot messages
+            if (message.author.id === this.client.user?.id) {
+                continue;
+            }
+            
+            const messageDate = message.createdAt.toLocaleDateString();
+            const timeOnly = message.createdAt.toLocaleTimeString();
+            const author = message.author.username; // Use username instead of mention to avoid pings
+            const content = (message.content || '')
+                .replace(/<@!?(\d+)>/g, '@$1') // Escape user mentions to prevent pings
+                .replace(/<@&(\d+)>/g, '@&$1'); // Escape role mentions to prevent pings
+            
+            // Check if we need to add a date header
+            if (currentDate !== messageDate) {
+                currentDate = messageDate;
+                const dateHeader = `\n**--- ${messageDate} ---**\n`;
+                
+                if (currentBlock.length + dateHeader.length > maxLength) {
+                    await forumPost.send({ content: currentBlock });
+                    currentBlock = dateHeader;
+                } else {
+                    currentBlock += dateHeader;
+                }
+            }
+            
+            // Format the message inline (more compact)
+            const messageBlock = `**[${timeOnly}] ${author}:** ${content || '*No text content*'}\n`;
+            
+            // Check if message has attachments
+            const hasAttachments = message.attachments.size > 0;
+            
+            // If current block + new message would exceed limit, send current block first
+            if (currentBlock.length + messageBlock.length > maxLength && currentBlock.length > 0) {
+                await forumPost.send({ content: currentBlock });
+                currentBlock = '';
+            }
+            
+            // Add message to current block
+            currentBlock += messageBlock;
+            
+            // If message has attachments, add them inline
+            if (hasAttachments) {
+                for (const attachment of message.attachments.values()) {
+                    const attachmentBlock = `**[${timeOnly}] ${author}:** ${attachment.url}\n`;
+                    
+                    if (currentBlock.length + attachmentBlock.length > maxLength) {
+                        await forumPost.send({ content: currentBlock });
+                        currentBlock = attachmentBlock;
+                    } else {
+                        currentBlock += attachmentBlock;
+                    }
+                }
+            }
+            
+            // If message has embeds, mention them
+            if (message.embeds.length > 0) {
+                const embedInfo = `*[${author} sent ${message.embeds.length} embed(s)]*\n`;
+                
+                if (currentBlock.length + embedInfo.length > maxLength) {
+                    await forumPost.send({ content: currentBlock });
+                    currentBlock = embedInfo;
+                } else {
+                    currentBlock += embedInfo;
+                }
+            }
+        }
+        
+        // Send any remaining content
+        if (currentBlock.trim()) {
+            await forumPost.send({ content: currentBlock });
+        }
+        
+        return `${forumPost.name}\n<#${forumPost.id}>`;
+    }
+
+
+
+    private async handleTicketOpen(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        // Check if user has admin/owner permissions
+        const hasPermission = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        if (!hasPermission) {
+            await interaction.reply({ content: 'You do not have permission to use this command.', ephemeral: true });
+            return;
+        }
+
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            const channel = interaction.channel as TextChannel;
+            
+            // Find the ticket opener using multiple methods (same as close functionality)
+            let ticketUserId: string | null = null;
+            
+            // Method 1: Look for welcome message
+            const messages = await channel.messages.fetch({ limit: 20 });
+            const welcomeMessage = messages.find(msg => 
+                msg.content && (
+                    msg.content.includes('your ticket has been created') ||
+                    msg.content.includes('ticket has been created')
+                ) && msg.content.match(/<@(\d+)>/)
+            );
+            
+            if (welcomeMessage) {
+                const userIdMatch = welcomeMessage.content.match(/<@(\d+)>/);
+                if (userIdMatch) {
+                    ticketUserId = userIdMatch[1];
+                }
+            }
+            
+            // Method 2: Look for closed ticket message (since this is reopening)
+            if (!ticketUserId) {
+                const closedMessage = messages.find(msg => 
+                    msg.embeds.length > 0 && 
+                    msg.embeds[0].title === 'Ticket Closed' &&
+                    msg.embeds[0].description?.match(/Ticket Closed by <@(\d+)>/)
+                );
+                
+                if (closedMessage) {
+                    // We know the ticket was closed, but we need the original opener
+                    // Let's try to find any message that mentions a user
+                    const anyUserMention = messages.find(msg => 
+                        msg.content && msg.content.match(/<@(\d+)>/) && 
+                        !msg.content.includes('Ticket Closed by')
+                    );
+                    
+                    if (anyUserMention) {
+                        const userIdMatch = anyUserMention.content.match(/<@(\d+)>/);
+                        if (userIdMatch) {
+                            ticketUserId = userIdMatch[1];
+                        }
+                    }
+                }
+            }
+            
+            // Method 3: Extract from channel name or ask admin
+            if (!ticketUserId) {
+                await interaction.editReply({ 
+                    content: 'Could not identify the original ticket opener. Please manually add the user back to this channel, or contact an administrator.' 
+                });
+                return;
+            }
+
+            // Re-add user's permissions to the channel
+            await channel.permissionOverwrites.create(ticketUserId, {
+                ViewChannel: true,
+                SendMessages: true,
+                ReadMessageHistory: true,
+                AttachFiles: true,
+                EmbedLinks: true
+            });
+
+            // Find and delete the support team controls message
+            const controlsMessage = messages.find(msg => 
+                msg.embeds.length > 0 && 
+                msg.embeds[0].title === 'Support team ticket controls'
+            );
+            
+            if (controlsMessage) {
+                try {
+                    await controlsMessage.delete();
+                } catch (error) {
+                    this.client.logger.error({
+                        message: 'Failed to delete support team controls message',
+                        error,
+                        handler: this.constructor.name
+                    });
+                }
+            }
+
+            // Send reopened message
+            const reopenEmbed = new EmbedBuilder()
+                .setTitle('Ticket Reopened')
+                .setDescription(`This ticket has been reopened by <@${interaction.user.id}>.`)
+                .setColor(0x00ff00)
+                .setTimestamp();
+
+            await channel.send({ embeds: [reopenEmbed] });
+
+            await interaction.editReply({ content: 'Ticket has been reopened successfully.' });
+
+            this.client.logger.log({
+                message: `Ticket ${channel.name} reopened by ${interaction.user.username} (${interaction.user.id})`,
+                handler: this.constructor.name
+            }, true);
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to reopen ticket',
+                error,
+                handler: this.constructor.name
+            });
+
+            await interaction.editReply({ content: 'An error occurred while reopening the ticket. Please try again.' });
+        }
+    }
+
+    private async handleTicketDelete(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        // Check if user has admin/owner permissions
+        const hasPermission = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        if (!hasPermission) {
+            await interaction.reply({ content: 'You do not have permission to use this command.', ephemeral: true });
+            return;
+        }
+
+        // Create final confirmation for deletion
+        const confirmEmbed = new EmbedBuilder()
+            .setTitle('Delete Ticket')
+            .setDescription('Are you sure you want to **permanently delete** this ticket channel?\n\n**This action cannot be undone!**')
+            .setColor(0xff0000);
+
+        const confirmButtons = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('ticket_delete_confirm')
+                    .setLabel('Delete Forever')
+                    .setStyle(ButtonStyle.Danger),
+                new ButtonBuilder()
+                    .setCustomId('ticket_delete_cancel')
+                    .setLabel('Cancel')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+
+        await interaction.reply({ embeds: [confirmEmbed], components: [confirmButtons], ephemeral: true });
+    }
+
+    private async handleTicketDeleteConfirm(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        // Check if user has admin/owner permissions
+        const hasPermission = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        if (!hasPermission) {
+            await interaction.reply({ content: 'You do not have permission to use this command.', ephemeral: true });
+            return;
+        }
+
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            const channel = interaction.channel as TextChannel;
+            
+            this.client.logger.log({
+                message: `Ticket ${channel.name} deleted by ${interaction.user.username} (${interaction.user.id})`,
+                handler: this.constructor.name
+            }, true);
+
+            await interaction.editReply({ content: 'Automatically logging ticket before deletion...' });
+
+            // Automatically log the ticket before deletion
+            try {
+                await this.logTicketToForum(channel, interaction.user, 'Automatically logged before deletion');
+                await interaction.editReply({ content: 'Ticket logged successfully. Channel will be deleted in 5 seconds...' });
+            } catch (logError) {
+                this.client.logger.error({
+                    message: 'Failed to automatically log ticket before deletion',
+                    error: logError,
+                    handler: this.constructor.name
+                });
+                await interaction.editReply({ content: 'Warning: Failed to log ticket automatically. Channel will still be deleted in 5 seconds...' });
+            }
+
+            // Delete the channel after a short delay
+            setTimeout(async () => {
+                try {
+                    await channel.delete('Ticket deleted by admin/owner');
+                } catch (error) {
+                    this.client.logger.error({
+                        message: 'Failed to delete ticket channel',
+                        error,
+                        handler: this.constructor.name
+                    });
+                }
+            }, 5000);
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to delete ticket',
+                error,
+                handler: this.constructor.name
+            });
+
+            await interaction.editReply({ content: 'An error occurred while deleting the ticket. Please try again.' });
+        }
+    }
+
+    private async handleTicketDeleteCancel(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        await interaction.update({ content: 'Ticket deletion cancelled.', embeds: [], components: [] });
     }
 }

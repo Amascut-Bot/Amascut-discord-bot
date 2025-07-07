@@ -2,7 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, 
 import BotInteraction from "../../types/BotInteraction";
 import Bot from "../../Bot";
 
-const LOG_CHANNEL_ID = '1045192967754883172';
+const LOG_CHANNEL_ID = '1390351711868158102';
 
 export default class RoleRemoval extends BotInteraction {
     
@@ -50,6 +50,7 @@ export default class RoleRemoval extends BotInteraction {
                 filtered.map(choice => ({ name: choice, value: choice })),
             );
         }
+        return;
     }
 
     async run(interaction: ChatInputCommandInteraction) {
@@ -63,7 +64,12 @@ export default class RoleRemoval extends BotInteraction {
         const user = interaction.options.getMember('user') as GuildMember | null;
         const massRemove = interaction.options.getString('mass') === 'True';
 
-        // Scenario 1: Single user specified
+        if (!user && !massRemove) {
+            return interaction.editReply({
+                content: "Invalid command usage. You must either specify a 'user' to remove the role from, or set 'mass' to 'True' to remove it from everyone."
+            });
+        }
+
         if (user) {
             if (!user.roles.cache.has(role.id)) {
                 return interaction.editReply({ content: `${user.displayName} does not have the ${role.name} role.` });
@@ -79,7 +85,6 @@ export default class RoleRemoval extends BotInteraction {
             }
         }
 
-        // Scenario 2: Mass removal
         if (massRemove) {
             try {
                 await interaction.editReply({ content: `Fetching members with the ${role.name} role... This might take a while.` });
@@ -115,11 +120,6 @@ export default class RoleRemoval extends BotInteraction {
                 return interaction.followUp({ content: `An unexpected error occurred during mass removal.`, ephemeral: true });
             }
         }
-
-        // Scenario 3: Invalid input
-        return interaction.editReply({
-            content: "Invalid command usage. You must either specify a 'user' to remove the role from, or set 'mass' to 'True' to remove it from everyone."
-        });
     }
 
     private async sendLog(interaction: ChatInputCommandInteraction, role: Role, member: GuildMember, isMass: boolean) {

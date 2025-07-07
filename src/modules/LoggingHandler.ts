@@ -1,10 +1,8 @@
 import isMaster from 'cluster';
-import { webhookUrl } from '../../config.json';
-import { WebhookClient } from 'discord.js';
+import WebhookLogger from './WebhookLogger';
 
 export default interface BotLogger {
-    webhookUrl: typeof webhookUrl;
-    webhook: WebhookClient;
+    webhookLogger: WebhookLogger;
 }
 
 export type BotLog = {
@@ -23,24 +21,9 @@ export type BotError = {
     error: unknown;
 };
 
-
-
 export default class BotLogger {
     constructor() {
-        this.webhookUrl = webhookUrl ?? null;
-        if (!this.webhookUrl) throw new Error('Webhook URL is missing in config file.');
-        this.webhook = new WebhookClient({ url: webhookUrl });
-        this.webhook.send('Health check initialized').catch((reason) => console.log(reason));
-    }
-
-    private webhook_formatter(incoming: BotLog | BotError): string {
-        const formatted = `\`\`\`json\n${JSON.stringify(incoming, null, 2)}\n\`\`\``;
-        // Truncate if too long for Discord (2000 char limit)
-        if (formatted.length > 1900) {
-            const truncated = formatted.substring(0, 1850) + '\n... (truncated)\n```';
-            return truncated;
-        }
-        return formatted;
+        this.webhookLogger = new WebhookLogger();
     }
 
     get id() {
@@ -49,13 +32,15 @@ export default class BotLogger {
 
     public log(incoming: BotLog, webhook_enabled: boolean): void {
         const _format: string = JSON.stringify(incoming, null, 2);
-        webhook_enabled ? this.webhook.send(this.webhook_formatter(incoming)) : void 0;
+        if (webhook_enabled) {
+            this.webhookLogger.logInfo(incoming);
+        }
         return console.log('[INFO]', _format);
     }
 
     public error(incoming: BotError): void {
+        this.webhookLogger.logError(incoming);
         const _format: string = JSON.stringify(incoming, null, 2);
-        this.webhook.send(this.webhook_formatter(incoming));
         return console.log('[ERROR]', _format);
     }
 }

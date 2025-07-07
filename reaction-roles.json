@@ -1,49 +1,75 @@
 {
-  "Kill Count": [
+  "Notify": [
     {
-      "emoji": "Perdita9",
-      "roleId": "1050066067503984670",
+      "emoji": "🟣",
+      "roleId": "1389404362597466255",
       "hierarchy": 1,
       "requiredRoleId": null
     },
     {
-      "emoji": "perdita5",
-      "roleId": "988209716570230804",
+      "emoji": "🔴",
+      "roleId": "1389404431891697784",
       "hierarchy": 2,
-      "requiredRoleId": "1038656621812916317"
+      "requiredRoleId": null
     },
     {
-      "emoji": "perdita_blackwood_red",
-      "roleId": "1038557474770407464",
+      "emoji": "🟡",
+      "roleId": "1389404486933545022",
       "hierarchy": 3,
-      "requiredRoleId": "1038656621812916317"
-    },
-    {
-      "emoji": "perdita_black",
-      "roleId": "1038557504428310578",
-      "hierarchy": 4,
-      "requiredRoleId": "1038656621812916317"
-    },
-    {
-      "emoji": "perdita6",
-      "roleId": "1038656630901985401",
-      "hierarchy": 5,
-      "requiredRoleId": "1038656621812916317"
+      "requiredRoleId": null
     }
   ],
-  "Gradient Roles": [
+  "EU": [
     {
-      "emoji": "Perdita13",
-      "roleId": "1387109059534258329",
+      "emoji": "🏰",
+      "roleId": "1389427754998431744",
       "hierarchy": 1,
       "requiredRoleId": null
     }
   ],
-  "TEST": [
+  "NA": [
     {
-      "emoji": "Solak",
-      "roleId": "1387596042978988163",
+      "emoji": "🗽",
+      "roleId": "1389427774078324746",
       "hierarchy": 1,
+      "requiredRoleId": null
+    }
+  ],
+  "Oceania": [
+    {
+      "emoji": "🌊",
+      "roleId": "1389427787810476152",
+      "hierarchy": 1,
+      "requiredRoleId": null
+    }
+  ],
+  "Server_Announcements": [
+    {
+      "emoji": "📢",
+      "roleId": "1389424960359104583",
+      "hierarchy": 1,
+      "requiredRoleId": null
+    }
+  ],
+  "Amascut_Updates": [
+    {
+      "emoji": "🗞️",
+      "roleId": "1389425187501510788",
+      "hierarchy": 1,
+      "requiredRoleId": null
+    }
+  ],
+  "Misc": [
+    {
+      "emoji": "☀️",
+      "roleId": "1389635797992341567",
+      "hierarchy": 1,
+      "requiredRoleId": null
+    },
+    {
+      "emoji": "ironman",
+      "roleId": "1389427844152823939",
+      "hierarchy": 2,
       "requiredRoleId": null
     }
   ]

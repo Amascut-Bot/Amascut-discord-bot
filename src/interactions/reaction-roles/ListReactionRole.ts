@@ -10,7 +10,7 @@ interface ReactionRole {
     emoji: string;
     roleId: string;
     hierarchy: number;
-    requiredRoleId: string | null;
+    requiredRoleId: string | string[] | null;
 }
 
 interface ReactionRolesData {
@@ -80,11 +80,21 @@ export default class ListReactionRole extends BotInteraction {
                 required: 'Role Required'
             };
 
-            const roleData = roles.map(r => ({
-                emoji: r.emoji,
-                role: `${interaction.guild?.roles.cache.get(r.roleId)?.name || r.roleId} (H: ${r.hierarchy})`,
-                required: r.requiredRoleId ? (interaction.guild?.roles.cache.get(r.requiredRoleId)?.name || r.requiredRoleId) : 'None'
-            }));
+            const roleData = roles.map(r => {
+                let requiredDisplay = 'None';
+                if (r.requiredRoleId) {
+                    if (Array.isArray(r.requiredRoleId)) {
+                        requiredDisplay = r.requiredRoleId.map(id => interaction.guild?.roles.cache.get(id)?.name || id).join(', ');
+                    } else {
+                        requiredDisplay = interaction.guild?.roles.cache.get(r.requiredRoleId)?.name || r.requiredRoleId;
+                    }
+                }
+                return {
+                    emoji: r.emoji,
+                    role: `${interaction.guild?.roles.cache.get(r.roleId)?.name || r.roleId} (H: ${r.hierarchy})`,
+                    required: requiredDisplay
+                };
+            });
 
             const emojiWidth = Math.max(header.emoji.length, ...roleData.map(r => r.emoji.length));
             const roleWidth = Math.max(header.role.length, ...roleData.map(r => r.role.length));

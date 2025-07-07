@@ -5,19 +5,27 @@
     "scripts": {
         "build": "tsc --watch",
         "start": "ts-node --transpile-only index.ts",
-        "start-js": "node ./dist/index.js"
+        "start-js": "node ./dist/index.js",
+        "dev": "npm run start"
     },
     "author": "Fate",
     "license": "MIT",
     "dependencies": {
         "@hunteroi/discord-temp-channels": "^3.0.0",
+        "@types/node-cron": "^3.0.11",
+        "@types/node-fetch": "^2.6.12",
+        "axios": "^1.10.0",
         "bufferutil": "^4.0.5",
         "count-interval": "^1.0.1",
         "discord-api-types": "^0.37.8",
         "discord.js": "^14.20.0",
         "dotenv": "^16.0.2",
         "indomitable": "^2.0.2",
+        "jsonc-parser": "^3.3.1",
+        "node-cron": "^4.2.0",
+        "node-fetch": "^3.3.2",
         "petitio": "^1.4.0",
+        "pg": "^8.16.2",
         "reflect-metadata": "^0.1.13",
         "sqlite3": "^5.1.4",
         "typeorm": "^0.3.11",
@@ -30,6 +38,6 @@
         "eslint": "^8.1.0",
         "ts-loader": "^9.3.1",
         "ts-node": "^10.9.1",
-        "typescript": "^4.8.2"
+        "typescript": "^5.8.3"
     }
 }

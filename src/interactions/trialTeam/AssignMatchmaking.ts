@@ -60,47 +60,24 @@ export default class Pass extends BotInteraction {
 
     get removeHierarchy(): RemoveHierarchy {
         return {
-            'threeSevenRootskips': ['noRealm'],
             'duoExperienced': ['duoRootskips'],
-            'threeSevenExperienced': ['threeSevenRootskips', 'noRealm'],
+            'threeSevenExperienced': ['threeSevenRootskips'],
             'duoMaster': ['duoExperienced', 'duoRootskips'],
-            'threeSevenMaster': ['threeSevenExperienced', 'threeSevenRootskips', 'noRealm'],
+            'threeSevenMaster': ['threeSevenExperienced', 'threeSevenRootskips'],
             'duoGrandmaster': ['duoMaster', 'duoExperienced', 'duoRootskips'],
-            'threeSevenGrandmaster': ['threeSevenMaster', 'threeSevenExperienced', 'threeSevenRootskips', 'noRealm'],
-            'rootskips': ['noRealm'],
-            'experienced': ['noRealm', 'rootskips'],
-            'master': ['noRealm', 'rootskips', 'experienced'],
-            'grandmaster': ['noRealm', 'rootskips', 'experienced', 'master'],
+            'threeSevenGrandmaster': ['threeSevenMaster', 'threeSevenExperienced', 'threeSevenRootskips'],
+            'experienced': ['rootskips'],
+            'master': ['rootskips', 'experienced'],
+            'grandmaster': ['rootskips', 'experienced', 'master'],
         }
     }
 
     get hierarchy(): Hierarchy {
         return {
-            threeSeven: ['noRealm', 'threeSevenRootskips', 'rootskips', 'threeSevenExperienced', 'experienced', 'threeSevenMaster', 'master', 'threeSevenGrandmaster', 'grandmaster'],
-            duo: ['duoRootskips', 'rootskips', 'duoExperienced', 'experienced', 'duoMaster', 'master', 'duoGrandmaster', 'grandmaster'],
+            threeSeven: ['rootskips', 'threeSevenExperienced', 'experienced', 'threeSevenMaster', 'master', 'threeSevenGrandmaster', 'grandmaster'],
+            duo: ['rootskips', 'duoExperienced', 'experienced', 'duoMaster', 'master', 'duoGrandmaster', 'grandmaster'],
             combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
         }
-    }
-
-    get options() {
-        const assignOptions: any = {
-            'Verified Learner': 'verifiedLearner',
-            'NoRealm': 'noRealm',
-            'Duo RootSkips': 'duoRootskips',
-            '3-7 RootSkips': 'threeSevenRootskips',
-            'Duo Experienced': 'duoExperienced',
-            '3-7 Experienced': 'threeSevenExperienced',
-            'Duo Master': 'duoMaster',
-            '3-7 Master': 'threeSevenMaster',
-            'Duo Grandmaster': 'duoGrandmaster',
-            '3-7 Grandmaster': 'threeSevenGrandmaster',
-            'Verified 4s': 'fours',
-        }
-        const options: any = [];
-        Object.keys(assignOptions).forEach((key: string) => {
-            options.push({ name: key, value: assignOptions[key] })
-        })
-        return options;
     }
 
     get slashData() {
@@ -108,9 +85,56 @@ export default class Pass extends BotInteraction {
             .setName(this.name)
             .setDescription(this.description)
             .addUserOption((option) => option.setName('user').setDescription('User').setRequired(true))
-            .addStringOption((option) => option.setName('role').setDescription('Role').addChoices(
-                ...this.options
-            ).setRequired(true))
+            .addStringOption((option) => option.setName('role').setDescription('Role').setAutocomplete(true).setRequired(true))
+    }
+
+    async autocomplete(interaction: any) {
+        const focusedOption = interaction.options.getFocused(true);
+        if (focusedOption.name !== 'role') return;
+
+        const allOptions: any = {
+            'Verified Learner': 'verifiedLearner',
+            'Duo Elite': 'duoExperienced',
+            '3-7 Elite': 'threeSevenExperienced',
+            'Duo Master': 'duoMaster',
+            '3-7 Master': 'threeSevenMaster',
+            'Duo Grandmaster': 'duoGrandmaster',
+            '3-7 Grandmaster': 'threeSevenGrandmaster',
+        };
+
+        const trialTeamOptions = {
+            'Duo Elite': 'duoExperienced',
+            '3-7 Elite': 'threeSevenExperienced',
+            'Duo Master': 'duoMaster',
+            '3-7 Master': 'threeSevenMaster',
+            'Duo Grandmaster': 'duoGrandmaster',
+            '3-7 Grandmaster': 'threeSevenGrandmaster',
+        };
+
+        const teacherOptions = {
+            'Verified Learner': 'verifiedLearner',
+            'Duo Elite': 'duoExperienced',
+            '3-7 Elite': 'threeSevenExperienced',
+        };
+
+        let choices = {};
+        const member = await interaction.guild.members.fetch(interaction.user.id);
+        const hasAdminPermissions = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        const hasTrialTeamPermissions = member.roles.cache.has(this.client.util.stripRole(this.client.util.roles.trialTeam));
+
+        if (hasAdminPermissions) {
+            choices = allOptions;
+        } else if (hasTrialTeamPermissions) {
+            choices = trialTeamOptions;
+        } else {
+            choices = teacherOptions;
+        }
+        
+        const filtered = Object.keys(choices)
+            .filter(key => key.toLowerCase().startsWith(focusedOption.value.toLowerCase()))
+            .map(key => ({ name: key, value: choices[key as keyof typeof choices] }));
+
+        await interaction.respond(filtered);
     }
 
     async run(interaction: ChatInputCommandInteraction) {
@@ -120,7 +144,7 @@ export default class Pass extends BotInteraction {
 
         const { roles, colours, channels, stripRole, categorizeChannel, categorize } = this.client.util;
 
-        const outputChannelId = categorizeChannel(role) ? (channels as any)[categorizeChannel(role)] : '';
+        const outputChannelId = '846853673476685824';
         let channel;
         if (outputChannelId) {
             channel = await this.client.channels.fetch(outputChannelId) as TextChannel;
@@ -243,7 +267,7 @@ export default class Pass extends BotInteraction {
             returnedMessage.url = message.url;
         });
 
-        const logChannel = await this.client.channels.fetch(channels.botRoleLog) as TextChannel;
+        const logChannel = await this.client.channels.fetch('1045192967754883172') as TextChannel;
         const buttonRow = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
                 new ButtonBuilder()

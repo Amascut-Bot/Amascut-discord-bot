@@ -8,7 +8,7 @@ export default interface BotEvent {
     get name(): string;
     get fireOnce(): boolean;
     get enabled(): boolean;
-    run(args: unknown | unknown[]): Promise<void>;
+    run(...args: unknown[]): Promise<void>;
 }
 
 export default class BotEvent extends EventEmitter {
@@ -22,8 +22,8 @@ export default class BotEvent extends EventEmitter {
         });
     }
 
-    exec(args: any[]) {
+    exec(...args: any[]) {
         type EmittedError = typeof Object;
-        this.run(args).catch((error: EmittedError) => this.emit('error', error));
+        this.run(...args).catch((error: EmittedError) => this.emit('error', error));
     }
 }

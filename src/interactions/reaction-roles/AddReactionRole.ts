@@ -10,7 +10,7 @@ interface ReactionRole {
     emoji: string;
     roleId: string;
     hierarchy: number;
-    requiredRoleId: string | null;
+    requiredRoleId: string | string[] | null;
 }
 
 interface ReactionRolesData {
@@ -23,7 +23,6 @@ async function readReactionRoles(): Promise<ReactionRolesData> {
         const data = await fs.readFile(reactionRolesFilePath, 'utf-8');
         return JSON.parse(data) as ReactionRolesData;
     } catch (error) {
-        // If file doesn't exist or other error, return empty object
         return {};
     }
 }
@@ -72,7 +71,16 @@ export default class AddReactionRole extends BotInteraction {
                     .setDescription("The hierarchy of this role. Higher hierarchies can claim roles from lower ones."))
             .addRoleOption(option =>
                 option.setName('required-role')
-                    .setDescription('A role a user must have to receive the role-given.'));
+                    .setDescription('A role a user must have to receive the role-given.'))
+            .addRoleOption(option =>
+                option.setName('required_role_2')
+                    .setDescription('A second role a user must have to receive the role-given.'))
+            .addRoleOption(option =>
+                option.setName('required_role_3')
+                    .setDescription('A third role a user must have to receive the role-given.'))
+            .addRoleOption(option =>
+                option.setName('required_role_4')
+                    .setDescription('A fourth role a user must have to receive the role-given.'));
     }
 
     async run(interaction: ChatInputCommandInteraction) {
@@ -80,11 +88,19 @@ export default class AddReactionRole extends BotInteraction {
         const emojiInput = interaction.options.getString('emoji', true);
         const roleGiven = interaction.options.getRole('role-given', true) as Role;
         const hierarchy = interaction.options.getInteger('hierarchy');
-        const requiredRole = interaction.options.getRole('required-role') as Role | null;
+        
+        const requiredRoles: Role[] = [];
+        const requiredRole1 = interaction.options.getRole('required-role') as Role | null;
+        if (requiredRole1) requiredRoles.push(requiredRole1);
+        const requiredRole2 = interaction.options.getRole('required_role_2') as Role | null;
+        if (requiredRole2) requiredRoles.push(requiredRole2);
+        const requiredRole3 = interaction.options.getRole('required_role_3') as Role | null;
+        if (requiredRole3) requiredRoles.push(requiredRole3);
+        const requiredRole4 = interaction.options.getRole('required_role_4') as Role | null;
+        if (requiredRole4) requiredRoles.push(requiredRole4);
 
         await interaction.deferReply({ ephemeral: true });
 
-        // Extract name from custom emoji string
         const emojiMatch = emojiInput.match(/<a?:(\w+):\d+>/);
         const emoji = emojiMatch ? emojiMatch[1] : emojiInput;
 
@@ -96,9 +112,7 @@ export default class AddReactionRole extends BotInteraction {
 
         const newHierarchy = hierarchy ?? (reactionRoles[category].length > 0 ? Math.max(...reactionRoles[category].map(rr => rr.hierarchy)) + 1 : 1);
 
-        // If a hierarchy is specified, make room for the new role
         if (hierarchy !== null) {
-            // Sort descending to avoid overwriting hierarchy values before they are checked
             reactionRoles[category].sort((a, b) => b.hierarchy - a.hierarchy);
             reactionRoles[category].forEach(role => {
                 if (role.hierarchy >= newHierarchy) {
@@ -107,11 +121,13 @@ export default class AddReactionRole extends BotInteraction {
             });
         }
 
+        const requiredRoleIds = requiredRoles.map(role => role.id);
+
         const newReactionRole: ReactionRole = {
             emoji: emoji,
             roleId: roleGiven.id,
             hierarchy: newHierarchy,
-            requiredRoleId: requiredRole ? requiredRole.id : null,
+            requiredRoleId: requiredRoleIds.length > 0 ? requiredRoleIds : null,
         };
         
         if (reactionRoles[category].some(rr => rr.emoji === newReactionRole.emoji)) {

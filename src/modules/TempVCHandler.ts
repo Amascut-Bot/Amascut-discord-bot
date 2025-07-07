@@ -8,6 +8,8 @@ export default interface TempChannelManager {
 }
 
 export default class TempChannelManager extends TempChannelsManager {
+    public client: Bot;
+    public built: boolean;
     constructor(client: Bot) {
         super(client);
         this.client = client;
@@ -37,7 +39,7 @@ export default class TempChannelManager extends TempChannelsManager {
 
     public loaded(): void {
         this.built = true;
-        this.client.logger.log({ handler: this.constructor.name, message: 'Loaded handler for TempVC' }, false)
+        this.client.logger.log({ handler: this.constructor.name, message: 'Loaded handler for TempVC' }, true)
         return void 0;
     }
 }

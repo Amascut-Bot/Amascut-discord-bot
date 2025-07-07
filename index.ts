@@ -1,8 +1,10 @@
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
+dotenv.config();
 import { GatewayIntentBits, Partials } from 'discord.js';
 import { Indomitable, IndomitableOptions } from 'indomitable';
 import Bot from './src/Bot';
 
+// basic error checking
 if (!process.env.TOKEN) throw new Error('Token Missing');
 if (!process.env.ENVIRONMENT) throw new Error('Environment Missing');
 
@@ -15,12 +17,12 @@ const options: IndomitableOptions = {
             GatewayIntentBits.GuildMessages,
             GatewayIntentBits.GuildMessageReactions,
             GatewayIntentBits.GuildVoiceStates,
-            GatewayIntentBits.MessageContent,
+            GatewayIntentBits.MessageContent, // needed for message parsing
         ],
         partials: [Partials.Message, Partials.Channel, Partials.Reaction],
     },
     autoRestart: true,
-    spawnTimeout: 60000,
+    spawnTimeout: 60000, // 1 minute
     client: Bot as any,
 };
 
@@ -32,4 +34,5 @@ const manager = new Indomitable(options)
         console.log(`[ClusterHandler] [Main] ${message}`);
     });
 
+// start the bot
 manager.spawn();

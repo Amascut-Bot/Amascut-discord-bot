@@ -52,49 +52,46 @@ export default class GivePoints extends BotInteraction {
 
         if (team === 'trial') {
             const repository = dataSource.getRepository(Trial);
-            let existingPlaceholder = await repository.findOne({
-                where: {
-                    host: 'Placeholder'
-                }
-            })
-            if (!existingPlaceholder) {
-                const placeholder = new Trial();
-                placeholder.host = 'Placeholder';
-                placeholder.link = 'Placeholder';
-                placeholder.trialee = 'Placeholder';
-                placeholder.role = 'Placeholder';
-                existingPlaceholder = await repository.save(placeholder);
-            }
-            const newData: any = [...Array(quantity)].map((element) => ({ participant: user.id, role: 'Placeholder', trial: existingPlaceholder }));
+            const placeholder = new Trial();
+            placeholder.host = 'Placeholder';
+            placeholder.link = 'Placeholder';
+            placeholder.trialee = 'Placeholder';
+            placeholder.role = 'Placeholder';
+            const newPlaceholder = await repository.save(placeholder);
+
+            const newData: any = [...Array(quantity)].map(() => ({ 
+                participant: user.id, 
+                role: 'Placeholder', 
+                trial: newPlaceholder 
+            }));
+
             await dataSource
                 .createQueryBuilder()
                 .insert()
                 .into(TrialParticipation)
                 .values(newData)
-                .execute()
+                .execute();
         }
 
         if (team === 'reaper') {
             const reaperRepo = dataSource.getRepository(Reaper);
-            let existingPlaceholder = await reaperRepo.findOne({
-                where: {
-                    host: 'Placeholder'
-                }
-            })
-            if (!existingPlaceholder) {
-                const placeholder = new Reaper();
-                placeholder.host = 'Placeholder';
-                placeholder.link = 'Placeholder';
-                placeholder.recipient = 'Placeholder';
-                existingPlaceholder = await reaperRepo.save(placeholder);
-            }
-            const newData: any = [...Array(quantity)].map((element) => ({ participant: user.id, reaper: existingPlaceholder }));
+            const placeholder = new Reaper();
+            placeholder.host = 'Placeholder';
+            placeholder.link = 'Placeholder';
+            placeholder.recipient = 'Placeholder';
+            const newPlaceholder = await reaperRepo.save(placeholder);
+
+            const newData: any = [...Array(quantity)].map(() => ({ 
+                participant: user.id, 
+                reaper: newPlaceholder 
+            }));
+            
             await dataSource
                 .createQueryBuilder()
                 .insert()
                 .into(ReaperParticipation)
                 .values(newData)
-                .execute()
+                .execute();
         }
 
         const replyEmbed = new EmbedBuilder()
