@@ -18,4 +18,3 @@ A Discord bot for Amascut Server.
 2. `npm install`
 3. Create `.env` file with your bot token
 4. `npm start`
-hgghghj
