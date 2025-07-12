@@ -74,10 +74,8 @@ export default class DPMSubmit extends BotInteraction {
 
         const calcedDPM = (+damage / timeInSeconds) * 60 / 1000;
 
-        // Generate a unique timestamp for this submission
         const timestamp = Date.now();
 
-        // Create modal for screenshots
         const modal = new ModalBuilder()
             .setCustomId(`dpm_screenshots_${interaction.user.id}_${timestamp}`)
             .setTitle('DPM Submission - Screenshots');
@@ -101,7 +99,7 @@ export default class DPMSubmit extends BotInteraction {
 
         modal.addComponents(firstActionRow, secondActionRow);
 
-        // Store submission data temporarily using the same timestamp
+        // Store submission
         const submissionData = {
             rsn,
             style,
@@ -112,7 +110,7 @@ export default class DPMSubmit extends BotInteraction {
             userId: interaction.user.id
         };
 
-        // Store in a temporary cache using the same timestamp
+        // Store in a temporary cache
         this.client.tempSubmissionData = this.client.tempSubmissionData || new Map();
         this.client.tempSubmissionData.set(`${interaction.user.id}_${timestamp}`, submissionData);
 

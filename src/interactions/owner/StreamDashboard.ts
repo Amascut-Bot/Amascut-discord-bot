@@ -36,14 +36,12 @@ export default class StreamDashboard extends BotInteraction {
         }
 
         try {
-            // Access the TwitchHandler through the client
             const twitchHandler = this.client.twitchHandler;
             if (!twitchHandler) {
                 await interaction.reply({ content: 'Twitch handler not found.', ephemeral: true });
                 return;
             }
 
-            // Call the updateContentCreatorsDashboard method
             await (twitchHandler as any).updateContentCreatorsDashboard();
             
             await interaction.reply({ content: 'Content creators dashboard has been created/updated!', ephemeral: true });

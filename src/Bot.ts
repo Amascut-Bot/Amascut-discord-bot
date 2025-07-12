@@ -8,6 +8,8 @@ import UtilityHandler from './modules/UtilityHandler';
 import TwitchHandler from './modules/TwitchHandler';
 import TempChannelManager from './modules/TempVCHandler';
 import AutoTriggerHandler from './modules/AutoTriggerHandler';
+import URLReactionHandler from './modules/URLReactionHandler';
+import ForumTodoHandler from './modules/ForumTodoHandler';
 import { DataSource } from "typeorm"
 import { AppDataSource } from './DataSource';
 import * as fs from 'fs/promises';
@@ -55,6 +57,8 @@ export default interface Bot extends Client {
     events: EventHandler;
     twitchHandler: TwitchHandler;
     autoTrigger: AutoTriggerHandler;
+    urlReactionHandler: URLReactionHandler;
+    forumTodoHandler: ForumTodoHandler;
     tempManager?: TempChannelManager;
     emojiCache: Map<string, GuildEmoji>;
     tempSubmissionData?: Map<string, any>;
@@ -73,6 +77,8 @@ export default class Bot extends Client {
         this.logger = new BotLogger();
         this.twitchHandler = new TwitchHandler(this);
         this.autoTrigger = new AutoTriggerHandler(this);
+        this.urlReactionHandler = new URLReactionHandler(this);
+        this.forumTodoHandler = new ForumTodoHandler(this);
         this.interactions = new InteractionHandler(this).build();
         this.events = new EventHandler(this);
         this.emojiCache = new Map<string, GuildEmoji>();
@@ -90,6 +96,11 @@ export default class Bot extends Client {
                     this.logger.error({ message: '[ReactionAdd] Failed to fetch partial reaction:', error });
                     return;
                 }
+            }
+
+            // Handle forum todo completion
+            if (await this.forumTodoHandler.handleForumTodoReaction(reaction, user)) {
+                return;
             }
     
             const activeMessages = await readJsonFile<ActiveMessages>(activeMessagesFilePath);

@@ -52,6 +52,11 @@ export default class MessageCreate extends BotEvent {
             return;
         }
 
+        // Handle URL reactions
+        if (await this.client.urlReactionHandler.handleURLReactions(message)) {
+            return;
+        }
+
         // slash command handler
         const isOwner = this.client.util.config.owners.includes(message.author.id);
         const buildMention = `<@${this.client.user?.id}> build`;

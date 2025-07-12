@@ -5,8 +5,7 @@
     "scripts": {
         "build": "tsc --watch",
         "start": "ts-node --transpile-only index.ts",
-        "start-js": "node ./dist/index.js",
-        "dev": "npm run start"
+        "start-js": "node ./dist/index.js"
     },
     "author": "Fate",
     "license": "MIT",
