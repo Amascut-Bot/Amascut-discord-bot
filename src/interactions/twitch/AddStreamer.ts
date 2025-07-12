@@ -61,8 +61,13 @@ export default class AddStreamer extends BotInteraction {
 
         await interaction.deferReply({ ephemeral: true });
 
-        const userName = interaction.options.getString('username', true).toLowerCase();
+        let userName = interaction.options.getString('username', true).toLowerCase();
         const discordUser = interaction.options.getUser('discord-user', true);
+
+        const match = userName.match(/\/([^\/]+)\/?$/);
+        if (match) {
+            userName = match[1];
+        }
 
         const streamerInfo = await this.client.twitchHandler.getStreamerInfo(userName);
 
