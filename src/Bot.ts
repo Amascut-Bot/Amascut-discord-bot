@@ -330,7 +330,7 @@ export default class Bot extends Client {
         this.destroy();
     }
 
-    private async logReactionRoleChange(member: GuildMember, role: Role, action: 'added' | 'removed') {
+    async logReactionRoleChange(member: GuildMember, role: Role, action: 'added' | 'removed') {
         try {
             const logChannel = await this.channels.fetch(LOG_CHANNEL_ID) as TextChannel;
             if (!logChannel) return;

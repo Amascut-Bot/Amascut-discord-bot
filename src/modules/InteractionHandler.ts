@@ -3,6 +3,7 @@ import { EmbedBuilder, Collection, Interaction, ModalSubmitInteraction } from 'd
 import Bot from '../Bot';
 import BotInteraction from '../types/BotInteraction';
 import ButtonHandler from './ButtonHandler';
+import StringSelectHandler from './StringSelectHandler';
 import EventEmitter = require('events');
 
 export default interface InteractionHandler {
@@ -246,6 +247,10 @@ export default class InteractionHandler extends EventEmitter {
                 });
                 interaction.editReply({ embeds: [errorEmbed] });
             }
+        }
+
+        if (interaction.isStringSelectMenu() && interaction.inCachedGuild()){
+            return new StringSelectHandler(this.client, interaction.customId, interaction);
         }
     }
     
