@@ -58,7 +58,7 @@ export default class Download extends BotInteraction {
                 let currentBlock = '';
                 const tagName = channelTags[message.id];
                 if (tagName) {
-                    currentBlock += `{name:${tagName}}\n`;
+                    currentBlock += `.tag:${tagName}\n`;
                 }
 
                 if (message.content) {
@@ -71,9 +71,16 @@ export default class Download extends BotInteraction {
                     }
                     const embedStrings = message.embeds.map(embed => {
                         const embedJson = this.cleanEmbed(embed.toJSON());
-                        return `{embed}\n${JSON.stringify(embedJson, null, 2)}\n{/embed}`;
+                        return `\n${JSON.stringify(embedJson, null, 2)}\n.embed:json`;
                     });
                     currentBlock += embedStrings.join('\n');
+                }
+
+                //for componentsV2 you can just parse the whole container
+                if (message.components.length > 0) {
+                    const container = this.cleanContainer(message.components[0]);
+                    const containerJson = JSON.stringify(container, null, 2); 
+                    currentBlock += `'\n'${containerJson}'\n.componentsV2:json`;
                 }
 
                 if (message.attachments.size > 0) {
@@ -84,9 +91,13 @@ export default class Download extends BotInteraction {
                         .filter(att => att.contentType?.startsWith('image/'))
                         .map(att => {
                             const imageEmbed = { image: { url: att.url } };
-                            return `{embed}\n${JSON.stringify(imageEmbed, null, 2)}\n{/embed}`;
+                            return `\n${JSON.stringify(imageEmbed, null, 2)}\n.embed:json`;
                         });
                     currentBlock += attachmentStrings.join('\n');
+                }
+
+                if (message.pinned) {
+                    currentBlock += `\n.pin:delete`;
                 }
                 
                 if (currentBlock) {
@@ -184,5 +195,11 @@ export default class Download extends BotInteraction {
         }
 
         return newEmbed;
+    }
+
+    //cleans up a componentsV2-container
+    private cleanContainer(containerData: any) :any {
+        //TODO: Cleanup tho not totally necessary
+        return containerData;
     }
 } 
