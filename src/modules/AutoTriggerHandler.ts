@@ -39,7 +39,7 @@ export default class AutoTriggerHandler {
         if (/\bmeow/i.test(message.content)) triggered = true;
 
         if (triggered && Math.floor(Math.random() * AutoTriggerHandler.TAUNT_CHANCE) === 0) {
-            await message.reply('Do you believe youself to be amusing, pest? Or do you long for annihilation so dearly?');
+            await message.reply('Do you believe yourself to be amusing, pest? Or do you long for annihilation so dearly?');
             return true;
         }
 
