@@ -12,6 +12,8 @@ type ParsedMessage = {
     hasPlaceholders?: boolean;
     sentMessage?: Message;
     pinAndDeleteOld?: boolean;
+    components: any[];
+    rawComponents?: string[];
 };
 
 function getErrorMessageForCode(e: number): string {
@@ -190,6 +192,27 @@ export default class Upload extends BotInteraction {
                         }
                     }
                 }
+
+                if (part.rawComponents) {
+                    for (const rawComponent of part.rawComponents) {
+                        const result = checkAndCorrect(rawComponent);
+                        if (result.hasErrors) {
+                            try {
+                                const originalFormatted = JSON.stringify(JSON.parse(rawComponent), null, 2);
+                                const correctedFormatted = JSON.stringify(JSON.parse(result.corrected), null, 2);
+                                linkErrors.push({
+                                    name: `an component in ${partIdentifier}`,
+                                    value: `**Original:**\n\`\`\`json\n${originalFormatted}\n\`\`\`\n**Suggested:**\n\`\`\`json\n${correctedFormatted}\n\`\`\``
+                                });
+                            } catch(e) {
+                                linkErrors.push({
+                                    name: `an component in ${partIdentifier}`,
+                                    value: `**Original:**\n\`\`\`json\n${rawComponent}\n\`\`\`\n**Suggested:**\n\`\`\`json\n${result.corrected}\n\`\`\``
+                                });
+                            }
+                        }
+                    }
+                }
             }
             
             if (linkErrors.length > 0) {
@@ -254,19 +277,32 @@ export default class Upload extends BotInteraction {
             // 1st Pass: Send messages and map tags
             try {
                 for (const part of parsedParts) {
-                    const { content, embeds } = part;
-                    if (!content && embeds.length === 0) {
+                    const { content, embeds, components } = part;
+                    if (!content && embeds.length === 0 && components.length === 0) {
                         continue;
                     }
 
                     // Convert emojis in content and embeds
                     const finalContent = content ? this.convertEmojis(content, interaction) : '';
                     const finalEmbeds = embeds.map(embed => this.convertEmbedEmojis(embed, interaction));
+                    const finalComponents = components.map(comps => this.convertComponentsV2Emojis(comps, interaction));
 
-                    const sentMessage = await targetChannel.send({ 
-                        content: finalContent || undefined,
-                        embeds: finalEmbeds
-                    });
+                    let sentMessage;
+
+                    if (finalComponents.length > 0) {
+                        sentMessage = await targetChannel.send({
+                            components: finalComponents, 
+                            flags: MessageFlags.IsComponentsV2, 
+                            allowedMentions: { "parse": [] }
+                        });
+                    } else {
+                        sentMessage = await targetChannel.send({ 
+                            content: finalContent || undefined,
+                            embeds: finalEmbeds,
+                            allowedMentions: { "parse": [] }
+                        });
+                    }
+                    
                     part.sentMessage = sentMessage;
 
                     if (part.nameTag) {
@@ -294,9 +330,8 @@ export default class Upload extends BotInteraction {
                     }
 
                     // Always pin messages that contain Table of Contents
-                    const hasTableOfContents = finalEmbeds.some(embed => 
-                        embed.title && embed.title.toLowerCase().includes('table of contents')
-                    );
+                    const hasTableOfContents = finalEmbeds.some(embed => embed.title && embed.title.toLowerCase().includes('table of contents'))
+                                                || components.some(comps => comps.components.some((component: any) => component.type === 10 && component.content.toLowerCase().includes('table of contents')));
                     
                     if (hasTableOfContents) {
                         try {
@@ -451,7 +486,7 @@ export default class Upload extends BotInteraction {
         }
         const lines = content.split(/\r?\n/);
         const messages: ParsedMessage[] = [];
-        let currentMessage: ParsedMessage = { content: '', embeds: [], rawEmbeds: [] };
+        let currentMessage: ParsedMessage = { content: '', embeds: [], rawEmbeds: [], components: [], rawComponents: [] };
         let nextMessageNameTag: string | undefined = undefined;
         const allParsingErrors: { description: string, correctedCode: string }[] = [];
 
@@ -472,7 +507,7 @@ export default class Upload extends BotInteraction {
                 });
                 messages.push(currentMessage);
             }
-            currentMessage = { content: '', embeds: [], rawEmbeds: [] };
+            currentMessage = { content: '', embeds: [], rawEmbeds: [], components: [], rawComponents: [] };
         };
         
         for (let i = 0; i < lines.length; i++) {
@@ -483,7 +518,7 @@ export default class Upload extends BotInteraction {
                 finalizeCurrentMessage();
                 const imageUrl = trimmedLine.substring(5).trim();
                 if (imageUrl) {
-                    messages.push({ content: imageUrl, embeds: [] });
+                    messages.push({ content: imageUrl, embeds: [], components: [] });
                 }
                 continue;
             }
@@ -503,10 +538,11 @@ export default class Upload extends BotInteraction {
             }
 
             // Handle .embed:json directive (can come before or after JSON block)
-            if (trimmedLine.startsWith('.embed:json')) {
+            if (trimmedLine.startsWith('.embed:json') || trimmedLine.startsWith('.componentsV2:json')) {
                 // Look backwards for JSON block first
                 let jsonBlock = '';
                 let foundJsonBackwards = false;
+                const isComponentsV2 = trimmedLine.startsWith('.componentsV2:json');
                 
                 // Check if there's a JSON block before this directive
                 for (let k = i - 1; k >= 0; k--) {
@@ -516,7 +552,7 @@ export default class Upload extends BotInteraction {
                     if (prevLine === '') continue;
                     
                     // Break on message separator or other directives (but not .embed:json)
-                    if (prevLine === '.' || (prevLine.startsWith('.') && !prevLine.startsWith('.embed:json'))) break;
+                    if (prevLine === '.' || (prevLine.startsWith('.') && (!prevLine.startsWith('.embed:json') || !prevLine.startsWith('.componentsV2:json')))) break;
                     
                     // Found end of JSON block, now collect it
                     if (prevLine.endsWith('}')) {
@@ -602,18 +638,18 @@ export default class Upload extends BotInteraction {
                         if (!fixed) break;
                     }
 
-                const finalErrors: ParseError[] = [];
-                const root = parseTree(correctedJson, finalErrors);
+                    const finalErrors: ParseError[] = [];
+                    const root = parseTree(correctedJson, finalErrors);
 
-                if (!root || finalErrors.length > 0) {
-                    const firstError = finalErrors[0] || { offset: 0, error: -1 };
-                        const { line: errorLine, column } = this.getLineAndColumn(correctedJson, firstError.offset);
-                    const errorType = getErrorMessageForCode(firstError.error);
-                        const summary = `Error: ${errorType} at line ${errorLine}, column ${column}.`;
-                     allParsingErrors.push({
-                        description: `${embedStartLine}`,
-                            correctedCode: `${summary}\n\`\`\`json\n${correctedJson}\n\`\`\``
-                        });
+                    if (!root || finalErrors.length > 0) {
+                        const firstError = finalErrors[0] || { offset: 0, error: -1 };
+                            const { line: errorLine, column } = this.getLineAndColumn(correctedJson, firstError.offset);
+                        const errorType = getErrorMessageForCode(firstError.error);
+                            const summary = `Error: ${errorType} at line ${errorLine}, column ${column}.`;
+                        allParsingErrors.push({
+                            description: `${embedStartLine}`,
+                                correctedCode: `${summary}\n\`\`\`json\n${correctedJson}\n\`\`\``
+                            });
                     } else {
                         let embedData = getNodeValue(root);
 
@@ -621,11 +657,11 @@ export default class Upload extends BotInteraction {
                             embedData = embedData.embed;
                         }
 
-                const { correctedData, corrections: structuralCorrections } = this.validateAndCorrectEmbedStructure(embedData);
-                blockCorrections.push(...structuralCorrections);
-                
+                        const { correctedData, corrections: structuralCorrections } = this.validateAndCorrectEmbedStructure(embedData);
+                        blockCorrections.push(...structuralCorrections);
+                        
                         // Only show corrections if there are actual issues found
-                if (blockCorrections.length > 0) {
+                        if (blockCorrections.length > 0) {
                             // For syntax corrections, show the corrected JSON string
                             // For structural corrections, reconstruct from parsed data
                             const hadJsonSyntaxCorrections = correctedJson !== embedJson;
@@ -649,17 +685,22 @@ export default class Upload extends BotInteraction {
                                     correctedJsonFormatted = JSON.stringify(correctedData, null, 2);
                                 }
                             }
-                            
+                                    
                             const summary = `The following issues were found and fixed:\n- ${blockCorrections.join('\n- ')}`;
-                    allParsingErrors.push({
-                        description: `${embedStartLine}`,
+                            allParsingErrors.push({
+                                description: `${embedStartLine}`,
                                 correctedCode: `${summary}\n\n**Corrected segment:**\n\`\`\`json\n${correctedJsonFormatted}\n\`\`\``
-                    });
-                }
+                            });
+                        }
                         // If no corrections needed, don't add to allParsingErrors at all
-                
-                currentMessage.embeds.push(correctedData);
-                currentMessage.rawEmbeds?.push(correctedJson);
+                        
+                        if (isComponentsV2) {
+                            currentMessage.components.push(correctedData);
+                            currentMessage.rawComponents?.push(correctedJson);
+                        } else {
+                            currentMessage.embeds.push(correctedData);
+                            currentMessage.rawEmbeds?.push(correctedJson);
+                        }                    
                     }
                 }
                 continue;
@@ -687,13 +728,13 @@ export default class Upload extends BotInteraction {
                             // Skip the JSON block here, it will be processed when we hit .embed:json
                             i = j; // Move to just before .embed:json line (loop will increment)
                             break;
-            } else {
+                        } else {
                             // Treat as regular content
                             currentMessage.content += (currentMessage.content ? '\n' : '') + jsonBlock.trim();
                             i = j;
                             break;
-                }
-            }
+                        }
+                    }
                 }
                 continue;
             }
@@ -751,6 +792,34 @@ export default class Upload extends BotInteraction {
         }
     
         return newEmbed;
+    }
+
+    private convertComponentsV2Emojis(container: any, interaction: ChatInputCommandInteraction): any {        
+        if (!container || typeof container !== 'object') return container;
+
+        // Deep copy to avoid modifying the original object
+        const newContainer = JSON.parse(JSON.stringify(container));
+
+        const convert = (text: string) => text ? this.convertEmojis(text, interaction) : text;
+
+        container.components.forEach((component: any) => {
+            //direct text container
+            if (component.type === 10) {
+                component.content = convert(component.content);
+            }
+
+            //text container inside section
+            if (component.type === 9) {
+                component.components.forEach((subComponent: any) => {
+                    //text container
+                    if (subComponent.type === 10) {
+                        subComponent.content = convert(subComponent.content);
+                    }
+                });
+            }
+        });
+
+        return newContainer;
     }
 
     private convertEmojis(text: string, interaction: ChatInputCommandInteraction): string {
