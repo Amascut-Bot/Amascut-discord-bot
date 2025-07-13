@@ -80,7 +80,7 @@ export default class Download extends BotInteraction {
                 if (message.components.length > 0) {
                     const container = this.cleanContainer(message.components[0]);
                     const containerJson = JSON.stringify(container, null, 2); 
-                    currentBlock += `'\n'${containerJson}'\n.componentsV2:json`;
+                    currentBlock += `\n${containerJson}\n.componentsV2:json`;
                 }
 
                 if (message.attachments.size > 0) {
