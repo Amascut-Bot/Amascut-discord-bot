@@ -3,11 +3,14 @@ import Bot from '../Bot';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as cron from 'node-cron';
-import { EmbedBuilder, TextChannel } from 'discord.js';
+import { EmbedBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize, TextDisplayBuilder, MessageFlags, SectionBuilder, ThumbnailBuilder, MediaGalleryBuilder } from 'discord.js';
+import 'dotenv/config';
 
 const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
 const dashboardDataFilePath = path.join(process.cwd(), 'dashboard-data.json');
-const liveRoleId = '1390396115148476426';
+const contentCreatorRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_CONTENT_CREATOR_ROLE}` : `${process.env.PROD_CONTENT_CREATOR_ROLE}`;
+const liveRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_LIVE_ROLE}` : `${process.env.PROD_LIVE_ROLE}`;
+const contentCreatorChannelId = `${process.env.TWITCH_NOTIFICATION_CHANNEL}`
 
 interface MonitoredStreamer {
     id: string;
@@ -73,10 +76,10 @@ export default class TwitchHandler {
                 // Streamer went offline
                 this.client.logger.log({ message: `${streamer.displayName} just went offline.`, handler: this.constructor.name }, true);
                 streamer.isLive = false;
-                
+
                 // Delete the live notification message
                 await this.deleteLiveNotification(streamer.userName);
-                
+
                 if (streamer.discordUserId) {
                     await this.updateUserRole(streamer.discordUserId, false);
                 }
@@ -95,19 +98,18 @@ export default class TwitchHandler {
 
     private async sendLiveNotification(streamData: any, streamerInfo: MonitoredStreamer) {
         console.log(`--- DEBUG: Attempting to send notification for ${streamerInfo.displayName} ---`);
-        const notificationChannelId = '1390391961172836494';
-        if (!notificationChannelId) {
+        if (!contentCreatorChannelId) {
             this.client.logger.error({ message: 'TWITCH_NOTIFICATION_CHANNEL is not set in the environment variables.', error: new Error('TWITCH_NOTIFICATION_CHANNEL not set'), handler: this.constructor.name });
             return;
         }
 
         try {
-            const channel = this.client.channels.cache.get(notificationChannelId);
+            const channel = this.client.channels.cache.get(contentCreatorChannelId);
             if (!channel) {
-                console.error(`--- DEBUG: Could not find channel with ID: ${notificationChannelId} ---`);
+                console.error(`--- DEBUG: Could not find channel with ID: ${contentCreatorChannelId} ---`);
                 this.client.logger.error({
                     message: 'Twitch notifications channel not found.',
-                    error: new Error(`Channel ID: ${notificationChannelId}`),
+                    error: new Error(`Channel ID: ${contentCreatorChannelId}`),
                     handler: 'TwitchHandler'
                 });
                 return;
@@ -127,7 +129,7 @@ export default class TwitchHandler {
                 .setColor(0x9146FF);
 
             console.log(`--- DEBUG: Basic embed created, adding author ---`);
-            
+
             // Safely add author
             try {
                 embed.setAuthor({
@@ -164,7 +166,7 @@ export default class TwitchHandler {
 
             const thumbnailUrl = streamData.thumbnail_url.replace('{width}', '1280').replace('{height}', '720');
             console.log(`--- DEBUG: Thumbnail URL: ${thumbnailUrl} ---`);
-            
+
             console.log(`--- DEBUG: Calling reuploadImage function ---`);
             const reuploadedUrl = await this.client.util.reuploadImage(thumbnailUrl);
             console.log(`--- DEBUG: reuploadImage returned: ${reuploadedUrl} ---`);
@@ -173,7 +175,7 @@ export default class TwitchHandler {
                 console.log(`--- DEBUG: Setting image on embed ---`);
                 embed.setImage(reuploadedUrl);
             }
-            
+
             console.log(`--- DEBUG: About to send embed to channel ---`);
             try {
                 const sentMessage = await (channel as TextChannel).send({
@@ -181,7 +183,7 @@ export default class TwitchHandler {
                     embeds: [embed]
                 });
                 console.log(`--- DEBUG: Successfully sent message with ID: ${sentMessage.id} ---`);
-                
+
                 // Store the message ID for this streamer so we can delete it later
                 this.liveNotificationMessages.set(streamData.user_name.toLowerCase(), sentMessage.id);
                 console.log(`--- DEBUG: Stored notification message ID for ${streamData.user_name} ---`);
@@ -190,7 +192,7 @@ export default class TwitchHandler {
                 console.error(`--- DEBUG: Full error:`, sendError);
                 throw sendError;
             }
-            
+
             console.log(`--- DEBUG: Notification sent successfully for ${streamData.user_name} ---`);
         } catch (error) {
             console.log(`--- DEBUG: FAILED to send notification for ${streamerInfo.displayName} ---`);
@@ -206,7 +208,7 @@ export default class TwitchHandler {
                 return;
             }
 
-            const channel = this.client.channels.cache.get('1390391961172836494') as TextChannel;
+            const channel = this.client.channels.cache.get(contentCreatorChannelId) as TextChannel;
             if (!channel) {
                 console.error(`--- DEBUG: Could not find notification channel ---`);
                 return;
@@ -361,7 +363,7 @@ export default class TwitchHandler {
             return { isLive: false, error: 'API request failed.' };
         }
     }
-    
+
     public async getStreamerInfo(userName: string): Promise<any> {
         const token = await this.getAccessToken();
         if (!token) return null;
@@ -386,33 +388,30 @@ export default class TwitchHandler {
 
     public async updateContentCreatorsDashboard(): Promise<void> {
         try {
-            const guild = await this.client.guilds.fetch('885457551397912596');
+            const guild = await this.client.guilds.fetch(`${process.env.GUILD_ID}`);
             if (!guild) {
-                console.error('--- DEBUG: Could not find guild with ID 885457551397912596 ---');
+                console.error(`--- DEBUG: Could not find guild with ID ${process.env.GUILD_ID} ---`);
                 return;
             }
 
             console.log(`--- DEBUG: Using guild: ${guild.name} (${guild.id}) ---`);
 
-            const contentCreatorRoleId = '1390007451482587216';
-            const liveRoleId = '1390396115148476426';
-            
             // Fetch all guild members to ensure we have the complete list
             console.log('--- DEBUG: Fetching all guild members ---');
             await guild.members.fetch();
             console.log(`--- DEBUG: Guild has ${guild.members.cache.size} cached members ---`);
-            
+
             // Get all members with the content creator role
-            const contentCreators = guild.members.cache.filter(member => 
+            const contentCreators = guild.members.cache.filter(member =>
                 member.roles.cache.has(contentCreatorRoleId)
             );
-            
+
             console.log(`--- DEBUG: Found ${contentCreators.size} content creators ---`);
             console.log('--- DEBUG: Content creators:', contentCreators.map(m => m.displayName));
 
             // Load monitored streamers to get Twitch usernames
             const monitoredStreamers = await this.readStreamers();
-            
+
             // Create a function to format member names with Twitch links if available
             const formatMemberName = (member: any, prefix: string = '') => {
                 // Try to find this member in monitored streamers by Discord user ID
@@ -425,70 +424,72 @@ export default class TwitchHandler {
             };
 
             // Separate live streamers from offline content creators
-            const liveStreamers = contentCreators.filter(member => 
+            const liveStreamers = contentCreators.filter(member =>
                 member.roles.cache.has(liveRoleId)
             );
-            
-            const offlineCreators = contentCreators.filter(member => 
+
+            const offlineCreators = contentCreators.filter(member =>
                 !member.roles.cache.has(liveRoleId)
             );
 
             console.log(`--- DEBUG: ${liveStreamers.size} live streamers, ${offlineCreators.size} offline creators ---`);
 
-            // Create the dashboard embed
-            const embed = new EmbedBuilder()
-                .setColor(0x9146FF)
-                .setTitle('Partnered Content Creators')
-                .setThumbnail('https://cdn.discordapp.com/emojis/1390430953322713159.webp?size=96')
-                .setImage('https://cdn.discordapp.com/attachments/1389379617915408448/1390437431001743510/cc02b5d89002a6efd4d2dc2916b29094.jpg?ex=68684144&is=6866efc4&hm=c4a354da43ede22b2f4694ac730a221cc5f5e1656351f776db3d1c1426b6a9be&')
-                .setTimestamp();
+            // Create the base dashboard container
+            const container = new ContainerBuilder().setAccentColor(0x9146FF);
 
-            // Add live streamers section
-            if (liveStreamers.size > 0) {
-                const liveList = liveStreamers.map(member => 
-                    formatMemberName(member, '🔴 ')
-                ).join('\n');
-                embed.addFields({
-                    name: 'Currently Live',
-                    value: liveList,
-                    inline: false
-                });
+            // Title section
+            const titleData: string[] = ['# Partnered Content Creators', `${contentCreators.size === 0 ? 'No Content creators found.' : '## Currently Live'}`];
+            liveStreamers.map(member => titleData.push(formatMemberName(member, '🔴 ')));
+            const titleText = new TextDisplayBuilder().setContent(titleData.join('\n'));
+
+            const titleThumbnail = new ThumbnailBuilder()
+                .setDescription('Partnered Content Creators')
+                .setURL('https://cdn.discordapp.com/emojis/1390430953322713159.webp?size=96');
+
+            const titleSection = new SectionBuilder()
+                .addTextDisplayComponents(titleText)
+                .setThumbnailAccessory(titleThumbnail);
+
+            container.addSectionComponents(titleSection);
+            // Title section
+
+            // Offline Creators
+            if (contentCreators.size > 0 && offlineCreators.size > 0) {
+                container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+
+                const offlineCreatorsData: string[] = ['## Not Currently Live'];
+                offlineCreators.map(member => offlineCreatorsData.push(formatMemberName(member, '⚫ ')));
+                const offlineCreatorsText = new TextDisplayBuilder().setContent(offlineCreatorsData.join('\n'));
+
+                container.addTextDisplayComponents(offlineCreatorsText);
             }
 
-            // Add all content creators section
-            if (offlineCreators.size > 0) {
-                const creatorList = offlineCreators.map(member => 
-                    formatMemberName(member, '⚫ ')
-                ).join('\n');
-                embed.addFields({
-                    name: 'Not Currently Live',
-                    value: creatorList,
-                    inline: false
-                });
-            }
+            // Add the thumbnail
+            const footerThumbnail = new MediaGalleryBuilder().addItems({
+                description: "Amascut",
+                media: { url: "https://cdn.discordapp.com/attachments/1389379617915408448/1390437431001743510/cc02b5d89002a6efd4d2dc2916b29094.jpg?ex=68684144&is=6866efc4&hm=c4a354da43ede22b2f4694ac730a221cc5f5e1656351f776db3d1c1426b6a9be&" }
+            });
 
-            if (contentCreators.size === 0) {
-                embed.setDescription('No content creators found.');
-            }
+            container.addMediaGalleryComponents(footerThumbnail);
 
-            const channel = this.client.channels.cache.get('1390391961172836494') as TextChannel;
+            const channel = this.client.channels.cache.get(contentCreatorChannelId) as TextChannel;
             if (!channel) return;
 
             // Update or create the dashboard message
             if (this.contentCreatorsDashboardMessageId) {
                 try {
                     const existingMessage = await channel.messages.fetch(this.contentCreatorsDashboardMessageId);
-                    await existingMessage.edit({ embeds: [embed] });
+                    await existingMessage.edit({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: {"parse": [] }});
                     console.log('--- DEBUG: Updated existing dashboard message ---');
                 } catch (error) {
                     // Message was deleted, create a new one
-                    const newMessage = await channel.send({ embeds: [embed] });
+                    const newMessage = await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: {"parse": [] }});
                     this.contentCreatorsDashboardMessageId = newMessage.id;
                     await this.saveDashboardData();
                     console.log('--- DEBUG: Created new dashboard message ---');
                 }
             } else {
-                const newMessage = await channel.send({ embeds: [embed] });
+                const newMessage = await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: {"parse": [] }});
                 this.contentCreatorsDashboardMessageId = newMessage.id;
                 await this.saveDashboardData();
                 console.log('--- DEBUG: Created initial dashboard message ---');
@@ -503,4 +504,4 @@ export default class TwitchHandler {
             });
         }
     }
-} 
+}
