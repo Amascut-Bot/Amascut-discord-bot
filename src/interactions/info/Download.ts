@@ -33,7 +33,7 @@ export default class Download extends BotInteraction {
         await interaction.deferReply({ ephemeral: true });
 
         const channel = interaction.options.getChannel('channel', true) as TextChannel;
-        
+
         try {
             const tagsFilePath = path.join(process.cwd(), 'message-tags.json');
             let tags: { [channelId: string]: { [messageId: string]: string } } = {};
@@ -79,7 +79,7 @@ export default class Download extends BotInteraction {
                 //for componentsV2 you can just parse the whole container
                 if (message.components.length > 0) {
                     const container = this.cleanContainer(message.components[0]);
-                    const containerJson = JSON.stringify(container, null, 2); 
+                    const containerJson = JSON.stringify(container, null, 2);
                     currentBlock += `\n${containerJson}\n.componentsV2:json`;
                 }
 
@@ -99,7 +99,7 @@ export default class Download extends BotInteraction {
                 if (message.pinned) {
                     currentBlock += `\n.pin:delete`;
                 }
-                
+
                 if (currentBlock) {
                     messageBlocks.push(currentBlock);
                 }
@@ -124,9 +124,9 @@ export default class Download extends BotInteraction {
                     const logAttachment = new AttachmentBuilder(Buffer.from(fileContent, 'utf-8'), {
                         name: `${channel.name}-archive.txt`,
                     });
-                    await logChannel.send({ 
+                    await logChannel.send({
                         content: `${interaction.user.username} downloaded from <#${channel.id}>`,
-                        files: [logAttachment] 
+                        files: [logAttachment]
                     });
                 }
             } catch (logError) {
@@ -197,9 +197,157 @@ export default class Download extends BotInteraction {
         return newEmbed;
     }
 
+    //#region componentsV2
+
     //cleans up a componentsV2-container
     private cleanContainer(containerData: any) :any {
-        //TODO: Cleanup tho not totally necessary
-        return containerData;
+        const newContainer: any = {};
+
+        if (containerData.type) newContainer.type = containerData.type;
+        if (containerData.accentColor) newContainer.accent_color = containerData.accentColor;
+
+        if (containerData.components?.length > 0) {
+            //depending on component type...
+            newContainer.components = containerData.components.map((component: any) => {
+                return this.cleanComponent(component);
+            });
+        }
+
+        return newContainer;
     }
-} 
+
+    private cleanComponent(node: any) :any {
+        let result: any = {};
+
+        //ActionRow
+        if (node.type == 1) {
+            result = {
+                type: node.type
+            };
+
+            result.components = node.components.map((component: any) => {
+                return this.cleanComponent(component);
+            });
+        }
+
+        //Button
+        if (node.type == 2) {
+            result = {
+                type: node.type,
+                style: node.style,
+                custom_id: node.customId
+            };
+
+            if (node.label) result.label = node.label;
+            if (node.emoji) result.emoji = node.emoji;
+            if (node.url) result.url = node.url;
+        }
+
+        //String Select
+        if (node.type == 3) {
+            result = {
+                type: node.type,
+                custom_id: node.customId
+            };
+
+            if (node.placeholder) result.placeholder = node.placeholder;
+
+            result.options = node.options.map((option: any) => {
+                let optionResult: any = {};
+
+                if (option.label) optionResult.label = option.label;
+                if (option.value) optionResult.value = option.value;
+                if (option.description) optionResult.description = option.description;
+
+                if (option.emoji) {
+                    const emoji: any = {};
+
+                    if (option.emoji.name) emoji.name = option.emoji.name;
+                    if (option.emoji.id) emoji.id = option.emoji.id;
+                    if (option.emoji.animated) emoji.animated = option.emoji.animated;
+
+                    optionResult.emoji = emoji;
+                }
+
+                return optionResult;
+            });
+        }
+
+        //Section
+        if (node.type == 9) {
+            result = {
+                type: node.type
+            };
+
+            result.components = node.components.map((component: any) => {
+                return this.cleanComponent(component);
+            });
+
+            result.accessory = this.cleanComponent(node.accessory);
+        }
+
+        //Text Display
+        if (node.type == 10) {
+            result = {
+                type: node.type,
+                content: node.content
+            };
+        }
+
+        //Thumbnail
+        if (node.type == 11) {
+            result = {
+                type: node.type,
+                media: {
+                    url: node.media.url
+                }
+            };
+
+            if (node.description) result.description = node.description;
+        }
+
+        //Media Gallery
+        if (node.type == 12) {
+            result = {
+                type: node.type
+            };
+
+            result.items = node.items.map((item: any) => {
+                let itemResult: any = {};
+
+                itemResult.media = {
+                    url: item.media.url
+                };
+
+                if (item.description) itemResult.description = item.description;
+
+                return itemResult;
+            });
+        }
+
+        //Separator
+        if (node.type == 14) {
+            result = {
+                type: node.type,
+                spacing: node.spacing
+            };
+        }
+
+        //Container
+        if (node.type == 17) {
+            result = {
+                type: node.type
+            };
+
+            if (node.accentColor) result.accent_color = node.accentColor;
+
+            result.components = node.components.map((component: any) => {
+                return this.cleanComponent(component);
+            });
+        }
+
+        return result;
+    }
+
+    //#endregion
+}
