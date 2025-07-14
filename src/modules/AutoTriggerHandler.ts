@@ -3,7 +3,7 @@ import Bot from '../Bot';
 
 export default class AutoTriggerHandler {
     private client: Bot;
-    
+
     private static readonly MEOW_REPLY_CHANCE = 50;
     private static readonly TAUNT_CHANCE = 10;
 
@@ -25,7 +25,7 @@ export default class AutoTriggerHandler {
 
     private async checkTauntTriggers(message: Message): Promise<boolean> {
         const msg = message.content.toLowerCase();
-        
+
         if (!msg.includes('meow') && !msg.includes(':meow:') && !msg.includes(':hehe:')) {
             return false;
         }
@@ -35,7 +35,7 @@ export default class AutoTriggerHandler {
         let triggered = false;
 
         if (meowEmoji && message.content.includes(meowEmoji.toString())) triggered = true;
-        if (heheEmoji && message.content.includes(heheEmoji.toString())) triggered = true;  
+        if (heheEmoji && message.content.includes(heheEmoji.toString())) triggered = true;
         if (/\bmeow/i.test(message.content)) triggered = true;
 
         if (triggered && Math.floor(Math.random() * AutoTriggerHandler.TAUNT_CHANCE) === 0) {
@@ -52,23 +52,48 @@ export default class AutoTriggerHandler {
             return false;
         }
 
+        // yoink
+        if (message.content.startsWith(`<@${this.client.user?.id}> yoink `) && message.member!.permissions.has('ManageEmojisAndStickers')) {
+            const emojiMentionMatch = message.content.match(/<a?:\w+:\d+>/g);
+
+            if (emojiMentionMatch) {
+                const isGif = emojiMentionMatch[0].startsWith('<a:');
+                const emojiNameMatch = emojiMentionMatch ? emojiMentionMatch[0].match(/:(\w+):/) : '';
+                const emojiIdMatch = emojiMentionMatch ? emojiMentionMatch[0].match(/:(\d+)>/) : '';
+
+                if (emojiNameMatch && emojiIdMatch) {
+                    const emojiName = emojiNameMatch[1];
+                    const emojiId = emojiIdMatch[1];
+                    const emojiUrl = `https://cdn.discordapp.com/emojis/${emojiId}.${isGif ? 'gif' : 'png'}`;
+
+                    await message.guild!.emojis.create({
+                        name: emojiName,
+                        attachment: emojiUrl
+                    });
+
+                    await message.reply(`yoinked!`);
+                    return false;
+                }
+            }
+        }
+
         if (Math.floor(Math.random() * AutoTriggerHandler.MEOW_REPLY_CHANCE) === 0) {
             const emoji = this.client.emojiCache.get('meow');
             const roleId = process.env.MEOW_ROLE_ID || '1390696959630774302';
             const role = await message.guild!.roles.fetch(roleId);
-            
+
             if (emoji && role && message.member && !message.member.roles.cache.has(roleId)) {
                 try {
                     await message.member.roles.add(role);
-                    this.client.logger.log({ 
-                        message: `Assigned 'meow' role to ${message.author.tag}.`, 
-                        handler: this.constructor.name 
+                    this.client.logger.log({
+                        message: `Assigned 'meow' role to ${message.author.tag}.`,
+                        handler: this.constructor.name
                     }, true);
                 } catch (error) {
-                    this.client.logger.error({ 
-                        message: `Failed to assign 'meow' role to ${message.author.tag}.`, 
-                        error, 
-                        handler: this.constructor.name 
+                    this.client.logger.error({
+                        message: `Failed to assign 'meow' role to ${message.author.tag}.`,
+                        error,
+                        handler: this.constructor.name
                     });
                 }
             }
@@ -82,4 +107,4 @@ export default class AutoTriggerHandler {
         await message.reply('YOUR SOUL IS MINE!');
         return true;
     }
-} 
+}
