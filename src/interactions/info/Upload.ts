@@ -1,6 +1,6 @@
 import BotInteraction from '../../types/BotInteraction';
 import { Attachment, ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, TextChannel, ChannelType, Message, MessageFlags } from 'discord.js';
-import { parseTree, getNodeValue, ParseError } from 'jsonc-parser';
+import { parseTree, getNodeValue, ParseError, findNodeAtOffset, Node } from 'jsonc-parser';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -39,7 +39,7 @@ function getErrorMessageForCode(e: number): string {
 }
 
 class ParsingError extends Error {
-    constructor(message: string, public errors: { description: string, correctedCode: string }[]) {
+    constructor(message: string, public errors: { description: string, summary: string, correctedCode: string }[]) {
         super(message);
         this.name = 'ParsingError';
     }
@@ -99,7 +99,7 @@ export default class Upload extends BotInteraction {
             });
         }
 
-        if (attachment.size > 5 * 1024 * 1024) { // 5MB limit
+        if (attachment.size > 5 * 1024 * 1024) {
             return await interaction.editReply({ 
                 content: 'File is too large. Please upload a file smaller than 5MB.' 
             });
@@ -141,95 +141,8 @@ export default class Upload extends BotInteraction {
 
             const parsedParts: ParsedMessage[] = this.parseFileContent(fileContent);
 
-            // Pre-flight check for unresolved tags before sending any messages
-            const definedTags = new Set(parsedParts.map(p => p.nameTag).filter(Boolean) as string[]);
-            const linkErrors: { name: string, value: string }[] = [];
-            const placeholderRegex = /\$linkmsg_([^$]+)\$/g;
-
-            for (const part of parsedParts) {
-                if (!part.hasPlaceholders) continue;
-        
-                const partIdentifier = part.nameTag ? `the message tagged \`${part.nameTag}\`` : `a message with no tag`;
-        
-                const checkAndCorrect = (text: string): { corrected: string, hasErrors: boolean } => {
-                    let correctedText = text;
-                    let hasErrors = false;
-                    
-                    correctedText = correctedText.replace(placeholderRegex, (match, tagName) => {
-                        if (definedTags.has(tagName)) {
-                            return match;
-                        }
-        
-                        hasErrors = true;
-                        const bestMatch = this.findBestMatch(tagName, definedTags);
-                        if (bestMatch) {
-                            return `$linkmsg_${bestMatch}$`;
-                        }
-        
-                        return match;
-                    });
-        
-                    return { corrected: correctedText, hasErrors };
-                };
-                
-                if (part.rawEmbeds) {
-                    for (const rawEmbed of part.rawEmbeds) {
-                        const result = checkAndCorrect(rawEmbed);
-                        if (result.hasErrors) {
-                            try {
-                                const originalFormatted = JSON.stringify(JSON.parse(rawEmbed), null, 2);
-                                const correctedFormatted = JSON.stringify(JSON.parse(result.corrected), null, 2);
-                                linkErrors.push({
-                                    name: `an embed in ${partIdentifier}`,
-                                    value: `**Original:**\n\`\`\`json\n${originalFormatted}\n\`\`\`\n**Suggested:**\n\`\`\`json\n${correctedFormatted}\n\`\`\``
-                                });
-                            } catch(e) {
-                                linkErrors.push({
-                                    name: `an embed in ${partIdentifier}`,
-                                    value: `**Original:**\n\`\`\`json\n${rawEmbed}\n\`\`\`\n**Suggested:**\n\`\`\`json\n${result.corrected}\n\`\`\``
-                                });
-                            }
-                        }
-                    }
-                }
-
-                if (part.rawComponents) {
-                    for (const rawComponent of part.rawComponents) {
-                        const result = checkAndCorrect(rawComponent);
-                        if (result.hasErrors) {
-                            try {
-                                const originalFormatted = JSON.stringify(JSON.parse(rawComponent), null, 2);
-                                const correctedFormatted = JSON.stringify(JSON.parse(result.corrected), null, 2);
-                                linkErrors.push({
-                                    name: `an component in ${partIdentifier}`,
-                                    value: `**Original:**\n\`\`\`json\n${originalFormatted}\n\`\`\`\n**Suggested:**\n\`\`\`json\n${correctedFormatted}\n\`\`\``
-                                });
-                            } catch(e) {
-                                linkErrors.push({
-                                    name: `an component in ${partIdentifier}`,
-                                    value: `**Original:**\n\`\`\`json\n${rawComponent}\n\`\`\`\n**Suggested:**\n\`\`\`json\n${result.corrected}\n\`\`\``
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (linkErrors.length > 0) {
-                await interaction.editReply({ content: 'Your file has link errors and was not uploaded. See details below.' });
-            
-                const textChunks = linkErrors.map(field => {
-                    return `**Found an issue in ${field.name}:**\n${field.value}`;
-                });
-            
-                for (let i = 0; i < textChunks.length; i += 2) {
-                    const chunk = textChunks.slice(i, i + 2);
-                    await interaction.followUp({
-                        content: `**Link Errors Found**\nI've provided suggestions for the segments below. You can copy the corrected versions.\n\n${chunk.join('\n\n')}`,
-                        ephemeral: true,
-                    });
-                }
-            
+            const hasLinkErrors = await this.checkForLinkErrors(parsedParts, interaction);
+            if (hasLinkErrors) {
                 return;
             }
 
@@ -429,42 +342,27 @@ export default class Upload extends BotInteraction {
 
         } catch (error: any) {
             if (error instanceof ParsingError) {
-                const fields = error.errors.map(e => ({
-                    name: `JSON block starting at line ${e.description}`,
-                    value: e.correctedCode.substring(0, 1020)
-                }));
                 await interaction.editReply({ content: 'Your file had some issues that were corrected. Check the details below.' });
-                for(let i = 0; i < fields.length; i += 5) {
-                    const chunk = fields.slice(i, i + 5);
-                    // Send JSON as plain text instead of embeds
-                    const jsonTexts = chunk.map(field => {
-                        // Extract JSON from either "**Corrected segment:**" or "**JSON segment:**" format
-                        const correctedMatch = field.value.match(/\*\*(?:Corrected segment|JSON segment):\*\*\n```json\n([\s\S]*?)\n```/);
-                        let jsonContent = correctedMatch ? correctedMatch[1] : field.value;
-                        
-                        // If no match found, try to extract any JSON from the field value
-                        if (!correctedMatch) {
-                            const anyJsonMatch = field.value.match(/```json\n([\s\S]*?)\n```/);
-                            if (anyJsonMatch) {
-                                jsonContent = anyJsonMatch[1];
-                            } else {
-                                // Try to parse the entire field.value as JSON
-                                try {
-                                    const parsed = JSON.parse(jsonContent);
-                                    jsonContent = JSON.stringify(parsed, null, 2);
-                                } catch (e) {
-                                    // If parsing fails, use as-is
-                                }
-                            }
-                        }
-                        
-                        return `**${field.name}**\n\`\`\`json\n${jsonContent}\n\`\`\``;
-                    }).join('\n\n');
-                    
-                    await interaction.followUp({
-                        content: `**JSON Segments from Your File**\nYou can copy them easily from here:\n\n${jsonTexts}`,
-                        ephemeral: true,
-                    });
+
+                for (const e of error.errors) {
+                    const summary = e.summary;
+                    const correctedCode = e.correctedCode;
+
+                    const chunks = this.splitMessage(correctedCode);
+
+                    if (chunks.length > 0) {
+                        await interaction.followUp({
+                            content: `**${summary}**\n\n**Corrected file:**\n\`\`\`json\n${chunks[0]}\n\`\`\``,
+                            ephemeral: true,
+                        });
+                    }
+
+                    for (let i = 1; i < chunks.length; i++) {
+                        await interaction.followUp({
+                            content: `\`\`\`json\n${chunks[i]}\n\`\`\``,
+                            ephemeral: true,
+                        });
+                    }
                 }
             } else {
                 this.client.logger.error({
@@ -479,6 +377,187 @@ export default class Upload extends BotInteraction {
         }
     }
 
+    private splitMessage(text: string, maxLength = 1900): string[] {
+        if (text.length <= maxLength) {
+            return [text];
+        }
+    
+        const chunks: string[] = [];
+        let remainingText = text;
+    
+        while (remainingText.length > 0) {
+            if (remainingText.length <= maxLength) {
+                chunks.push(remainingText);
+                break;
+            }
+    
+            let splitIndex = maxLength;
+    
+            // Prefer splitting after a complete component object.
+            const componentBreak = remainingText.lastIndexOf('},\n', splitIndex);
+            if (componentBreak > 0) {
+                splitIndex = componentBreak + 3;
+            } else {
+                // Otherwise, split at the last newline.
+                const lastNewline = remainingText.lastIndexOf('\n', splitIndex);
+                if (lastNewline > 0) {
+                    splitIndex = lastNewline + 1;
+                }
+            }
+    
+            chunks.push(remainingText.substring(0, splitIndex));
+            remainingText = remainingText.substring(splitIndex);
+        }
+    
+        return chunks;
+    }
+
+    private async checkForLinkErrors(parsedParts: ParsedMessage[], interaction: ChatInputCommandInteraction): Promise<boolean> {
+        const definedTags = new Set(parsedParts.map(p => p.nameTag).filter(Boolean) as string[]);
+        const linkErrors: { name: string, value: string }[] = [];
+        const placeholderRegex = /\$linkmsg_([^$]+)\$/g;
+
+        for (const part of parsedParts) {
+            if (!part.hasPlaceholders) continue;
+    
+            const partIdentifier = part.nameTag ? `the message tagged \`${part.nameTag}\`` : `a message with no tag`;
+    
+            const checkAndCorrect = (text: string): { corrected: string, hasErrors: boolean } => {
+                let correctedText = text;
+                let hasErrors = false;
+                
+                correctedText = correctedText.replace(placeholderRegex, (match, tagName) => {
+                    if (definedTags.has(tagName)) {
+                        return match;
+                    }
+    
+                    hasErrors = true;
+                    const bestMatch = this.findBestMatch(tagName, definedTags);
+                    if (bestMatch) {
+                        return `$linkmsg_${bestMatch}$`;
+                    }
+    
+                    return match;
+                });
+    
+                return { corrected: correctedText, hasErrors };
+            };
+            
+            if (part.rawEmbeds) {
+                for (const rawEmbed of part.rawEmbeds) {
+                    const result = checkAndCorrect(rawEmbed);
+                    if (result.hasErrors) {
+                        try {
+                            const originalFormatted = JSON.stringify(JSON.parse(rawEmbed), null, 2);
+                            const correctedFormatted = JSON.stringify(JSON.parse(result.corrected), null, 2);
+                            linkErrors.push({
+                                name: `an embed in ${partIdentifier}`,
+                                value: `**Original:**\n\`\`\`json\n${originalFormatted}\n\`\`\`\n**Suggested:**\n\`\`\`json\n${correctedFormatted}\n\`\`\``
+                            });
+                        } catch(e) {
+                            linkErrors.push({
+                                name: `an embed in ${partIdentifier}`,
+                                value: `**Original:**\n\`\`\`json\n${rawEmbed}\n\`\`\`\n**Suggested:**\n\`\`\`json\n${result.corrected}\n\`\`\``
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (part.rawComponents) {
+                for (const rawComponent of part.rawComponents) {
+                    const result = checkAndCorrect(rawComponent);
+                    if (result.hasErrors) {
+                        try {
+                            const originalFormatted = JSON.stringify(JSON.parse(rawComponent), null, 2);
+                            const correctedFormatted = JSON.stringify(JSON.parse(result.corrected), null, 2);
+                            linkErrors.push({
+                                name: `an component in ${partIdentifier}`,
+                                value: `**Original:**\n\`\`\`json\n${originalFormatted}\n\`\`\`\n**Suggested:**\n\`\`\`json\n${correctedFormatted}\n\`\`\``
+                            });
+                        } catch(e) {
+                            linkErrors.push({
+                                name: `an component in ${partIdentifier}`,
+                                value: `**Original:**\n\`\`\`json\n${rawComponent}\n\`\`\`\n**Suggested:**\n\`\`\`json\n${result.corrected}\n\`\`\``
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (linkErrors.length > 0) {
+            await interaction.editReply({ content: 'Your file has link errors and was not uploaded. See details below.' });
+        
+            const textChunks = linkErrors.map(field => {
+                return `**Found an issue in ${field.name}:**\n${field.value}`;
+            });
+        
+            for (let i = 0; i < textChunks.length; i += 2) {
+                const chunk = textChunks.slice(i, i + 2);
+                await interaction.followUp({
+                    content: `**Link Errors Found**\nI've provided suggestions for the segments below. You can copy the corrected versions.\n\n${chunk.join('\n\n')}`,
+                    ephemeral: true,
+                });
+            }
+        
+            return true;
+        }
+
+        return false;
+    }
+
+    private levenshteinDistance(s1: string, s2: string): number {
+        s1 = s1.toLowerCase();
+        s2 = s2.toLowerCase();
+    
+        const track = Array(s2.length + 1).fill(null).map(() =>
+            Array(s1.length + 1).fill(null)
+        );
+    
+        for (let i = 0; i <= s1.length; i++) {
+            track[0][i] = i;
+        }
+        for (let j = 0; j <= s2.length; j++) {
+            track[j][0] = j;
+        }
+    
+        for (let j = 1; j <= s2.length; j++) {
+            for (let i = 1; i <= s1.length; i++) {
+                const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
+                track[j][i] = Math.min(
+                    track[j][i - 1] + 1, // deletion
+                    track[j - 1][i] + 1, // insertion
+                    track[j - 1][i - 1] + indicator // substitution
+                );
+            }
+        }
+        return track[s2.length][s1.length];
+    }
+
+    private findBestMatch(tag: string, availableTags: Set<string>): string | null {
+        if (availableTags.size === 0) return null;
+    
+        let bestMatch: string | null = null;
+        let minDistance = Infinity;
+    
+        for (const availableTag of availableTags) {
+            const distance = this.levenshteinDistance(tag, availableTag);
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestMatch = availableTag;
+            }
+        }
+    
+        // A match is considered good if its distance is less than half the length
+        // of the correct tag. This is a simple heuristic to avoid wildly wrong suggestions.
+        if (bestMatch && minDistance <= bestMatch.length / 2) {
+            return bestMatch;
+        }
+    
+        return null;
+    }
+
     private parseFileContent(content: string): ParsedMessage[] {
         // Strip BOM if it exists
         if (content.charCodeAt(0) === 0xFEFF) {
@@ -488,7 +567,7 @@ export default class Upload extends BotInteraction {
         const messages: ParsedMessage[] = [];
         let currentMessage: ParsedMessage = { content: '', embeds: [], rawEmbeds: [], components: [], rawComponents: [] };
         let nextMessageNameTag: string | undefined = undefined;
-        const allParsingErrors: { description: string, correctedCode: string }[] = [];
+        const allParsingErrors: { description: string, summary: string, correctedCode: string }[] = [];
 
         const finalizeCurrentMessage = () => {
             if (currentMessage.content.trim() || currentMessage.embeds.length > 0) {
@@ -548,13 +627,10 @@ export default class Upload extends BotInteraction {
                 for (let k = i - 1; k >= 0; k--) {
                     const prevLine = lines[k].trim();
                     
-                    // Skip empty lines but don't break on them
                     if (prevLine === '') continue;
                     
-                    // Break on message separator or other directives (but not .embed:json)
                     if (prevLine === '.' || (prevLine.startsWith('.') && (!prevLine.startsWith('.embed:json') || !prevLine.startsWith('.componentsV2:json')))) break;
                     
-                    // Found end of JSON block, now collect it
                     if (prevLine.endsWith('}')) {
                         let braceCount = 0;
                         let jsonLines: string[] = [];
@@ -578,7 +654,7 @@ export default class Upload extends BotInteraction {
                     }
                 }
                 
-                // If no JSON found backwards, look forwards (original logic)
+                // If no JSON found backwards, look forwards.
                 if (!foundJsonBackwards) {
                     let braceCount = 0;
                     let inJson = false;
@@ -609,98 +685,17 @@ export default class Upload extends BotInteraction {
                 }
                 
                 if (jsonBlock.trim()) {
-                    let embedJson = jsonBlock.trim();
-                    const blockCorrections: string[] = [];
-                    let correctedJson = embedJson;
-                    let embedStartLine = i + 1;
+                    const isComponentsV2 = trimmedLine.startsWith('.componentsV2:json');
+                    const { errors, correctedData, rawData } = this.processJsonBlock(jsonBlock, i + 1);
 
-                    let iterations = 0;
-                    const MAX_ITERATIONS = 10;
-                    while(iterations < MAX_ITERATIONS) {
-                        iterations++;
-                        const errors: ParseError[] = [];
-                        parseTree(correctedJson, errors, { allowTrailingComma: true });
-                        if (errors.length === 0) break;
+                    allParsingErrors.push(...errors);
 
-                        const error = errors[0];
-                        let fixed = false;
-                        if (error.error === 6) { // Comma expected
-                            // Add comma if we're after a value (number, string, object, array) and before whitespace or property name
-                            const charBefore = correctedJson.charAt(error.offset - 1);
-                            const charAt = correctedJson.charAt(error.offset);
-                            
-                            if (charBefore.match(/[0-9"}\]]/) || charAt.match(/\s/) || charAt === '"') {
-                                correctedJson = correctedJson.slice(0, error.offset) + ',' + correctedJson.slice(error.offset);
-                                blockCorrections.push('Added missing comma in JSON syntax');
-                                fixed = true;
-                            }
-                        }
-                        if (!fixed) break;
-                    }
-
-                    const finalErrors: ParseError[] = [];
-                    const root = parseTree(correctedJson, finalErrors);
-
-                    if (!root || finalErrors.length > 0) {
-                        const firstError = finalErrors[0] || { offset: 0, error: -1 };
-                            const { line: errorLine, column } = this.getLineAndColumn(correctedJson, firstError.offset);
-                        const errorType = getErrorMessageForCode(firstError.error);
-                            const summary = `Error: ${errorType} at line ${errorLine}, column ${column}.`;
-                        allParsingErrors.push({
-                            description: `${embedStartLine}`,
-                                correctedCode: `${summary}\n\`\`\`json\n${correctedJson}\n\`\`\``
-                            });
+                    if (isComponentsV2) {
+                        if (correctedData) currentMessage.components.push(correctedData);
+                        if (rawData) currentMessage.rawComponents?.push(rawData);
                     } else {
-                        let embedData = getNodeValue(root);
-
-                        if (embedData && typeof embedData === 'object' && 'embed' in embedData) {
-                            embedData = embedData.embed;
-                        }
-
-                        const { correctedData, corrections: structuralCorrections } = this.validateAndCorrectEmbedStructure(embedData);
-                        blockCorrections.push(...structuralCorrections);
-                        
-                        // Only show corrections if there are actual issues found
-                        if (blockCorrections.length > 0) {
-                            // For syntax corrections, show the corrected JSON string
-                            // For structural corrections, reconstruct from parsed data
-                            const hadJsonSyntaxCorrections = correctedJson !== embedJson;
-                            
-                            let correctedJsonFormatted;
-                            if (hadJsonSyntaxCorrections) {
-                                // Format the syntax-corrected JSON nicely
-                                try {
-                                    const parsed = JSON.parse(correctedJson);
-                                    correctedJsonFormatted = JSON.stringify(parsed, null, 2);
-                                } catch {
-                                    correctedJsonFormatted = correctedJson;
-                                }
-                            } else {
-                                // Only structural corrections, reconstruct with corrected data
-                                const originalData = getNodeValue(root);
-                                if (originalData && typeof originalData === 'object' && 'embed' in originalData) {
-                                    const correctedWithWrapper = { embed: correctedData };
-                                    correctedJsonFormatted = JSON.stringify(correctedWithWrapper, null, 2);
-                                } else {
-                                    correctedJsonFormatted = JSON.stringify(correctedData, null, 2);
-                                }
-                            }
-                                    
-                            const summary = `The following issues were found and fixed:\n- ${blockCorrections.join('\n- ')}`;
-                            allParsingErrors.push({
-                                description: `${embedStartLine}`,
-                                correctedCode: `${summary}\n\n**Corrected segment:**\n\`\`\`json\n${correctedJsonFormatted}\n\`\`\``
-                            });
-                        }
-                        // If no corrections needed, don't add to allParsingErrors at all
-                        
-                        if (isComponentsV2) {
-                            currentMessage.components.push(correctedData);
-                            currentMessage.rawComponents?.push(correctedJson);
-                        } else {
-                            currentMessage.embeds.push(correctedData);
-                            currentMessage.rawEmbeds?.push(correctedJson);
-                        }                    
+                        if (correctedData) currentMessage.embeds.push(correctedData);
+                        if (rawData) currentMessage.rawEmbeds?.push(rawData);
                     }
                 }
                 continue;
@@ -750,10 +745,95 @@ export default class Upload extends BotInteraction {
         finalizeCurrentMessage();
 
         if (allParsingErrors.length > 0) {
-            throw new ParsingError("File processing completed with corrections.", allParsingErrors);
+            throw new ParsingError('File has parsing errors.', allParsingErrors);
         }
 
         return messages;
+    }
+
+    private processJsonBlock(embedJson: string, embedStartLine: number): { errors: any[], correctedData: any, rawData: string } {
+        const allParsingErrors: any[] = [];
+        let finalCorrectedData: any = null;
+        let finalRawData: string = embedJson;
+
+        const initialErrors: ParseError[] = [];
+        parseTree(embedJson, initialErrors, { allowTrailingComma: true });
+
+        const fixableCommaErrors = initialErrors.filter(e => e.error === 6).sort((a, b) => a.offset - b.offset);
+
+        if (fixableCommaErrors.length > 0) {
+            let correctedJson = embedJson;
+            let offsetCorrection = 0;
+            for (const error of fixableCommaErrors) {
+                const errorOffset = error.offset + offsetCorrection;
+                correctedJson = correctedJson.slice(0, errorOffset) + ',' + correctedJson.slice(errorOffset);
+                offsetCorrection++;
+            }
+            
+            const summary = `Summary: Fixed ${fixableCommaErrors.length} missing comma(s) in your file.`;
+            let formattedCorrectedJson;
+            try {
+                const parsed = JSON.parse(correctedJson);
+                formattedCorrectedJson = JSON.stringify(parsed, null, 2);
+            } catch {
+                formattedCorrectedJson = correctedJson;
+            }
+
+            allParsingErrors.push({
+                description: `${embedStartLine}`,
+                summary: summary,
+                correctedCode: formattedCorrectedJson,
+            });
+            
+            const finalRoot = parseTree(formattedCorrectedJson);
+            if(finalRoot) {
+                let embedData = getNodeValue(finalRoot);
+                if (embedData && typeof embedData === 'object' && 'embed' in embedData) {
+                    embedData = embedData.embed;
+                }
+                 const { correctedData, corrections: structuralCorrections } = this.validateAndCorrectEmbedStructure(embedData);
+                if (structuralCorrections.length > 0) {
+                    // This might report structural issues for the whole blob, which is acceptable
+                }
+                finalCorrectedData = correctedData;
+                finalRawData = formattedCorrectedJson;
+            }
+
+        } else if (initialErrors.length > 0) {
+            for (const error of initialErrors) {
+                 const { line: errorLine, column } = this.getLineAndColumn(embedJson, error.offset);
+                const errorType = getErrorMessageForCode(error.error);
+                const summary = `Error: ${errorType} at line ${errorLine}, column ${column}.`;
+                allParsingErrors.push({
+                    description: `${embedStartLine}`,
+                    summary: summary,
+                    correctedCode: embedJson,
+                });
+            }
+        } else {
+            const root = parseTree(embedJson);
+            if (root) {
+                let embedData = getNodeValue(root);
+                if (embedData && typeof embedData === 'object' && 'embed' in embedData) {
+                    embedData = embedData.embed;
+                }
+                const { correctedData, corrections: structuralCorrections } = this.validateAndCorrectEmbedStructure(embedData);
+                
+                if (structuralCorrections.length > 0) {
+                    const summary = `The following errors were fixed:\n- ${structuralCorrections.join('\n- ')}`;
+                    allParsingErrors.push({
+                        description: `${embedStartLine}`,
+                        summary: summary,
+                        correctedCode: JSON.stringify(correctedData, null, 2),
+                    });
+                }
+
+                finalCorrectedData = correctedData;
+                finalRawData = embedJson;
+            }                    
+        }
+
+        return { errors: allParsingErrors, correctedData: finalCorrectedData, rawData: finalRawData };
     }
 
     private hasLinkPlaceholder(text: string): boolean {
@@ -775,7 +855,7 @@ export default class Upload extends BotInteraction {
 
     private convertEmbedEmojis(embed: any, interaction: ChatInputCommandInteraction): any {
         if (!embed || typeof embed !== 'object') return embed;
-        // Deep copy to avoid modifying the original object
+        
         const newEmbed = JSON.parse(JSON.stringify(embed));
     
         const convert = (text: string) => text ? this.convertEmojis(text, interaction) : text;
@@ -797,21 +877,17 @@ export default class Upload extends BotInteraction {
     private convertComponentsV2Emojis(container: any, interaction: ChatInputCommandInteraction): any {        
         if (!container || typeof container !== 'object') return container;
 
-        // Deep copy to avoid modifying the original object
         const newContainer = JSON.parse(JSON.stringify(container));
 
         const convert = (text: string) => text ? this.convertEmojis(text, interaction) : text;
 
         container.components.forEach((component: any) => {
-            //direct text container
             if (component.type === 10) {
                 component.content = convert(component.content);
             }
 
-            //text container inside section
             if (component.type === 9) {
                 component.components.forEach((subComponent: any) => {
-                    //text container
                     if (subComponent.type === 10) {
                         subComponent.content = convert(subComponent.content);
                     }
@@ -855,75 +931,5 @@ export default class Upload extends BotInteraction {
         if (correctedData.author) validateUrlField(correctedData.author, 'author');
         
         return { correctedData, corrections };
-    }
-
-    private splitLongMessage(message: string, maxLength = 1900): string[] {
-        if (message.length <= maxLength) {
-            return [message];
-        }
-        const chunks = [];
-        let currentChunk = '';
-        const sentences = message.split(/(?<=\.|\?|!)\s/);
-        for (const sentence of sentences) {
-            if (currentChunk.length + sentence.length <= maxLength) {
-                currentChunk += sentence;
-            } else {
-                chunks.push(currentChunk);
-                currentChunk = sentence;
-            }
-        }
-            chunks.push(currentChunk);
-        return chunks;
-    }
-
-    private levenshteinDistance(s1: string, s2: string): number {
-        s1 = s1.toLowerCase();
-        s2 = s2.toLowerCase();
-    
-        const track = Array(s2.length + 1).fill(null).map(() =>
-            Array(s1.length + 1).fill(null)
-        );
-    
-        for (let i = 0; i <= s1.length; i++) {
-            track[0][i] = i;
-        }
-        for (let j = 0; j <= s2.length; j++) {
-            track[j][0] = j;
-        }
-    
-        for (let j = 1; j <= s2.length; j++) {
-            for (let i = 1; i <= s1.length; i++) {
-                const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
-                track[j][i] = Math.min(
-                    track[j][i - 1] + 1, // deletion
-                    track[j - 1][i] + 1, // insertion
-                    track[j - 1][i - 1] + indicator // substitution
-                );
-            }
-        }
-        return track[s2.length][s1.length];
-    }
-
-    private findBestMatch(tag: string, availableTags: Set<string>): string | null {
-        if (availableTags.size === 0) return null;
-    
-        let bestMatch: string | null = null;
-        let minDistance = Infinity;
-    
-        for (const availableTag of availableTags) {
-            const distance = this.levenshteinDistance(tag, availableTag);
-            if (distance < minDistance) {
-                minDistance = distance;
-                bestMatch = availableTag;
-            }
-        }
-    
-        // A match is considered good if its distance is less than half the length
-        // of the correct tag. This is a simple heuristic to avoid wildly wrong suggestions.
-        if (bestMatch && minDistance <= bestMatch.length / 2) {
-            return bestMatch;
-        }
-    
-        return null;
     }
 } 
