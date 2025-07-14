@@ -9,10 +9,18 @@ import { ReaperParticipation } from '../entity/ReaperParticipation';
 import Bot from '../Bot';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import TranscriptGenerator from './TranscriptGenerator';
+import axios from 'axios';
 
+// ===============================
+// CONSTANTS
+// ===============================
 const leaderboardConfigPath = path.join(process.cwd(), 'leaderboard-config.json');
 const killTimeLeaderboardConfigPath = path.join(process.cwd(), 'killtime-leaderboard-config.json');
 
+// ===============================
+// INTERFACES
+// ===============================
 interface RemoveHierarchy {
     [key: string]: string[];
 }
@@ -29,6 +37,9 @@ interface Prerequisite {
     [key: string]: string[]
 }
 
+// ===============================
+// MAIN CLASS
+// ===============================
 export default class ButtonHandler {
     client: Bot;
     id: string;
@@ -38,6 +49,25 @@ export default class ButtonHandler {
         this.client = client;
         this.id = id;
         this.interaction = interaction;
+        
+        this.client.logger.log({ 
+            message: `[ButtonHandler] Processing button interaction: "${id}" from user ${interaction.user.id}`, 
+            handler: this.constructor.name 
+        }, true);
+        
+        if (id.startsWith('ticket:download_transcript_')) {
+            const forumPostId = id.substring('ticket:download_transcript_'.length);
+            this.client.logger.log({ 
+                message: `[ButtonHandler] Matched transcript download button. Forum post ID: "${forumPostId}"`, 
+                handler: this.constructor.name 
+            }, true);
+            this.handleTranscriptDownload(interaction, forumPostId);
+            return;
+        }
+        if (id.startsWith('selfassign')) {
+            this.handleSelfAssign(interaction, id.slice(11));
+            return;
+        }
         switch (id) {
             case 'rejectRoleAssign': this.rejectRoleAssign(interaction); break;
             case 'approveReport': this.approveReport(interaction); break;
@@ -59,10 +89,10 @@ export default class ButtonHandler {
             case 'failTrialee': this.failTrialee(interaction); break;
             case 'nextUpkeep': this.nextUpkeep(interaction); break;
             case 'prevUpkeep': this.prevUpkeep(interaction); break;
-            case 'ticket_suggestion': this.handleTicketSuggestion(interaction); break;
-            case 'ticket_report': this.handleTicketReport(interaction); break;
-            case 'ticket_contentcreator': this.handleTicketContentCreator(interaction); break;
-            case 'ticket_other': this.handleTicketOther(interaction); break;
+            case 'ticket:create_suggestion': this.handleTicketSuggestion(interaction); break;
+            case 'ticket:create_report': this.handleTicketReport(interaction); break;
+            case 'ticket:create_contentcreator': this.handleTicketContentCreator(interaction); break;
+            case 'ticket:create_other': this.handleTicketOther(interaction); break;
             case 'ticket_close': this.handleTicketClose(interaction); break;
             case 'ticket_close_confirm': this.handleTicketCloseConfirm(interaction); break;
             case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction); break;
@@ -70,14 +100,12 @@ export default class ButtonHandler {
             case 'ticket_delete': this.handleTicketDelete(interaction); break;
             case 'ticket_delete_confirm': this.handleTicketDeleteConfirm(interaction); break;
             case 'ticket_delete_cancel': this.handleTicketDeleteCancel(interaction); break;
-            default: 
-                if (id.startsWith('selfassign')) {
-                    this.handleSelfAssign(interaction, id.slice(11));
-                }
-                break;
         }
     }
 
+    // ===============================
+    // UTILITY GETTERS
+    // ===============================
     get userId(): string {
         return this.interaction.user.id;
     }
@@ -86,10 +114,13 @@ export default class ButtonHandler {
         return Math.round(Date.now() / 1000)
     }
 
+    // ===============================
+    // UPKEEP SYSTEM
+    // ===============================
     public getUpkeepMembers = async (pastDate: Date, interaction: ButtonInteraction<'cached'>) => {
         const { dataSource } = this.client;
         const { roles, stripRole } = this.client.util;
-        // Get all trials since pastDate but only grab the first 10
+
         const trialsParticipated = await dataSource.createQueryBuilder()
             .select('trialParticipation.participant', 'user')
             .addSelect('COUNT(*)', 'count')
@@ -99,7 +130,6 @@ export default class ButtonHandler {
             .orderBy('count', 'DESC')
             .getRawMany();
 
-        // Process result into a key value pair
         const participation: any = {}
         trialsParticipated.forEach((trial: any) => {
             participation[trial.user] = trial.count;
@@ -152,7 +182,6 @@ export default class ButtonHandler {
             pageNumber = pageMatches ? Number(pageMatches[1]) : 0;
             totalPages = pageMatches ? Number(pageMatches[2]) : 0;
             if (!timeInSeconds || !pageNumber || !totalPages) {
-                // Should never really make it to this.
                 replyEmbed.setColor(colours.discord.red)
                 replyEmbed.setDescription('Time or page numbers could not be detected.')
                 return await interaction.editReply({ embeds: [replyEmbed] });
@@ -230,7 +259,6 @@ export default class ButtonHandler {
             pageNumber = pageMatches ? Number(pageMatches[1]) : 0;
             totalPages = pageMatches ? Number(pageMatches[2]) : 0;
             if (!timeInSeconds || !pageNumber || !totalPages) {
-                // Should never really make it to this.
                 replyEmbed.setColor(colours.discord.red)
                 replyEmbed.setDescription('Time or page numbers could not be detected.')
                 return await interaction.editReply({ embeds: [replyEmbed] });
@@ -285,8 +313,10 @@ export default class ButtonHandler {
         }
     }
 
+    // ===============================
+    // ROLE ASSIGNMENT SYSTEM
+    // ===============================
     public async assignMatchmakingRole(interaction: ButtonInteraction<'cached'>, cleanRoleId: string, trialeeId: string) {
-
         const { roles, colours, channels, stripRole, categorize, getKeyFromValue } = this.client.util;
 
         const hierarchy: Hierarchy = {
@@ -365,21 +395,17 @@ export default class ButtonHandler {
         const channel = await this.client.channels.fetch(channels.roleConfirmations) as TextChannel;
 
         if (role in prerequisites) {
-            // For each key inside a role pre-requisite
             for (const key in prerequisites[role]) {
-                // Break out if they have the role already or if they have any higher role
                 if (userRoles?.includes(stripRole(roles[key])) && hasHigherRole(role)) {
                     break;
                 };
                 let assign = true;
-                // Loop over each role and check if they have all pre-requisites
                 prerequisites[role][key].forEach((prereqRole: string) => {
                     const roleId = stripRole(roles[prereqRole]);
                     if (!(userRoles?.includes(roleId))) {
                         assign = false;
                     }
                 })
-                // Assign the additional role and remove the existing pre-requisite roles
                 if (assign) {
                     const assignedRoleId = stripRole(roles[key]);
                     if (!(userRoles?.includes(assignedRoleId)) && !hasHigherRole(role)) {
@@ -391,7 +417,6 @@ export default class ButtonHandler {
                         const roleId = stripRole(roles[prereqRole]);
                         if (userRoles?.includes(roleId)) user?.roles.remove(roleId);
                     })
-                    // Remove inferior roles for combination roles
                     if ((key in removeHierarchy) && !hasHigherRole(role)) {
                         for await (const roleToRemove of removeHierarchy[key]) {
                             const removeRoleId = stripRole(roles[roleToRemove]);
@@ -405,7 +430,6 @@ export default class ButtonHandler {
                         };
                     }
                     anyAdditionalRole = key;
-                    // Just add the new role as no pre-requisites for the combined role
                 } else {
                     const roleId = stripRole(roles[role]);
                     if (!hasHigherRole(role) && !userRoles?.includes(roleId)) user?.roles.add(roleId);
@@ -413,7 +437,6 @@ export default class ButtonHandler {
                     if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
                         sendMessage = true;
                     }
-                    // Remove inferior roles
                     if ((role in removeHierarchy) && !hasHigherRole(role)) {
                         for await (const roleToRemove of removeHierarchy[role]) {
                             const removeRoleId = stripRole(roles[roleToRemove]);
@@ -422,7 +445,6 @@ export default class ButtonHandler {
                     }
                 }
             }
-            // No pre-requisite needed so just assign role
         } else {
             const roleId = stripRole(roles[role]);
             if (!hasHigherRole(role) && !userRoles?.includes(roleId)) await user?.roles.add(roleId);
@@ -474,6 +496,9 @@ export default class ButtonHandler {
         if (sendMessage) await logChannel.send({ embeds: [logEmbed], components: [buttonRow] });
     }
 
+    // ===============================
+    // DATABASE OPERATIONS
+    // ===============================
     public async sendReaperSquadMessage(interaction: ButtonInteraction<'cached'>, reaperId: string, fields: APIEmbedField[]): Promise<void> {
         const { channels, colours, roles } = this.client.util;
         const channel = await this.client.channels.fetch(channels.reaperSquad) as TextChannel;
@@ -495,7 +520,6 @@ export default class ButtonHandler {
     }
 
     public async saveReaper(interaction: ButtonInteraction<'cached'>, reaperId: string, userId: string, fields: APIEmbedField[]): Promise<void> {
-        // Create new Reaper.
         const { dataSource } = this.client;
         const reaperRepository = dataSource.getRepository(Reaper);
         const reaperObject = new Reaper();
@@ -503,8 +527,6 @@ export default class ButtonHandler {
         reaperObject.host = userId;
         reaperObject.link = interaction.message.url;
         const reaper = await reaperRepository.save(reaperObject);
-
-        // Update Reaper Attendees
 
         const reaperParticipants: ReaperParticipation[] = [];
         fields.forEach((member: APIEmbedField) => {
@@ -516,14 +538,11 @@ export default class ButtonHandler {
             }
         })
 
-        // Save reaper attendees
-
         const participantReposittory = dataSource.getRepository(ReaperParticipation);
         await participantReposittory.save(reaperParticipants);
     }
 
     public async saveTrial(interaction: ButtonInteraction<'cached'>, trialeeId: string, roleId: string, userId: string, fields: APIEmbedField[]): Promise<void> {
-        // Create new Trial.
         const { dataSource } = this.client;
         const trialRepository = dataSource.getRepository(Trial);
         const trialObject = new Trial();
@@ -532,8 +551,6 @@ export default class ButtonHandler {
         trialObject.role = roleId;
         trialObject.link = interaction.message.url;
         const trial = await trialRepository.save(trialObject);
-
-        // Update Trial Attendees
 
         const trialParticipants: TrialParticipation[] = [];
         fields.forEach((member: APIEmbedField) => {
@@ -546,14 +563,14 @@ export default class ButtonHandler {
             }
         })
 
-        // Save trial attendees
-
         const participantReposittory = dataSource.getRepository(TrialParticipation);
         await participantReposittory.save(trialParticipants);
     }
 
+    // ===============================
+    // TRIAL & REAPER MANAGEMENT
+    // ===============================
     public async handleRoleSelection(interaction: ButtonInteraction<'cached'>, roleString: string): Promise<Message<true> | InteractionResponse<true> | void> {
-
         const { colours, checkForUserId, getEmptyObject } = this.client.util;
 
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -629,7 +646,6 @@ export default class ButtonHandler {
             const matches = messageContent.match(expression);
             userId = matches ? matches[1] : '';
             if (!userId) {
-                // Should never really make it to this.
                 replyEmbed.setColor(colours.discord.red)
                 replyEmbed.setDescription('Host could not be detected.')
                 return await interaction.editReply({ embeds: [replyEmbed] });
@@ -672,7 +688,7 @@ export default class ButtonHandler {
     }
 
     private async startTrial(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
-        const { colours } = this.client.util; // Add isTeamFull if team full is required again.
+        const { colours } = this.client.util;
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const hasRolePermissions: boolean | undefined = await this.client.util.hasRolePermissions(this.client, ['trialTeam'], interaction);
         const messageEmbed: Embed = interaction.message.embeds[0];
@@ -685,7 +701,6 @@ export default class ButtonHandler {
             const matches = messageContent.match(expression);
             userId = matches ? matches[1] : '';
             if (!userId) {
-                // Should never really make it to this.
                 replyEmbed.setColor(colours.discord.red)
                 replyEmbed.setDescription('Host could not be detected.')
                 return await interaction.editReply({ embeds: [replyEmbed] });
@@ -694,7 +709,6 @@ export default class ButtonHandler {
         if (hasRolePermissions) {
             const hasElevatedRole = await this.client.util.hasRolePermissions(this.client, ['moderator', 'admin', 'owner'], interaction);
             if ((interaction.user.id === userId) || hasElevatedRole) {
-                // if (isTeamFull(fields)) {
                 const trialStarted = `> **Moderation**\n\n ⬥ Trial started <t:${this.currentTime}:R>.\n\n> **Team**`;
                 const newMessageContent = messageContent?.replace('> **Team**', trialStarted);
                 const newEmbed = new EmbedBuilder()
@@ -716,11 +730,6 @@ export default class ButtonHandler {
                 replyEmbed.setColor(colours.discord.green);
                 replyEmbed.setDescription(`Trial successfully started!`);
                 return await interaction.editReply({ embeds: [replyEmbed] });
-                // } else {
-                //     replyEmbed.setColor(colours.discord.red)
-                //     replyEmbed.setDescription(`The team is not full yet.`)
-                //     return await interaction.editReply({ embeds: [replyEmbed] });
-                // }
             } else {
                 replyEmbed.setColor(colours.discord.red)
                 replyEmbed.setDescription(`Only <@${userId}> or an elevated role can start this trial.`)
@@ -739,7 +748,7 @@ export default class ButtonHandler {
     }
 
     private async startReaper(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
-        const { colours } = this.client.util; // Add isTeamFull if team full is required again.
+        const { colours } = this.client.util;
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const hasRolePermissions: boolean | undefined = await this.client.util.hasRolePermissions(this.client, ['reaper'], interaction);
         const messageEmbed: Embed = interaction.message.embeds[0];
@@ -752,7 +761,6 @@ export default class ButtonHandler {
             const matches = messageContent.match(expression);
             userId = matches ? matches[1] : '';
             if (!userId) {
-                // Should never really make it to this.
                 replyEmbed.setColor(colours.discord.red)
                 replyEmbed.setDescription('Host could not be detected.')
                 return await interaction.editReply({ embeds: [replyEmbed] });
@@ -761,7 +769,6 @@ export default class ButtonHandler {
         if (hasRolePermissions) {
             const hasElevatedRole = await this.client.util.hasRolePermissions(this.client, ['moderator', 'admin', 'owner'], interaction);
             if ((interaction.user.id === userId) || hasElevatedRole) {
-                // if (isTeamFull(fields)) {
                 const trialStarted = `> **Moderation**\n\n ⬥ Reaper started <t:${this.currentTime}:R>.\n\n> **Team**`;
                 const newMessageContent = messageContent?.replace('> **Team**', trialStarted);
                 const newEmbed = new EmbedBuilder()
@@ -783,11 +790,6 @@ export default class ButtonHandler {
                 replyEmbed.setColor(colours.discord.green);
                 replyEmbed.setDescription(`Reaper successfully started!`);
                 return await interaction.editReply({ embeds: [replyEmbed] });
-                // } else {
-                //     replyEmbed.setColor(colours.discord.red)
-                //     replyEmbed.setDescription(`The team is not full yet.`)
-                //     return await interaction.editReply({ embeds: [replyEmbed] });
-                // }
             } else {
                 replyEmbed.setColor(colours.discord.red)
                 replyEmbed.setDescription(`Only <@${userId}> or an elevated role can start this reaper.`)
@@ -823,7 +825,6 @@ export default class ButtonHandler {
             userId = hostMatches ? hostMatches[1] : '';
             reaperId = trialeeMatches ? trialeeMatches[1] : '';
             if (!userId || !reaperId) {
-                // Should never really make it to this.
                 replyEmbed.setColor(colours.discord.red)
                 replyEmbed.setDescription('Host or Reaper ID could not be detected.')
                 return await interaction.editReply({ embeds: [replyEmbed] });
@@ -843,10 +844,7 @@ export default class ButtonHandler {
                 const started = dirtyStarted?.replace('> **Team**', '').trim();
                 const newMessageContent = `${messageContentWithoutStarted}⬥ ${started}\n⬥ <@${reaperId}> got their kill <t:${this.currentTime}:R>!\n\n> **Team**`;
 
-                // Gotta post this to reaper squad
                 await this.sendReaperSquadMessage(interaction, reaperId, fields);
-
-                // Gotta save this to reaper database
                 await this.saveReaper(interaction, reaperId, userId, fields);
 
                 const newEmbed = new EmbedBuilder()
@@ -896,7 +894,6 @@ export default class ButtonHandler {
             trialeeId = trialeeMatches ? trialeeMatches[1] : '';
             roleId = roleMatches ? roleMatches[1] : '';
             if (!userId || !trialeeId || !roleId) {
-                // Should never really make it to this.
                 replyEmbed.setColor(colours.discord.red)
                 replyEmbed.setDescription('Host, Trialee or Tag could not be detected.')
                 return await interaction.editReply({ embeds: [replyEmbed] });
@@ -916,10 +913,7 @@ export default class ButtonHandler {
                 const started = dirtyStarted?.replace('> **Team**', '').trim();
                 const newMessageContent = `${messageContentWithoutStarted}⬥ ${started}\n⬥ <@${trialeeId}> successfully passed <t:${this.currentTime}:R>!\n\n> **Team**`;
 
-                // Save trial to database.
                 await this.saveTrial(interaction, trialeeId, roleId, userId, fields);
-
-                // Give the trialee the correct role.
                 await this.assignMatchmakingRole(interaction, roleId, trialeeId);
 
                 const newEmbed = new EmbedBuilder()
@@ -969,7 +963,6 @@ export default class ButtonHandler {
             trialeeId = trialeeMatches ? trialeeMatches[1] : '';
             roleId = roleMatches ? roleMatches[1] : '';
             if (!userId || !trialeeId || !roleId) {
-                // Should never really make it to this.
                 replyEmbed.setColor(colours.discord.red)
                 replyEmbed.setDescription('Host, Trialee or Tag could not be detected.')
                 return await interaction.editReply({ embeds: [replyEmbed] });
@@ -989,7 +982,6 @@ export default class ButtonHandler {
                 const started = dirtyStarted?.replace('> **Team**', '').trim();
                 const newMessageContent = `${messageContentWithoutStarted}⬥ ${started}\n⬥ <@${trialeeId}> failed <t:${this.currentTime}:R>!\n\n> **Team**`;
 
-                // Save trial to database.
                 await this.saveTrial(interaction, trialeeId, roleId, userId, fields);
 
                 const newEmbed = new EmbedBuilder()
@@ -1017,7 +1009,9 @@ export default class ButtonHandler {
         }
     }
 
-
+    // ===============================
+    // SUBMISSION APPROVAL SYSTEM
+    // ===============================
     private async rejectDPM(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const { colours, hasRolePermissions, hasOverridePermissions } = this.client.util;
@@ -1072,12 +1066,10 @@ export default class ButtonHandler {
         const dpmSubmissionRepository = this.client.dataSource.getRepository(DpmSubmission);
         const leaderboardEligibleStyles = ['Hybrid', 'Tribrid', 'Necromancy'];
         
-        // Only check position for leaderboard-eligible styles
         if (!leaderboardEligibleStyles.includes(submission.style)) {
             return null;
         }
 
-        // Get all approved submissions for the same team size and style, ordered by DPM descending
         const submissions = await dpmSubmissionRepository.find({
             where: { 
                 status: 'approved',
@@ -1155,9 +1147,8 @@ export default class ButtonHandler {
 
             await interaction.message.edit({ embeds: [originalEmbed], components: [] });
 
-                // Update the leaderboard
             const dpmLeaderboards = await this.client.util.generateDpmLeaderboardEmbeds();
-                try {
+            try {
                 const config = JSON.parse(await fs.readFile(leaderboardConfigPath, 'utf-8'));
                 const message = await (this.client.channels.cache.get(config.channelId) as TextChannel).messages.fetch(config.messageId);
                 await message.edit({ embeds: dpmLeaderboards });
@@ -1167,25 +1158,22 @@ export default class ButtonHandler {
                     error: err,
                     handler: this.constructor.name,
                 });
-                }
+            }
 
-            // Check leaderboard position for top 3 announcement
             const positionInfo = await this.checkDpmLeaderboardPosition(submission);
             const announcementChannel = await this.client.channels.fetch(channels.roleConfirmations) as TextChannel;
 
             if (announcementChannel) {
-                // Send role confirmation only if user didn't already have the role
                 if (submission.roleId && !userAlreadyHadRole) {
                     const roleEmbed = new EmbedBuilder()
-                .setAuthor({ name: interaction.user.username, iconURL: interaction.user.avatarURL() || this.client.user?.avatarURL() || 'https://media.discordapp.net/attachments/1027186342620299315/1047598720834875422/618px-Solly_pet_1.png' })
-                .setTimestamp()
+                        .setAuthor({ name: interaction.user.username, iconURL: interaction.user.avatarURL() || this.client.user?.avatarURL() || 'https://media.discordapp.net/attachments/1027186342620299315/1047598720834875422/618px-Solly_pet_1.png' })
+                        .setTimestamp()
                         .setColor(colours.lightblue)
                         .setDescription(`Congratulations to <@${submission.userId}> on achieving <@&${submission.roleId}>!`);
 
                     await announcementChannel.send({ embeds: [roleEmbed] });
                 }
 
-                // Send leaderboard position announcement for top 3
                 if (positionInfo && positionInfo.position <= 3) {
                     const positionEmojis = [this.client.util.emojis.gem1, this.client.util.emojis.gem2, this.client.util.emojis.gem3];
                     const leaderboardName = `\`${submission.teamSize} ${submission.style} DPM Leaderboard\``;
@@ -1218,6 +1206,9 @@ export default class ButtonHandler {
         }
     }
 
+    // ===============================
+    // REPORT SYSTEM
+    // ===============================
     private async rejectReport(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const { hasRolePermissions, hasOverridePermissions } = this.client.util;
@@ -1350,7 +1341,6 @@ export default class ButtonHandler {
             let embedMessage = '';
             let reportCount = 0;
 
-            // Attempt to DM a notification to trialee.
             const sendRoleRemovalDM = async (user: GuildMember) => {
                 try {
                     const dmEmbed = new EmbedBuilder()
@@ -1382,7 +1372,6 @@ export default class ButtonHandler {
                         expired: false
                     }
                 })
-                // Add new report
                 const report = new Report();
                 report.reporter = dirtySubmitterId;
                 report.reportedUser = dirtyReportedUserId;
@@ -1390,7 +1379,6 @@ export default class ButtonHandler {
                 report.link = interaction.message.url;
                 await repository.save(report);
 
-                // Check length of reports that are active.
                 removeRole = reportsCount + 1 >= 3 ? true : false;
 
                 if (removeRole) {
@@ -1404,14 +1392,11 @@ export default class ButtonHandler {
                     const userId = dirtyReportedUserId.slice(2, -1);
                     const user = await interaction.guild?.members.fetch(userId);
                     let userRoles = user?.roles.cache.map(role => role.id) || [];
-                    // Boolean to check for early exit conditions as we can't break out. These conditions are: No role or no combo role.
                     let handled = false;
-                    // Does not have the role.
                     if (!userRoles.includes(roleId) && !userRoles.includes(combinationRoleId)) {
                         handled = true;
                         embedMessage = `This user does not have this role to remove.`;
                     }
-                    // Has the role, but the role has no combination role
                     if (userRoles.includes(roleId) && !combinationRoleId && !combinationKey) {
                         await user?.roles.remove(roleId);
                         userRoles = userRoles.filter(item => item !== roleId);
@@ -1419,17 +1404,12 @@ export default class ButtonHandler {
                         embedMessage = `${dirtyRoleId} was removed.\n`;
                         sendRoleRemovalDM(user);
                     }
-                    // Has the role but no combination role (just in case)
                     if (userRoles.includes(roleId) && !userRoles.includes(combinationRoleId) && (handled === false)) {
                         await user?.roles.remove(roleId);
                         userRoles = userRoles.filter(item => item !== roleId);
-                        // i.e. index of 'grandmaster'
                         const combinedCategoryIndex = categories.combined.indexOf(combinationKey);
-                        // i.e index of 'master' FROM 'grandmaster'
                         const newCombinedCategoryIndex: number | null = combinedCategoryIndex !== 0 ? combinedCategoryIndex - 1 : null;
-                        // If user already has the combined role for degradation
                         if ((newCombinedCategoryIndex !== null) && userRoles.includes(stripRole(roles[categories.combined[newCombinedCategoryIndex]]))) {
-                            // Do nothing. Tags are already removed and combo role for degraded role already exists.
                             embedMessage = `
                             ${dirtyRoleId} was removed.
                             <@${user.id}> already has <@&${roles[categories[category][newCombinedCategoryIndex]]}>.
@@ -1437,25 +1417,20 @@ export default class ButtonHandler {
                             `
                             sendRoleRemovalDM(user);
                         } else {
-                            // They don't have the combined role, therefore we have to add degraded role and opposite role.
                             const reportedCategoryIndex = categories[category].indexOf(roleKey);
                             const newCategoryIndex: number | null = reportedCategoryIndex !== 0 ? reportedCategoryIndex - 1 : null;
                             if (newCategoryIndex !== null) {
-                                // i.e. duoMaster
                                 const newRoleKey = categories[category][newCategoryIndex];
                                 let anyAdditionalRole;
                                 if (newRoleKey in prerequisites) {
-                                    // For each key inside a role pre-requisite
                                     for (const key in prerequisites[newRoleKey]) {
                                         let assign = true;
-                                        // Loop over each role and check if they have all pre-requisites
                                         prerequisites[newRoleKey][key].forEach((prereqRole: string) => {
                                             const roleId = stripRole(roles[prereqRole]);
                                             if (!(userRoles?.includes(roleId))) {
                                                 assign = false;
                                             }
                                         })
-                                        // Assign the additional role and remove the existing pre-requisite roles
                                         if (assign) {
                                             const assignedRoleId = stripRole(roles[key]);
                                             if (!userRoles?.includes(assignedRoleId)) await user?.roles.add(assignedRoleId);
@@ -1463,7 +1438,6 @@ export default class ButtonHandler {
                                                 const roleId = stripRole(roles[prereqRole]);
                                                 if (userRoles?.includes(roleId)) user?.roles.remove(roleId);
                                             })
-                                            // Remove inferior roles for combination roles
                                             if (key in removeHierarchy) {
                                                 for await (const roleToRemove of removeHierarchy[key]) {
                                                     const removeRoleId = stripRole(roles[roleToRemove]);
@@ -1477,11 +1451,9 @@ export default class ButtonHandler {
                                                 };
                                             }
                                             anyAdditionalRole = key;
-                                            // Just add the new role as no pre-requisites for the combined role
                                         } else {
                                             const roleId = stripRole(roles[newRoleKey]);
                                             if (!userRoles?.includes(roleId)) user?.roles.add(roleId);
-                                            // Remove inferior roles
                                             if (newRoleKey in removeHierarchy) {
                                                 for await (const roleToRemove of removeHierarchy[newRoleKey]) {
                                                     const removeRoleId = stripRole(roles[roleToRemove]);
@@ -1490,7 +1462,6 @@ export default class ButtonHandler {
                                             }
                                         }
                                     }
-                                    // No pre-requisite needed so just assign role
                                 } else {
                                     const roleId = stripRole(roles[newRoleKey]);
                                     if (!userRoles?.includes(roleId)) await user?.roles.add(roleId);
@@ -1507,7 +1478,6 @@ export default class ButtonHandler {
                         }
                         handled = true;
                     }
-                    // Has the combination role and the role will need degrading
                     if (userRoles.includes(combinationRoleId) && (handled === false)) {
                         const hasHigherRole = (role: string) => {
                             try {
@@ -1525,10 +1495,8 @@ export default class ButtonHandler {
                             }
                             catch (err) { return false }
                         }
-                        // Remove role
                         await user?.roles.remove(combinationRoleId);
                         userRoles = userRoles.filter(item => item !== combinationRoleId);
-                        // Add degraded role (should not have to check)
                         let degradedRoleAdded = false;
                         let oppositeRoleAdded = false;
                         const reportedCategoryIndex = categories[category].indexOf(roleKey);
@@ -1543,7 +1511,6 @@ export default class ButtonHandler {
                                 degradedRoleAdded = true;
                             }
 
-                            // Add opposite role (should not have to check)
                             const oppositeRoleKey = prerequisites[roleKey][combinationKey][0];
                             const oppositeRoleId = stripRole(roles[oppositeRoleKey]);
                             if (!hasHigherRole(oppositeRoleKey)) {
@@ -1762,6 +1729,9 @@ export default class ButtonHandler {
         }
     }
 
+    // ===============================
+    // UTILITY METHODS
+    // ===============================
     public async grantTrialRole(interaction: ButtonInteraction<'cached'>, cleanRoleId: string, trialeeId: string) {
         const { roles, stripRole, getKeyFromValue } = this.client.util;
         const roleKey = getKeyFromValue(roles, `<@&${cleanRoleId}>`);
@@ -1772,10 +1742,12 @@ export default class ButtonHandler {
         }
     }
 
-    // Ticket System Handlers
+    // ===============================
+    // TICKET SYSTEM - MODAL HANDLERS
+    // ===============================
     private async handleTicketSuggestion(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
-            .setCustomId(`ticket_suggestion_${interaction.user.id}`)
+            .setCustomId(`ticket:create_suggestion_${interaction.user.id}`)
             .setTitle('Submit a Suggestion');
 
         const rsnInput = new TextInputBuilder()
@@ -1809,7 +1781,7 @@ export default class ButtonHandler {
 
     private async handleTicketReport(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
-            .setCustomId(`ticket_report_${interaction.user.id}`)
+            .setCustomId(`ticket:create_report_${interaction.user.id}`)
             .setTitle('Submit a Report');
 
         const rsnInput = new TextInputBuilder()
@@ -1851,7 +1823,7 @@ export default class ButtonHandler {
 
     private async handleTicketContentCreator(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
-            .setCustomId(`ticket_contentcreator_${interaction.user.id}`)
+            .setCustomId(`ticket:create_contentcreator_${interaction.user.id}`)
             .setTitle('Content Creator Application');
 
         const rsnInput = new TextInputBuilder()
@@ -1885,7 +1857,7 @@ export default class ButtonHandler {
 
     private async handleTicketOther(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
-            .setCustomId(`ticket_other_${interaction.user.id}`)
+            .setCustomId(`ticket:create_other_${interaction.user.id}`)
             .setTitle('Other Support Request');
 
         const rsnInput = new TextInputBuilder()
@@ -1909,23 +1881,21 @@ export default class ButtonHandler {
         await interaction.showModal(modal);
     }
 
-    // Ticket Close Handlers
+    // ===============================
+    // TICKET SYSTEM - CLOSE HANDLERS
+    // ===============================
     private async handleTicketClose(interaction: ButtonInteraction<'cached'>): Promise<void> {
-        // Check if user has permission to close ticket (user who opened it, admin, or owner)
         const channelName = interaction.channel?.name;
         if (!channelName || !channelName.includes('-')) {
             await interaction.reply({ content: 'This command can only be used in ticket channels.', flags: MessageFlags.Ephemeral });
             return;
         }
 
-        // Extract user ID from the channel's first message or footer
         const hasPermission = await this.canCloseTicket(interaction);
         if (!hasPermission) {
             await interaction.reply({ content: 'You do not have permission to close this ticket.', flags: MessageFlags.Ephemeral });
             return;
         }
-
-        // Create confirmation embed and buttons
         const confirmEmbed = new EmbedBuilder()
             .setTitle('Close Ticket')
             .setDescription('Are you sure you would like to close this ticket?')
@@ -1952,10 +1922,8 @@ export default class ButtonHandler {
         try {
             const channel = interaction.channel as TextChannel;
             
-            // Find the ticket opener using multiple methods
             let ticketUserId: string | null = null;
             
-            // Method 1: Look for welcome message
             const messages = await channel.messages.fetch({ limit: 20 });
             const welcomeMessage = messages.find(msg => 
                 msg.content && (
@@ -1971,11 +1939,9 @@ export default class ButtonHandler {
                 }
             }
             
-            // Method 2: Look at channel permissions (fallback)
             if (!ticketUserId) {
                 for (const [id, overwrite] of channel.permissionOverwrites.cache) {
                     if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
-                        // Skip admin and owner roles by checking if it's a user ID format
                         const adminRoleId = this.client.util.stripRole(this.client.util.roles.admin);
                         const ownerRoleId = this.client.util.stripRole(this.client.util.roles.owner);
                         
@@ -1987,27 +1953,21 @@ export default class ButtonHandler {
                 }
             }
             
-            // Method 3: Extract from channel name (last resort)
             if (!ticketUserId) {
-                // If channel name format is like "suggestion-0001", we can't get user ID this way
-                // So we'll have to fail gracefully
                 await interaction.editReply({ 
                     content: 'Could not identify ticket opener. Please use the Delete button instead to remove this ticket, or contact an administrator.' 
                 });
                 return;
             }
 
-            // Remove user's permissions from the channel
             await channel.permissionOverwrites.delete(ticketUserId);
 
-            // Update the confirmation message to show ticket closed
             const closedEmbed = new EmbedBuilder()
                 .setTitle('Ticket Closed')
                 .setDescription(`Ticket Closed by <@${interaction.user.id}>`)
                 .setColor(0xff0000)
                 .setTimestamp();
 
-            // Create support team controls embed
             const controlsEmbed = new EmbedBuilder()
                 .setTitle('Support team ticket controls')
                 .setColor(0x99ccff);
@@ -2024,10 +1984,8 @@ export default class ButtonHandler {
                         .setStyle(ButtonStyle.Danger)
                 );
 
-            // Update the confirmation interaction to show completion
             await interaction.editReply({ content: 'Ticket has been closed successfully.' });
             
-            // Send the closure message and controls to the channel
             await channel.send({ embeds: [closedEmbed] });
             await channel.send({ embeds: [controlsEmbed], components: [controlButtons] });
 
@@ -2052,27 +2010,27 @@ export default class ButtonHandler {
     }
 
     private async canCloseTicket(interaction: ButtonInteraction<'cached'>): Promise<boolean> {
-        // Check if user is admin or owner
         const hasRolePermissions = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
         if (hasRolePermissions) return true;
 
-        // Check if user is the ticket opener by looking at channel permissions
         const channel = interaction.channel as TextChannel;
         const userPermissions = channel.permissionOverwrites.cache.get(interaction.user.id);
         
-        // If user has explicit permissions on this channel, they likely opened the ticket
         return userPermissions !== undefined;
     }
 
-    // Support Team Control Handlers
-    private async logTicketToForum(channel: TextChannel, user: any, logReason: string): Promise<string> {
+    // ===============================
+    // TICKET SYSTEM - SUPPORT TEAM CONTROLS
+    // ===============================
+    private async logTicketToForum(channel: TextChannel, user: any, logReason: string): Promise<string | null> {
         const forumChannelId = '1390801555724308591';
         
-        // Fetch all messages in the channel
         const messages = await channel.messages.fetch({ limit: 100 });
         const messageArray = Array.from(messages.values()).reverse();
+
+        const transcriptBuffer = await TranscriptGenerator.createTranscript(messages, channel.name);
+        const transcriptAttachment = new AttachmentBuilder(transcriptBuffer, { name: `${channel.name}-transcript.html` });
         
-        // Get ticket information from the welcome message
         const welcomeMessage = messages.find(msg => 
             msg.content.includes('your ticket has been created') && 
             msg.content.match(/<@(\d+)>,/)
@@ -2094,39 +2052,33 @@ export default class ButtonHandler {
             }
         }
         
-        // Extract ticket type from channel name
         const channelNameParts = channel.name.split('-');
         if (channelNameParts.length > 0) {
             ticketType = channelNameParts[0];
         }
         
-        // Get the original ticket embed (the one with form responses, not the closed embed)
         const ticketEmbedMessage = messages.find(msg => 
             msg.author.id === this.client.user?.id && 
             msg.embeds.length > 0 &&
             msg.embeds[0].title?.includes('Ticket') &&
             !msg.embeds[0].title?.includes('Closed') &&
-            msg.embeds[0].fields && msg.embeds[0].fields.length > 0 // Has form response fields
+            msg.embeds[0].fields && msg.embeds[0].fields.length > 0
         );
         const originalTicketEmbed = ticketEmbedMessage?.embeds[0];
         
-        // Create forum post title with special handling for report tickets
         let forumTitle = `${ticketType}-${ticketOpener}`;
         
         if (ticketType === 'report' && originalTicketEmbed?.fields) {
-            // Find the "Reported User" field from the embed
             const reportedUserField = originalTicketEmbed.fields.find(field => 
                 field.name === 'Reported User'
             );
             
             if (reportedUserField) {
-                // Extract the reported user from the field value (remove backticks)
                 const reportedUser = reportedUserField.value.replace(/```/g, '').trim();
                 forumTitle = `Report-${ticketOpener}-${reportedUser}`;
             }
         }
         
-        // Create summary embed (non-inline fields)
         const summaryEmbed = new EmbedBuilder()
             .setTitle(`Ticket Log: ${channel.name}`)
             .setColor(0x99ccff)
@@ -2140,17 +2092,14 @@ export default class ButtonHandler {
                 { name: 'Message Count', value: messageArray.length.toString(), inline: false }
             );
         
-        // Get forum channel
         const forumChannel = await channel.guild.channels.fetch(forumChannelId);
         if (!forumChannel || !forumChannel.isThreadOnly()) {
             throw new Error('Could not find or access the forum channel.');
         }
         
-        // Get the appropriate forum tag based on ticket type
         const tagName = ticketType === 'contentcreator' ? 'Content Creator' : 
                        ticketType.charAt(0).toUpperCase() + ticketType.slice(1);
         
-        // Find the matching tag in the forum channel
         const availableTags = forumChannel.availableTags;
         const matchingTag = availableTags.find(tag => 
             tag.name.toLowerCase() === tagName.toLowerCase() ||
@@ -2158,95 +2107,94 @@ export default class ButtonHandler {
             (ticketType === 'report' && tag.name.toLowerCase() === 'reports')
         );
         
-        // Create forum post with summary, original ticket embed, and appropriate tag
-        const forumPost = await forumChannel.threads.create({
-            name: forumTitle,
-            message: {
-                embeds: originalTicketEmbed ? [summaryEmbed, originalTicketEmbed] : [summaryEmbed]
-            },
-            appliedTags: matchingTag ? [matchingTag.id] : []
-        });
-        
-        // Send conversation messages as separate posts
-        let currentBlock = '';
-        const maxLength = 1900; // Leave room for formatting
-        
-        let currentDate = '';
-        
-        for (const message of messageArray) {
-            // Skip bot messages
-            if (message.author.id === this.client.user?.id) {
-                continue;
-            }
+        try {
+            const forumPost = await forumChannel.threads.create({
+                name: forumTitle,
+                message: {
+                    embeds: originalTicketEmbed ? [summaryEmbed, originalTicketEmbed] : [summaryEmbed],
+                    files: [transcriptAttachment]
+                },
+                appliedTags: matchingTag ? [matchingTag.id] : []
+            });
             
-            const messageDate = message.createdAt.toLocaleDateString();
-            const timeOnly = message.createdAt.toLocaleTimeString();
-            const author = message.author.username; // Use username instead of mention to avoid pings
-            const content = (message.content || '')
-                .replace(/<@!?(\d+)>/g, '@$1') // Escape user mentions to prevent pings
-                .replace(/<@&(\d+)>/g, '@&$1'); // Escape role mentions to prevent pings
+            let currentBlock = '';
+            const maxLength = 1900;
             
-            // Check if we need to add a date header
-            if (currentDate !== messageDate) {
-                currentDate = messageDate;
-                const dateHeader = `\n**--- ${messageDate} ---**\n`;
-                
-                if (currentBlock.length + dateHeader.length > maxLength) {
-                    await forumPost.send({ content: currentBlock });
-                    currentBlock = dateHeader;
-                } else {
-                    currentBlock += dateHeader;
+            let currentDate = '';
+            
+            for (const message of messageArray) {
+                if (message.author.id === this.client.user?.id) {
+                    continue;
                 }
-            }
-            
-            // Format the message inline (more compact)
-            const messageBlock = `**[${timeOnly}] ${author}:** ${content || '*No text content*'}\n`;
-            
-            // Check if message has attachments
-            const hasAttachments = message.attachments.size > 0;
-            
-            // If current block + new message would exceed limit, send current block first
-            if (currentBlock.length + messageBlock.length > maxLength && currentBlock.length > 0) {
-                await forumPost.send({ content: currentBlock });
-                currentBlock = '';
-            }
-            
-            // Add message to current block
-            currentBlock += messageBlock;
-            
-            // If message has attachments, add them inline
-            if (hasAttachments) {
-                for (const attachment of message.attachments.values()) {
-                    const attachmentBlock = `**[${timeOnly}] ${author}:** ${attachment.url}\n`;
+                
+                const messageDate = message.createdAt.toLocaleDateString();
+                const timeOnly = message.createdAt.toLocaleTimeString();
+                const author = message.author.username;
+                const content = (message.content || '')
+                    .replace(/<@!?(\d+)>/g, '@$1')
+                    .replace(/<@&(\d+)>/g, '@&$1');
+                
+                if (currentDate !== messageDate) {
+                    currentDate = messageDate;
+                    const dateHeader = `\n**--- ${messageDate} ---**\n`;
                     
-                    if (currentBlock.length + attachmentBlock.length > maxLength) {
+                    if (currentBlock.length + dateHeader.length > maxLength) {
                         await forumPost.send({ content: currentBlock });
-                        currentBlock = attachmentBlock;
+                        currentBlock = dateHeader;
                     } else {
-                        currentBlock += attachmentBlock;
+                        currentBlock += dateHeader;
+                    }
+                }
+                
+                const messageBlock = `**[${timeOnly}] ${author}:** ${content || '*No text content*'}\n`;
+                
+                const hasAttachments = message.attachments.size > 0;
+                
+                if (currentBlock.length + messageBlock.length > maxLength && currentBlock.length > 0) {
+                    await forumPost.send({ content: currentBlock });
+                    currentBlock = '';
+                }
+                
+                currentBlock += messageBlock;
+                
+                if (hasAttachments) {
+                    for (const attachment of message.attachments.values()) {
+                        const attachmentBlock = `**[${timeOnly}] ${author}:** ${attachment.url}\n`;
+                        
+                        if (currentBlock.length + attachmentBlock.length > maxLength) {
+                            await forumPost.send({ content: currentBlock });
+                            currentBlock = attachmentBlock;
+                        } else {
+                            currentBlock += attachmentBlock;
+                        }
+                    }
+                }
+                
+                if (message.embeds.length > 0) {
+                    const embedInfo = `*[${author} sent ${message.embeds.length} embed(s)]*\n`;
+                    
+                    if (currentBlock.length + embedInfo.length > maxLength) {
+                        await forumPost.send({ content: currentBlock });
+                        currentBlock = embedInfo;
+                    } else {
+                        currentBlock += embedInfo;
                     }
                 }
             }
             
-            // If message has embeds, mention them
-            if (message.embeds.length > 0) {
-                const embedInfo = `*[${author} sent ${message.embeds.length} embed(s)]*\n`;
-                
-                if (currentBlock.length + embedInfo.length > maxLength) {
-                    await forumPost.send({ content: currentBlock });
-                    currentBlock = embedInfo;
-                } else {
-                    currentBlock += embedInfo;
-                }
+            if (currentBlock.trim()) {
+                await forumPost.send({ content: currentBlock });
             }
+            
+            return forumPost.id;
+        } catch(error) {
+            this.client.logger.error({
+                message: `Failed to create forum post for transcript log for channel ${channel.name}`,
+                error,
+                handler: this.constructor.name
+            });
+            return null;
         }
-        
-        // Send any remaining content
-        if (currentBlock.trim()) {
-            await forumPost.send({ content: currentBlock });
-        }
-        
-        return `${forumPost.name}\n<#${forumPost.id}>`;
     }
 
 
@@ -2412,25 +2360,80 @@ export default class ButtonHandler {
         try {
             const channel = interaction.channel as TextChannel;
             
+            // First, log the ticket to the forum, which now also attaches the transcript
+            await interaction.editReply({ content: 'Archiving ticket to forum...' });
+            const forumPostId = await this.logTicketToForum(channel, interaction.user, 'Automatically logged before deletion');
+
+            if (!forumPostId) {
+                await interaction.editReply({ content: 'Error: Failed to archive ticket to the forum. Aborting deletion.' });
+                return;
+            }
+
+            // New: Attempt to find the ticket opener and send them a DM with a download button
+            const ticketOpenerId = await this.findTicketOpener(channel);
+            this.client.logger.log({ 
+                message: `[Transcript] Found ticket opener ID: ${ticketOpenerId} for channel ${channel.name}`, 
+                handler: this.constructor.name 
+            }, true);
+            
+            if (ticketOpenerId) {
+                try {
+                    const ticketOpener = await this.client.users.fetch(ticketOpenerId);
+                    this.client.logger.log({ 
+                        message: `[Transcript] Fetched user ${ticketOpener.username} (${ticketOpener.id})`, 
+                        handler: this.constructor.name 
+                    }, true);
+                    
+                    const dmEmbed = new EmbedBuilder()
+                        .setTitle('Ticket Closed')
+                        .setDescription(`Your ticket **#${channel.name}** has been closed and archived. You can download a copy of the transcript at any time.`)
+                        .setColor(0x99ccff)
+                        .setTimestamp();
+                    
+                    const buttonId = `ticket:download_transcript_${forumPostId}`;
+                    const downloadButton = new ActionRowBuilder<ButtonBuilder>()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(buttonId)
+                                .setLabel('Download Transcript')
+                                .setStyle(ButtonStyle.Primary)
+                        );
+
+                    this.client.logger.log({ 
+                        message: `[Transcript] Sending DM to ${ticketOpener.username} with button ID: "${buttonId}"`, 
+                        handler: this.constructor.name 
+                    }, true);
+
+                    await ticketOpener.send({
+                        embeds: [dmEmbed],
+                        components: [downloadButton]
+                    });
+
+                    this.client.logger.log({ 
+                        message: `[Transcript] Successfully sent DM to ${ticketOpener.username}`, 
+                        handler: this.constructor.name 
+                    }, true);
+
+                    await interaction.followUp({ content: `A DM has been sent to ${ticketOpener.username} with a download link.`, flags: MessageFlags.Ephemeral });
+
+                } catch (dmError: any) {
+                    this.client.logger.error({
+                        message: `Failed to DM transcript button to user ${ticketOpenerId}`,
+                        error: { message: dmError.message, stack: dmError.stack, name: dmError.name },
+                        handler: this.constructor.name
+                    });
+                    await interaction.followUp({ content: 'Could not send DM to the user. They may have DMs disabled.', flags: MessageFlags.Ephemeral });
+                }
+            } else {
+                await interaction.followUp({ content: 'Warning: Could not identify the ticket opener to send a DM.', flags: MessageFlags.Ephemeral });
+            }
+            
             this.client.logger.log({
                 message: `Ticket ${channel.name} deleted by ${interaction.user.username} (${interaction.user.id})`,
                 handler: this.constructor.name
             }, true);
 
-            await interaction.editReply({ content: 'Automatically logging ticket before deletion...' });
-
-            // Automatically log the ticket before deletion
-            try {
-                await this.logTicketToForum(channel, interaction.user, 'Automatically logged before deletion');
-                await interaction.editReply({ content: 'Ticket logged successfully. Channel will be deleted in 5 seconds...' });
-            } catch (logError) {
-                this.client.logger.error({
-                    message: 'Failed to automatically log ticket before deletion',
-                    error: logError,
-                    handler: this.constructor.name
-                });
-                await interaction.editReply({ content: 'Warning: Failed to log ticket automatically. Channel will still be deleted in 5 seconds...' });
-            }
+            await interaction.followUp({ content: 'Ticket archived. The channel will be deleted in 5 seconds...' });
 
             // Delete the channel after a short delay
             setTimeout(async () => {
@@ -2460,7 +2463,9 @@ export default class ButtonHandler {
         await interaction.update({ content: 'Ticket deletion cancelled.', embeds: [], components: [] });
     }
 
-    //Self-Assign
+    // ===============================
+    // SELF-ASSIGN SYSTEM
+    // ===============================
     private async handleSelfAssign(interaction: ButtonInteraction<'cached'>, id: string) : Promise<Message<true> | InteractionResponse<true> | void> {
         await interaction.deferReply({flags: MessageFlags.Ephemeral});
         const { logReactionRoleChange } = this.client;
@@ -2468,8 +2473,6 @@ export default class ButtonHandler {
         const user = await interaction.guild?.members.fetch(interaction.user.id);
         const userRoles = await user?.roles.cache.map(role => role.id) || [];
 
-        //parse the id <role>{;<neededRole>;<neededRole>}
-        //first id has always the 'to-be-assigned'-Role, ids after are check-roles if user has sufficient tag
         const roleIds: string[] = id.split(";");
         let roleReqError: string = "";
         const addResultEmbed = new EmbedBuilder()
@@ -2480,7 +2483,6 @@ export default class ButtonHandler {
             .setColor(colours.discord.green)
             .setDescription(`<@&${roleIds[0]}> successfully removed.`);
 
-        //Blacklist tags that are able to change roles
         const roleObject = interaction.guild.roles.cache.get(roleIds[0]);
 
         if (roleObject?.permissions.has('ManageRoles')) {
@@ -2489,23 +2491,17 @@ export default class ButtonHandler {
                 .setDescription(`Unallowed Role-Assign!`)]});
         }
 
-        //TODO: cleanup all other cosmetic tags
-        //TODO: some sort of hierarchy logic
-
-        //remove should always work
         if (userRoles.includes(roleIds[0])) {
             await user.roles.remove(roleIds[0]);
             await logReactionRoleChange(user, roleObject!, 'removed');
             return await interaction.editReply({embeds: [removeResultEmbed]});
         } else if (roleIds.length == 1) {
-            //if it's only assign, just do it
             if (!userRoles.includes(roleIds[0])) {
                 await user.roles.add(roleIds[0]);
                 await logReactionRoleChange(user, roleObject!, 'added');
                 return await interaction.editReply({embeds: [addResultEmbed]});
             }
         } else if (roleIds.length > 1) {            
-            //check for required tags
             for (let i = 1; i < roleIds.length; i++) {                
                 if (userRoles.includes(roleIds[i])) {
                     await user.roles.add(roleIds[0]);
@@ -2527,5 +2523,223 @@ export default class ButtonHandler {
         }
 
         return interaction.editReply("somehow i did nothing?");
+    }
+
+    // ===============================
+    // TRANSCRIPT SYSTEM
+    // ===============================
+    private async findTicketOpener(channel: TextChannel): Promise<string | null> {
+        const messages = await channel.messages.fetch({ limit: 20 });
+        const welcomeMessage = messages.find(msg => 
+            msg.author.id === this.client.user?.id &&
+            msg.content &&
+            msg.content.includes('ticket has been created') &&
+            msg.mentions.users.first()
+        );
+        
+        if (welcomeMessage && welcomeMessage.mentions.users.first()) {
+            return welcomeMessage.mentions.users.first()!.id;
+        }
+        
+        for (const [id, overwrite] of channel.permissionOverwrites.cache) {
+            if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
+                const isAdmin = id === this.client.util.stripRole(this.client.util.roles.admin);
+                const isOwner = id === this.client.util.stripRole(this.client.util.roles.owner);
+                const isBot = id === this.client.user?.id;
+                
+                if (!isAdmin && !isOwner && !isBot) {
+                    return id;
+                }
+            }
+        }
+    
+        return null;
+    }
+
+    public static async handleDMTranscriptDownload(client: Bot, interaction: ButtonInteraction, forumPostId: string): Promise<void> {
+        client.logger.log({ 
+            message: `[Transcript] handleDMTranscriptDownload called with forumPostId: "${forumPostId}", user: ${interaction.user.id}`, 
+            handler: 'ButtonHandler' 
+        }, true);
+        
+        try {
+            await interaction.deferReply({ ephemeral: true });
+            client.logger.log({ 
+                message: `[Transcript] Successfully deferred reply for post ${forumPostId}`, 
+                handler: 'ButtonHandler' 
+            }, true);
+        } catch (error: any) {
+            client.logger.error({
+                message: `[Transcript] FAILED to defer reply for post ${forumPostId}`,
+                error: {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                },
+                handler: 'ButtonHandler'
+            });
+            return;
+        }
+        
+        client.logger.log({ message: `[Transcript] Received download request for post ${forumPostId}.`, handler: 'ButtonHandler' }, true);
+
+        const forumChannelId = '1390801555724308591';
+
+        try {
+            client.logger.log({ message: `[Transcript] Fetching forum channel ${forumChannelId}...`, handler: 'ButtonHandler' }, true);
+            const forumChannel = await client.channels.fetch(forumChannelId);
+            if (!forumChannel || !forumChannel.isThreadOnly()) {
+                await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
+                return;
+            }
+            client.logger.log({ message: `[Transcript] Forum channel found. Fetching thread ${forumPostId}...`, handler: 'ButtonHandler' }, true);
+
+            const thread = await forumChannel.threads.fetch(forumPostId);
+            if (!thread) {
+                await interaction.editReply({ content: 'Error: Could not find the specific transcript for this ticket.' });
+                return;
+            }
+            client.logger.log({ message: `[Transcript] Thread found. Fetching starter message...`, handler: 'ButtonHandler' }, true);
+
+            const starterMessage = await thread.fetchStarterMessage();
+            if (!starterMessage || starterMessage.attachments.size === 0) {
+                await interaction.editReply({ content: 'Error: The archived transcript is missing its attachment.' });
+                return;
+            }
+            client.logger.log({ message: `[Transcript] Starter message found. Getting attachment...`, handler: 'ButtonHandler' }, true);
+
+            const transcriptAttachment = starterMessage.attachments.first();
+            if (!transcriptAttachment) {
+                await interaction.editReply({ content: 'Error: Could not retrieve the transcript attachment.' });
+                return;
+            }
+            client.logger.log({ message: `[Transcript] Attachment found: ${transcriptAttachment.name}. URL: ${transcriptAttachment.url}`, handler: 'ButtonHandler' }, true);
+            
+            client.logger.log({ message: `[Transcript] Sending direct link to user...`, handler: 'ButtonHandler' }, true);
+            await interaction.editReply({
+                content: `Here is your transcript - click the link below to view it in your browser:\n\n**[📄 View Transcript](${transcriptAttachment.url})**\n\n*This link will open the transcript in a new browser tab.*`
+            });
+            client.logger.log({ message: `[Transcript] Direct link sent successfully for post ${forumPostId}.`, handler: 'ButtonHandler' }, true);
+
+        } catch (error: any) {
+            client.logger.error({
+                message: `[Transcript] CRITICAL FAILURE while retrieving transcript for forum post ${forumPostId}`,
+                error: {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name,
+                    isAxiosError: error.isAxiosError,
+                    axiosRequest: error.config?.url,
+                    axiosResponseStatus: error.response?.status,
+                    axiosResponseData: error.response?.data?.toString(),
+                },
+                handler: 'ButtonHandler'
+            });
+            
+            // Final attempt to notify the user
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', ephemeral: true }).catch(() => {});
+            } else {
+                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => {});
+            }
+        }
+    }
+
+    private async handleTranscriptDownload(interaction: ButtonInteraction, forumPostId: string): Promise<void> {
+        this.client.logger.log({ 
+            message: `[Transcript] handleTranscriptDownload called with forumPostId: "${forumPostId}", user: ${interaction.user.id}`, 
+            handler: this.constructor.name 
+        }, true);
+        
+        try {
+            await interaction.deferReply({ ephemeral: true });
+            this.client.logger.log({ 
+                message: `[Transcript] Successfully deferred reply for post ${forumPostId}`, 
+                handler: this.constructor.name 
+            }, true);
+        } catch (error: any) {
+            this.client.logger.error({
+                message: `[Transcript] FAILED to defer reply for post ${forumPostId}`,
+                error: {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                },
+                handler: this.constructor.name
+            });
+            return;
+        }
+        
+        this.client.logger.log({ message: `[Transcript] Received download request for post ${forumPostId}.`, handler: this.constructor.name }, true);
+
+        const forumChannelId = '1390801555724308591';
+
+        try {
+            this.client.logger.log({ message: `[Transcript] Fetching forum channel ${forumChannelId}...`, handler: this.constructor.name }, true);
+            const forumChannel = await this.client.channels.fetch(forumChannelId);
+            if (!forumChannel || !forumChannel.isThreadOnly()) {
+                await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
+                return;
+            }
+            this.client.logger.log({ message: `[Transcript] Forum channel found. Fetching thread ${forumPostId}...`, handler: this.constructor.name }, true);
+
+            const thread = await forumChannel.threads.fetch(forumPostId);
+            if (!thread) {
+                await interaction.editReply({ content: 'Error: Could not find the specific transcript for this ticket.' });
+                return;
+            }
+            this.client.logger.log({ message: `[Transcript] Thread found. Fetching starter message...`, handler: this.constructor.name }, true);
+
+            const starterMessage = await thread.fetchStarterMessage();
+            if (!starterMessage || starterMessage.attachments.size === 0) {
+                await interaction.editReply({ content: 'Error: The archived transcript is missing its attachment.' });
+                return;
+            }
+            this.client.logger.log({ message: `[Transcript] Starter message found. Getting attachment...`, handler: this.constructor.name }, true);
+
+            const transcriptAttachment = starterMessage.attachments.first();
+            if (!transcriptAttachment) {
+                await interaction.editReply({ content: 'Error: Could not retrieve the transcript attachment.' });
+                return;
+            }
+            this.client.logger.log({ message: `[Transcript] Attachment found: ${transcriptAttachment.name}. URL: ${transcriptAttachment.url}`, handler: this.constructor.name }, true);
+            
+            this.client.logger.log({ message: `[Transcript] Downloading file via axios...`, handler: this.constructor.name }, true);
+            const response = await axios.get(transcriptAttachment.url, {
+                responseType: 'arraybuffer'
+            });
+            this.client.logger.log({ message: `[Transcript] File downloaded successfully. Status: ${response.status}.`, handler: this.constructor.name }, true);
+
+            const newAttachment = new AttachmentBuilder(response.data, { name: transcriptAttachment.name });
+            
+            this.client.logger.log({ message: `[Transcript] Replying to interaction with file...`, handler: this.constructor.name }, true);
+            await interaction.editReply({
+                content: 'Here is your transcript:',
+                files: [newAttachment]
+            });
+            this.client.logger.log({ message: `[Transcript] Interaction reply sent successfully for post ${forumPostId}.`, handler: this.constructor.name }, true);
+
+        } catch (error: any) {
+            this.client.logger.error({
+                message: `[Transcript] CRITICAL FAILURE while retrieving transcript for forum post ${forumPostId}`,
+                error: {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name,
+                    isAxiosError: error.isAxiosError,
+                    axiosRequest: error.config?.url,
+                    axiosResponseStatus: error.response?.status,
+                    axiosResponseData: error.response?.data?.toString(),
+                },
+                handler: this.constructor.name
+            });
+            
+            // Final attempt to notify the user
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', ephemeral: true }).catch(() => {});
+            } else {
+                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => {});
+            }
+        }
     }
 }
