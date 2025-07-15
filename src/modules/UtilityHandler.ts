@@ -37,6 +37,7 @@ interface Categories {
     threeSeven: string[]
     duo: string[]
     combined: string[]
+    serverPings: string[]
 }
 
 interface Hierarchy {
@@ -275,6 +276,8 @@ export default class UtilityHandler {
                 adept: `<@&${process.env.DEV_ADEPT_ROLE!}>`,
                 mastery: `<@&${process.env.DEV_MASTERY_ROLE!}>`,
                 extreme: `<@&${process.env.DEV_EXTREME_ROLE!}>`,
+                serverAnnouncements: `<@&${process.env.DEV_SERVER_ANNOUNCEMENTS_ROLE!}>`,
+                goodMorning: `<@&${process.env.DEV_GOOD_MORNING_ROLE!}>`,
             }
         }
         return {
@@ -316,6 +319,8 @@ export default class UtilityHandler {
             adept: `<@&${process.env.PROD_ADEPT_ROLE!}>`,
             mastery: `<@&${process.env.PROD_MASTERY_ROLE!}>`,
             extreme: `<@&${process.env.PROD_EXTREME_ROLE!}>`,
+            serverAnnouncements: `<@&${process.env.PROD_SERVER_ANNOUNCEMENTS_ROLE!}>`,
+            goodMorning: `<@&${process.env.PROD_GOOD_MORNING_ROLE!}>`,
         }
     }
 
@@ -325,7 +330,8 @@ export default class UtilityHandler {
             collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
             threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
             duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
-            combined: ['rootskips', 'experienced', 'master', 'grandmaster']
+            combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
+            serverPings: ['serverAnnouncements', 'goodMorning'],
         }
     }
 
@@ -335,7 +341,8 @@ export default class UtilityHandler {
             collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
             threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
             duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
-            combined: ['rootskips', 'experienced', 'master', 'grandmaster']
+            combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
+            serverPings: ['serverAnnouncements', 'goodMorning'],
         }
     }
 
@@ -363,6 +370,8 @@ export default class UtilityHandler {
             category = 'duo';
         } else if (this.categories.combined.includes(role)) {
             category = 'combined';
+        } else if (this.categories.serverPings.includes(role)) {
+            category = 'serverPings';
         } else {
             category = ''
         }

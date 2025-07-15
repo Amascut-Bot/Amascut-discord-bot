@@ -18,7 +18,7 @@
         "count-interval": "^1.0.1",
         "discord-api-types": "^0.37.8",
         "discord.js": "^14.20.0",
-        "dotenv": "^16.0.2",
+        "dotenv": "^16.6.1",
         "express": "^5.1.0",
         "indomitable": "^2.0.2",
         "jsonc-parser": "^3.3.1",
