@@ -8,14 +8,14 @@ export default class StringSelectHandler {
         this.client = client;
         this.id = id;
         this.interaction = interaction;
-        switch (id) {            
+        switch (id) {
             default:
                 if (id.startsWith('selfassign')) {
                     this.handleSelfAssign(interaction);
                 }
                 break;
         }
-    }    
+    }
 
     private async handleSelfAssign(interaction: StringSelectMenuInteraction<'cached'>) : Promise<Message<true> | InteractionResponse<true> | void> {
         interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -69,7 +69,7 @@ export default class StringSelectHandler {
             }
         } else if (roleIds.length > 1) {
             const { categorize, stripRole, roles, hierarchy } = this.client.util;
-            
+
             //special logic for hierarchy tags
             const hasRoleOrHigher = (role: string) => {
                 try {
@@ -90,7 +90,7 @@ export default class StringSelectHandler {
 
             //check for required tags
             for (let i = 1; i < roleIds.length; i++) {
-                if (!/^[+-]?\\d+(\\.\\d+)?$/.test(roleIds[i])) {
+                if (!/^[+-]?\d+(\.\d+)?$/.test(roleIds[i])) {
                     if (hasRoleOrHigher(roleIds[i])) {
                         await user.roles.add(roleIds[0]);
                         await this.client.logReactionRoleChange(user, roleObject!, 'added');
