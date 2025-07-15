@@ -19,7 +19,6 @@ export default class StringSelectHandler {
 
     private async handleSelfAssign(interaction: StringSelectMenuInteraction<'cached'>) : Promise<Message<true> | InteractionResponse<true> | void> {
         interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        const { logReactionRoleChange } = this.client;
         const { colours } = this.client.util;
         const user = await interaction.guild?.members.fetch(interaction.user.id);
         const userRoles = await user?.roles.cache.map(role => role.id) || [];
@@ -59,13 +58,13 @@ export default class StringSelectHandler {
         //remove should always work
         if (userRoles.includes(roleIds[0])) {
             await user.roles.remove(roleIds[0]);
-            await logReactionRoleChange(user, roleObject!, 'removed');
+            await this.client.logReactionRoleChange(user, roleObject!, 'removed');
             return await interaction.editReply({embeds: [removeResultEmbed]});
         } else if (roleIds.length == 1) {
             //if it's only assign, just do it
             if (!userRoles.includes(roleIds[0])) {
                 await user.roles.add(roleIds[0]);
-                await logReactionRoleChange(user, roleObject!, 'added');
+                await this.client.logReactionRoleChange(user, roleObject!, 'added');
                 return await interaction.editReply({embeds: [addResultEmbed]});
             }
         } else if (roleIds.length > 1) {
@@ -73,7 +72,7 @@ export default class StringSelectHandler {
             for (let i = 1; i < roleIds.length; i++) {                
                 if (userRoles.includes(roleIds[i])) {
                     await user.roles.add(roleIds[0]);
-                    await logReactionRoleChange(user, roleObject!, 'added');
+                    await this.client.logReactionRoleChange(user, roleObject!, 'added');
                     return await interaction.editReply({embeds: [addResultEmbed]});
                 }
                 
