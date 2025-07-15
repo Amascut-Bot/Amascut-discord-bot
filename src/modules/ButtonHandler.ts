@@ -2549,13 +2549,13 @@ export default class ButtonHandler {
                     }
             }
 
-            const errorEmbed = new EmbedBuilder()
-                .setColor(colours.discord.red)
-                .setDescription(`You need any of the following tags to set this colour!\nTags:${roleReqError}`);
-            return await interaction.editReply({ embeds: [errorEmbed] });
+            if (roleReqError) {
+                const errorEmbed = new EmbedBuilder()
+                    .setColor(colours.discord.red)
+                    .setDescription(`You need any of the following tags to set this colour!\nTags:${roleReqError}`);
+                return await interaction.editReply({ embeds: [errorEmbed] });
+            }
         }
-
-        return interaction.editReply("somehow i did nothing?");
     }
 
     // ===============================
