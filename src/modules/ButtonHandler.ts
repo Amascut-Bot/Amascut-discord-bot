@@ -2523,7 +2523,7 @@ export default class ButtonHandler {
 
             //check for required tags
             for (let i = 1; i < roleIds.length; i++) {
-                if (!/^[+-]?\\d+(\\.\\d+)?$/.test(roleIds[i])) {
+                if (!/^[+-]?\d+(\.\d+)?$/.test(roleIds[i])) {
                     if (hasRoleOrHigher(roleIds[i])) {
                         await user.roles.add(roleIds[0]);
                         await this.client.logReactionRoleChange(user, roleObject!, 'added');
