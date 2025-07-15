@@ -8,6 +8,7 @@ import 'dotenv/config';
 
 const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
 const dashboardDataFilePath = path.join(process.cwd(), 'dashboard-data.json');
+const notificationsFilePath = path.join(process.cwd(), 'notifications.json');
 const contentCreatorRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_CONTENT_CREATOR_ROLE}` : `${process.env.PROD_CONTENT_CREATOR_ROLE}`;
 const liveRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_LIVE_ROLE}` : `${process.env.PROD_LIVE_ROLE}`;
 const contentCreatorChannelId = `${process.env.TWITCH_NOTIFICATION_CHANNEL}`
@@ -38,6 +39,7 @@ export default class TwitchHandler {
         this.clientId = process.env.TWITCH_CLIENT_ID!;
         this.clientSecret = process.env.TWITCH_CLIENT_SECRET!;
         this.loadDashboardData();
+        this.loadNotifications();
     }
 
     public startMonitoring() {
@@ -47,52 +49,65 @@ export default class TwitchHandler {
 
     private async checkLiveStreams() {
         this.client.logger.log({ message: 'Checking for live Twitch streams...', handler: this.constructor.name }, true);
-        let streamers = await this.readStreamers();
+        const streamers = await this.readStreamers();
         if (streamers.length === 0) {
             this.client.logger.log({ message: 'No streamers to monitor.', handler: this.constructor.name }, true);
-            this.isFirstCheck = false; // Reset flag even if no streamers
+            this.isFirstCheck = false;
             return;
         }
 
+        // Get current state from sources of truth
         const userLogins = streamers.map(s => s.userName);
-        const liveStreams = await this.getLiveStreams(userLogins);
+        const liveStreamsFromAPI = await this.getLiveStreams(userLogins);
+        const liveUserNamesFromAPI = new Set(liveStreamsFromAPI.map(s => s.user_login.toLowerCase()));
+        const trackedNotifications = new Map(this.liveNotificationMessages); // Create a copy to iterate over
 
         let hasStatusChanges = false;
 
-        for (const streamer of streamers) {
-            const liveStream = liveStreams.find(s => s.user_login.toLowerCase() === streamer.userName.toLowerCase());
+        // Process streamers who went OFFLINE
+        for (const [userName, messageId] of trackedNotifications.entries()) {
+            if (!liveUserNamesFromAPI.has(userName)) {
+                // This streamer has a notification but is not live according to the API
+                this.client.logger.log({ message: `${userName} just went offline (or was found offline during check).`, handler: this.constructor.name }, true);
+                await this.deleteLiveNotification(userName); // This will remove from liveNotificationMessages and save
 
-            if (liveStream && !streamer.isLive) {
-                // Streamer went live
-                this.client.logger.log({ message: `${streamer.displayName} just went live!`, handler: this.constructor.name }, true);
-                streamer.isLive = true;
-                streamer.lastLiveAt = new Date();
-                await this.sendLiveNotification(liveStream, streamer);
-                if (streamer.discordUserId) {
-                    await this.updateUserRole(streamer.discordUserId, true);
+                const streamerInfo = streamers.find(s => s.userName.toLowerCase() === userName);
+                if (streamerInfo) {
+                    if (streamerInfo.isLive) hasStatusChanges = true; // Only a "change" if we thought they were live
+                    streamerInfo.isLive = false;
+                    if (streamerInfo.discordUserId) {
+                        await this.updateUserRole(streamerInfo.discordUserId, false);
+                    }
                 }
-                hasStatusChanges = true;
-            } else if (!liveStream && streamer.isLive) {
-                // Streamer went offline
-                this.client.logger.log({ message: `${streamer.displayName} just went offline.`, handler: this.constructor.name }, true);
-                streamer.isLive = false;
-
-                // Delete the live notification message
-                await this.deleteLiveNotification(streamer.userName);
-
-                if (streamer.discordUserId) {
-                    await this.updateUserRole(streamer.discordUserId, false);
-                }
-                hasStatusChanges = true;
             }
         }
 
-        // Only update dashboard if it's not the first check and there were actual status changes
-        if (!this.isFirstCheck && hasStatusChanges) {
+        // Process streamers who went ONLINE
+        for (const liveStream of liveStreamsFromAPI) {
+            const userNameLower = liveStream.user_login.toLowerCase();
+            // Use the main `this.liveNotificationMessages` for the check, as `trackedNotifications` is a stale copy
+            if (!this.liveNotificationMessages.has(userNameLower)) {
+                // This streamer is live but we don't have a notification for them
+                const streamerInfo = streamers.find(s => s.userName.toLowerCase() === userNameLower);
+                if (streamerInfo) {
+                    this.client.logger.log({ message: `${streamerInfo.displayName} just went live!`, handler: this.constructor.name }, true);
+                    if (!streamerInfo.isLive) hasStatusChanges = true; // Only a "change" if we thought they were offline
+                    streamerInfo.isLive = true;
+                    streamerInfo.lastLiveAt = new Date();
+                    await this.sendLiveNotification(liveStream, streamerInfo); // This will add to liveNotificationMessages and save
+                    if (streamerInfo.discordUserId) {
+                        await this.updateUserRole(streamerInfo.discordUserId, true);
+                    }
+                }
+            }
+        }
+
+        // Update dashboard if there were status changes or on the first run after a restart
+        if (hasStatusChanges || this.isFirstCheck) {
             await this.updateContentCreatorsDashboard();
         }
 
-        this.isFirstCheck = false; // Reset flag after first check
+        this.isFirstCheck = false;
         await this.writeStreamers(streamers);
     }
 
@@ -186,6 +201,7 @@ export default class TwitchHandler {
 
                 // Store the message ID for this streamer so we can delete it later
                 this.liveNotificationMessages.set(streamData.user_name.toLowerCase(), sentMessage.id);
+                await this.saveNotifications();
                 console.log(`--- DEBUG: Stored notification message ID for ${streamData.user_name} ---`);
             } catch (sendError: any) {
                 console.error(`--- DEBUG: Failed to send embed: ${sendError.message} ---`);
@@ -223,10 +239,12 @@ export default class TwitchHandler {
 
             // Remove from our tracking map
             this.liveNotificationMessages.delete(userName.toLowerCase());
+            await this.saveNotifications();
         } catch (error: any) {
             console.error(`--- DEBUG: Failed to delete live notification for ${userName}:`, error.message);
             // Remove from tracking map even if deletion failed (message might already be deleted)
             this.liveNotificationMessages.delete(userName.toLowerCase());
+            await this.saveNotifications();
         }
     }
 
@@ -245,6 +263,31 @@ export default class TwitchHandler {
         } catch (error) {
             console.error(error);
             this.client.logger.error({ message: `Failed to update role for user ${userId}.`, error, handler: this.constructor.name });
+        }
+    }
+
+    private async loadNotifications(): Promise<void> {
+        try {
+            const data = await fs.readFile(notificationsFilePath, 'utf-8');
+            const notifications = JSON.parse(data);
+            this.liveNotificationMessages = new Map(Object.entries(notifications));
+            this.client.logger.log({ message: `Loaded ${this.liveNotificationMessages.size} notification message IDs.`, handler: this.constructor.name }, true);
+        } catch (error: any) {
+            if (error.code === 'ENOENT') {
+                this.client.logger.log({ message: 'notifications.json not found, starting fresh.', handler: this.constructor.name }, true);
+                this.liveNotificationMessages = new Map();
+            } else {
+                this.client.logger.error({ message: 'Failed to load notifications.json.', error, handler: this.constructor.name });
+            }
+        }
+    }
+
+    private async saveNotifications(): Promise<void> {
+        try {
+            const notificationsObject = Object.fromEntries(this.liveNotificationMessages);
+            await fs.writeFile(notificationsFilePath, JSON.stringify(notificationsObject, null, 4));
+        } catch (error) {
+            this.client.logger.error({ message: 'Failed to save notifications.json.', error, handler: this.constructor.name });
         }
     }
 

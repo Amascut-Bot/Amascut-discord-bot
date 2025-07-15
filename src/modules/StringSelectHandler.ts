@@ -19,7 +19,6 @@ export default class StringSelectHandler {
 
     private async handleSelfAssign(interaction: StringSelectMenuInteraction<'cached'>) : Promise<Message<true> | InteractionResponse<true> | void> {
         interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        const { logReactionRoleChange } = this.client;
         const { colours } = this.client.util;
         const user = await interaction.guild?.members.fetch(interaction.user.id);
         const userRoles = await user?.roles.cache.map(role => role.id) || [];
@@ -59,29 +58,62 @@ export default class StringSelectHandler {
         //remove should always work
         if (userRoles.includes(roleIds[0])) {
             await user.roles.remove(roleIds[0]);
-            await logReactionRoleChange(user, roleObject!, 'removed');
+            await this.client.logReactionRoleChange(user, roleObject!, 'removed');
             return await interaction.editReply({embeds: [removeResultEmbed]});
         } else if (roleIds.length == 1) {
             //if it's only assign, just do it
             if (!userRoles.includes(roleIds[0])) {
                 await user.roles.add(roleIds[0]);
-                await logReactionRoleChange(user, roleObject!, 'added');
+                await this.client.logReactionRoleChange(user, roleObject!, 'added');
                 return await interaction.editReply({embeds: [addResultEmbed]});
             }
         } else if (roleIds.length > 1) {
-            //check for required tags
-            for (let i = 1; i < roleIds.length; i++) {                
-                if (userRoles.includes(roleIds[i])) {
-                    await user.roles.add(roleIds[0]);
-                    await logReactionRoleChange(user, roleObject!, 'added');
-                    return await interaction.editReply({embeds: [addResultEmbed]});
+            const { categorize, stripRole, roles, hierarchy } = this.client.util;
+            
+            //special logic for hierarchy tags
+            const hasRoleOrHigher = (role: string) => {
+                try {
+                    if (!categorize(role) || categorize(role) === 'vanity' || categorize(role) === '') return false;
+                    const categorizedHierarchy = hierarchy[categorize(role)];
+                    const sliceFromIndex: number = categorizedHierarchy.indexOf(role);
+                    const hierarchyList = categorizedHierarchy.slice(sliceFromIndex);
+                    const hierarchyIdList = hierarchyList.map((item: string) => stripRole(roles[item]));
+                    const intersection = hierarchyIdList.filter((roleId: string) => userRoles.includes(roleId));
+                    if (intersection.length === 0) {
+                        return false
+                    } else {
+                        return true
+                    };
                 }
-                
-                if (i > 1) {
-                    roleReqError += ", ";
-                }
+                catch (err) { return false }
+            }
 
-                roleReqError += `<@&${roleIds[i]}>`;                    
+            //check for required tags
+            for (let i = 1; i < roleIds.length; i++) {
+                if (!/^[+-]?\\d+(\\.\\d+)?$/.test(roleIds[i])) {
+                    if (hasRoleOrHigher(roleIds[i])) {
+                        await user.roles.add(roleIds[0]);
+                        await this.client.logReactionRoleChange(user, roleObject!, 'added');
+                        return await interaction.editReply({embeds: [addResultEmbed]});
+                    } else {
+                        if (i > 1) {
+                            roleReqError += ", ";
+                        }
+
+                        roleReqError += roles[roleIds[i]];
+                    }
+                } else {
+                    if (userRoles.includes(roleIds[i])) {
+                        await user.roles.add(roleIds[0]);
+                        await this.client.logReactionRoleChange(user, roleObject!, 'added');
+                        return await interaction.editReply({embeds: [addResultEmbed]});
+                    }
+                    if (i > 1) {
+                        roleReqError += ", ";
+                    }
+
+                    roleReqError += `<@&${roleIds[i]}>`;
+                    }
             }
 
             const errorEmbed = new EmbedBuilder()
