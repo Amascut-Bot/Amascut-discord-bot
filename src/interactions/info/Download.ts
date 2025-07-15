@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, AttachmentBuilder, ChannelType, APIEmbed, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, AttachmentBuilder, ChannelType, APIEmbed } from 'discord.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -16,6 +16,18 @@ export default class Download extends BotInteraction {
         return 'ELEVATED_ROLE';
     }
 
+    get options() {
+        const assignOptions: any = {
+            'Yes': 'yes',
+            'No': 'no',
+        }
+        const options: any = [];
+        Object.keys(assignOptions).forEach((key: string) => {
+            options.push({ name: key, value: assignOptions[key] })
+        })
+        return options;
+    }
+
     get slashData() {
         return new SlashCommandBuilder()
             .setName(this.name)
@@ -26,15 +38,60 @@ export default class Download extends BotInteraction {
                     .setDescription('The channel to download messages from')
                     .setRequired(true)
                     .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-            );
+            ).addStringOption((option) => option.setName('archived').setDescription('Download from Upload-Archive if existing').addChoices(
+                ...this.options
+            ).setRequired(false));
     }
 
     async run(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ ephemeral: true });
 
         const channel = interaction.options.getChannel('channel', true) as TextChannel;
+        const archived = (interaction.options.getString('archived', false) ?? 'yes') === 'yes';
 
         try {
+            //try to find an archived file first, if no one to be found, download the channel
+            const archiveDir = path.join(process.cwd(), 'upload_archives');
+            //2025-07-14T21-37-50.955Z_test-channel_role-assign-archive3
+            const pattern = new RegExp(channel.name);
+
+            const archivedFile = await this.getNewestFile(archiveDir, pattern);
+
+            if (archivedFile && archived) {
+                const fileContent = await fs.readFile(archivedFile, 'utf-8');
+
+                const attachment = new AttachmentBuilder(Buffer.from(fileContent, 'utf-8'), {
+                    name: `${channel.name}-archive.txt`,
+                });
+
+                // Send log message
+                try {
+                    const logChannelId = interaction.channelId;
+                    const logChannel = await this.client.channels.fetch(logChannelId);
+                    if (logChannel instanceof TextChannel) {
+                        // Create a new attachment to be sent to the log channel
+                        const logAttachment = new AttachmentBuilder(Buffer.from(fileContent, 'utf-8'), {
+                            name: `${channel.name}-archive.txt`,
+                        });
+                        await logChannel.send({
+                            content: `${interaction.user.username} downloaded from <#${channel.id}>`,
+                            files: [logAttachment]
+                        });
+                    }
+                } catch (logError) {
+                    this.client.logger.error({
+                        message: 'Failed to send download log.',
+                        handler: this.name,
+                        error: logError as Error
+                    });
+                }
+
+                return await interaction.editReply({
+                    content: `Here is the archive of the last uplaod from <#${channel.id}>.`,
+                    files: [attachment],
+                });
+            }
+
             const tagsFilePath = path.join(process.cwd(), 'message-tags.json');
             let tags: { [channelId: string]: { [messageId: string]: string } } = {};
             try {
@@ -85,7 +142,7 @@ export default class Download extends BotInteraction {
 
                 if (message.attachments.size > 0) {
                     if (message.content || message.embeds.length > 0) {
-                         currentBlock += '\n';
+                        currentBlock += '\n';
                     }
                     const attachmentStrings = message.attachments
                         .filter(att => att.contentType?.startsWith('image/'))
@@ -99,6 +156,8 @@ export default class Download extends BotInteraction {
                 if (message.pinned) {
                     currentBlock += `\n.pin:delete`;
                 }
+
+                currentBlock = await this.resolveToc(currentBlock, channelTags, channel.id, channel.guildId);
 
                 if (currentBlock) {
                     messageBlocks.push(currentBlock);
@@ -350,4 +409,48 @@ export default class Download extends BotInteraction {
     }
 
     //#endregion
+
+    private async getNewestFile(dir: string, pattern: RegExp) {
+        await fs.mkdir(dir, { recursive: true });
+        const files = await fs.readdir(dir);
+
+        const matchedFiles = await Promise.all(
+            files
+                .filter(file => pattern.test(file))
+                .map(async file => {
+                    const filePath = path.join(dir, file);
+                    const stats = await fs.stat(filePath);
+                    return { file: filePath, mtime: (stats).mtime };
+            }));
+
+        if (matchedFiles.length === 0) {
+            return null;
+        }
+
+        matchedFiles.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+
+        return matchedFiles[0].file;
+    }
+
+    //check content for a discord message link and replace the tags if known
+    private async resolveToc(content: string, channelTags: any, channelId: string, guildId: string): Promise<string> {
+        let result: string = content;
+        const pattern = `(https:\\/\\/discord\\.com\\/channels\\/${guildId}\\/${channelId}\\/(\\d+))`;
+        const regex = new RegExp(pattern, 'g');
+
+        const matches = [...result.matchAll(regex)];
+
+        if (matches.length > 0) {
+            matches.forEach(match => {
+                const tagName = channelTags[match[2]];
+
+                if (tagName) {
+                    const url = `(https://discord.com/channels/${guildId}/${channelId}/${match[2]})`;
+                    const replacement = `($linkmsg_${tagName}$)`;
+                    result = result.replace(url, replacement);
+                }
+            });
+        }
+        return result;
+    }
 }
