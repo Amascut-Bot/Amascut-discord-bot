@@ -34,13 +34,13 @@ interface Emojis {
 interface Categories {
     killCount: string[]
     collectionLog: string[]
-    matchmaking: MatchmakingCategory
-}
-
-interface MatchmakingCategory {
     threeSeven: string[]
     duo: string[]
     combined: string[]
+}
+
+interface Hierarchy {
+    [key: string]: string[];
 }
 
 export default class UtilityHandler {
@@ -320,25 +320,22 @@ export default class UtilityHandler {
     }
 
     get categories(): Categories {
-        if (process.env.ENVIRONMENT === 'DEVELOPMENT') {
-            return {
-                killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend'],
-                collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
-                matchmaking: {
-                    threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
-                    duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
-                    combined: ['rootskips', 'experienced', 'master', 'grandmaster']
-                }
-            }
-        }
         return {
             killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend'],
             collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
-            matchmaking: {
-                threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
-                duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
-                combined: ['rootskips', 'experienced', 'master', 'grandmaster']
-            }
+            threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
+            duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
+            combined: ['rootskips', 'experienced', 'master', 'grandmaster']
+        }
+    }
+
+    get hierarchy(): Hierarchy {
+        return {
+            killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend'],
+            collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
+            threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
+            duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
+            combined: ['rootskips', 'experienced', 'master', 'grandmaster']
         }
     }
 
@@ -360,11 +357,11 @@ export default class UtilityHandler {
             category = 'killCount';
         } else if (this.categories.collectionLog.includes(role)) {
             category = 'collectionLog';
-        } else if (this.categories.matchmaking.threeSeven.includes(role)) {
+        } else if (this.categories.threeSeven.includes(role)) {
             category = 'threeSeven';
-        } else if (this.categories.matchmaking.duo.includes(role)) {
+        } else if (this.categories.duo.includes(role)) {
             category = 'duo';
-        } else if (this.categories.matchmaking.combined.includes(role)) {
+        } else if (this.categories.combined.includes(role)) {
             category = 'combined';
         } else {
             category = ''
@@ -378,7 +375,7 @@ export default class UtilityHandler {
         }
         if (this.categories.killCount.includes(role) || this.categories.collectionLog.includes(role)) {
             return 'achievementsAndLogs'
-        } else if (overrides.roleConfirmations.includes(role) || this.categories.matchmaking.combined.includes(role) || this.categories.matchmaking.duo.includes(role) || this.categories.matchmaking.threeSeven.includes(role)) {
+        } else if (overrides.roleConfirmations.includes(role) || this.categories.combined.includes(role) || this.categories.duo.includes(role) || this.categories.threeSeven.includes(role)) {
             return 'roleConfirmations'
         } else {
             return ''

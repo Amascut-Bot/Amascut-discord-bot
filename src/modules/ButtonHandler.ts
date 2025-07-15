@@ -2500,19 +2500,53 @@ export default class ButtonHandler {
                 await this.client.logReactionRoleChange(user, roleObject!, 'added');
                 return await interaction.editReply({embeds: [addResultEmbed]});
             }
-        } else if (roleIds.length > 1) {            
-            for (let i = 1; i < roleIds.length; i++) {                
-                if (userRoles.includes(roleIds[i])) {
-                    await user.roles.add(roleIds[0]);
-                    await this.client.logReactionRoleChange(user, roleObject!, 'added');
-                    return await interaction.editReply({embeds: [addResultEmbed]});
-                }
+        } else if (roleIds.length > 1) {       
+            const { categorize, stripRole, roles, hierarchy } = this.client.util;
 
-                if (i > 1) {
-                    roleReqError += ", ";
+            //special logic for hierarchy tags
+            const hasRoleOrHigher = (role: string) => {
+                try {
+                    if (!categorize(role) || categorize(role) === 'vanity' || categorize(role) === '') return false;
+                    const categorizedHierarchy = hierarchy[categorize(role)];
+                    const sliceFromIndex: number = categorizedHierarchy.indexOf(role);
+                    const hierarchyList = categorizedHierarchy.slice(sliceFromIndex);
+                    const hierarchyIdList = hierarchyList.map((item: string) => stripRole(roles[item]));
+                    const intersection = hierarchyIdList.filter((roleId: string) => userRoles.includes(roleId));
+                    if (intersection.length === 0) {
+                        return false
+                    } else {
+                        return true
+                    };
                 }
+                catch (err) { return false }
+            }
 
-                roleReqError += `<@&${roleIds[i]}>`                    
+            //check for required tags
+            for (let i = 1; i < roleIds.length; i++) {
+                if (!/^[+-]?\\d+(\\.\\d+)?$/.test(roleIds[i])) {
+                    if (hasRoleOrHigher(roleIds[i])) {
+                        await user.roles.add(roleIds[0]);
+                        await this.client.logReactionRoleChange(user, roleObject!, 'added');
+                        return await interaction.editReply({embeds: [addResultEmbed]});
+                    } else {
+                        if (i > 1) {
+                            roleReqError += ", ";
+                        }
+
+                        roleReqError += roles[roleIds[i]];
+                    }
+                } else {
+                    if (userRoles.includes(roleIds[i])) {
+                        await user.roles.add(roleIds[0]);
+                        await this.client.logReactionRoleChange(user, roleObject!, 'added');
+                        return await interaction.editReply({embeds: [addResultEmbed]});
+                    }
+                    if (i > 1) {
+                        roleReqError += ", ";
+                    }
+
+                    roleReqError += `<@&${roleIds[i]}>`;
+                    }
             }
 
             const errorEmbed = new EmbedBuilder()
