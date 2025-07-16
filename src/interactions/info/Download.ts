@@ -176,7 +176,7 @@ export default class Download extends BotInteraction {
 
             // Send log message
             try {
-                const logChannelId = '1387201503428870399';
+                const logChannelId = '1389412380626255872';
                 const logChannel = await this.client.channels.fetch(logChannelId);
                 if (logChannel instanceof TextChannel) {
                     // Create a new attachment to be sent to the log channel
