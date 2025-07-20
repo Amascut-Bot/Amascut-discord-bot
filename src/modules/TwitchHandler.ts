@@ -63,9 +63,6 @@ export default class TwitchHandler {
         const trackedNotifications = new Map(this.liveNotificationMessages); // Create a copy to iterate over
 
         let hasStatusChanges = false;
-        if (this.isFirstCheck) {
-            hasStatusChanges = true;
-        }
 
         // Process streamers who went OFFLINE
         for (const [userName, messageId] of trackedNotifications.entries()) {
