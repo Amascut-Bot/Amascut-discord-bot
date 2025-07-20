@@ -77,7 +77,7 @@ export default class TwitchHandler {
                     streamerInfo.isLive = false;
                     if (streamerInfo.discordUserId) {
                         await this.updateUserRole(streamerInfo.discordUserId, false);
-                    }
+                }
                 }
             }
         }
@@ -97,7 +97,7 @@ export default class TwitchHandler {
                     await this.sendLiveNotification(liveStream, streamerInfo); // This will add to liveNotificationMessages and save
                     if (streamerInfo.discordUserId) {
                         await this.updateUserRole(streamerInfo.discordUserId, true);
-                    }
+                }
                 }
             }
         }

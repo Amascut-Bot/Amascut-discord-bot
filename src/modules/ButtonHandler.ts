@@ -11,6 +11,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import TranscriptGenerator from './TranscriptGenerator';
 import axios from 'axios';
+import { AppDataSource } from '../DataSource';
 
 // ===============================
 // CONSTANTS
