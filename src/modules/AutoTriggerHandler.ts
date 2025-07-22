@@ -88,7 +88,7 @@ export default class AutoTriggerHandler {
     private async handleYoink(message: Message): Promise<boolean> {
         // only react to yoink
         if (!message.content.toLowerCase().includes('yoink')) {
-            return false;
+            return true;
         }
 
         const messageMatch = message.content.match(/(?<=yoink\s).*/g);
