@@ -124,10 +124,10 @@ export default class UtilityHandler {
             const dpmConfigPath = path.join(process.cwd(), 'dpm-thresholds.json');
             const configData = await fs.readFile(dpmConfigPath, 'utf-8');
             const config = JSON.parse(configData);
-            
+
             this._dpmCache = config.thresholds;
             this._dpmCacheTime = now;
-            
+
             return config.thresholds;
         } catch (error) {
             // Fallback to hardcoded values if file doesn't exist or is invalid
@@ -136,16 +136,16 @@ export default class UtilityHandler {
                 error,
                 handler: 'UtilityHandler'
             });
-            
+
             const defaultThresholds = {
                 'adept': 400,
                 'mastery': 475,
                 'extreme': 590
             };
-            
+
             this._dpmCache = defaultThresholds;
             this._dpmCacheTime = now;
-            
+
             return defaultThresholds;
         }
     }
@@ -169,7 +169,7 @@ export default class UtilityHandler {
     // Method to update DPM thresholds
     async updateDpmThresholds(newThresholds: any, updatedBy: string) {
         const dpmConfigPath = path.join(process.cwd(), 'dpm-thresholds.json');
-        
+
         // Validate thresholds
         const validatedThresholds = this.validateDpmThresholds(newThresholds);
         if (!validatedThresholds.isValid) {
@@ -183,11 +183,11 @@ export default class UtilityHandler {
         };
 
         await fs.writeFile(dpmConfigPath, JSON.stringify(config, null, 2));
-        
+
         // Clear cache to force reload
         this._dpmCache = null;
         this._dpmCacheTime = 0;
-        
+
         this.client.logger.log({
             message: `DPM thresholds updated by ${updatedBy}`,
             handler: 'UtilityHandler'
@@ -197,7 +197,7 @@ export default class UtilityHandler {
     // Validate DPM thresholds
     private validateDpmThresholds(thresholds: any): { isValid: boolean, error?: string } {
         const requiredKeys = ['adept', 'mastery', 'extreme'];
-        
+
         for (const key of requiredKeys) {
             if (!thresholds.hasOwnProperty(key)) {
                 return { isValid: false, error: `Missing required threshold: ${key}` };
@@ -221,7 +221,7 @@ export default class UtilityHandler {
         let roleToAssign;
         const { stripRole, roles } = this;
         const { adept, mastery, extreme } = await this.getDpm();
-        
+
         if (dpm >= extreme) {
             roleToAssign = 'extreme';
         } else if (dpm >= mastery) {
@@ -507,12 +507,12 @@ export default class UtilityHandler {
             2: this.emojis.gem2,
             3: this.emojis.gem3,
         };
-        
+
         // Only these styles are eligible for the leaderboard
         // Magic, Ranged, and Melee submissions are accepted but not displayed here
         const leaderboardEligibleStyles = ['Hybrid', 'Tribrid', 'Necromancy'];
         const teamSizes = ['Duo', '4 man'];
-        
+
         // Group submissions by team size first, then by style
         const groupedSubmissions: { [teamSize: string]: { [style: string]: DpmSubmission[] } } = {};
 
@@ -526,7 +526,7 @@ export default class UtilityHandler {
 
         // Group submissions by team size and style (only leaderboard-eligible ones)
         submissions.forEach(submission => {
-            if (groupedSubmissions[submission.teamSize] && 
+            if (groupedSubmissions[submission.teamSize] &&
                 groupedSubmissions[submission.teamSize][submission.style]) {
                 groupedSubmissions[submission.teamSize][submission.style].push(submission);
             }
@@ -616,7 +616,7 @@ export default class UtilityHandler {
             2: this.emojis.gem2,
             3: this.emojis.gem3,
         };
-        
+
         const groupedSubmissions: { [key: string]: KillTimeSubmission[] } = {
             'Duo': [],
             '4 man': [],
@@ -645,7 +645,7 @@ export default class UtilityHandler {
                 description += '\n';
             }
         }
-        
+
         if (description === '') {
             description = 'No kill time submissions yet.';
         }
@@ -656,7 +656,7 @@ export default class UtilityHandler {
 
     public async reuploadImage(url: string): Promise<string> {
         console.log(`--- DEBUG: Entered reuploadImage function for URL: ${url}`);
-        
+
         const assetChannelId = this.channels.botAssetChannel;
         console.log(`--- DEBUG: Read assetChannelId from this.channels. It is: ${assetChannelId}`);
 
@@ -669,7 +669,7 @@ export default class UtilityHandler {
             });
             return url;
         }
-        
+
         try {
             console.log(`--- DEBUG: Attempting to fetch channel ${assetChannelId}`);
             const botAssetChannel = await this.client.channels.fetch(assetChannelId) as TextChannel;
@@ -686,11 +686,11 @@ export default class UtilityHandler {
             const buffer = Buffer.from(arrayBuffer);
 
             const attachment = new AttachmentBuilder(buffer, { name: 'image.png' });
-            
+
             console.log(`--- DEBUG: Sending attachment to Discord channel...`);
             const message = await botAssetChannel.send({ files: [attachment] });
             const newUrl = message.attachments.first()!.url;
-            
+
             console.log(`--- DEBUG: Successfully re-uploaded. New URL: ${newUrl}`);
             return newUrl;
         } catch (error: any) {
@@ -707,17 +707,17 @@ export default class UtilityHandler {
     // Ticket System Utilities
     public async getNextTicketNumber(ticketType: string): Promise<number> {
         const ticketNumbersPath = path.join(process.cwd(), 'ticket-numbers.json');
-        
+
         try {
             const data = await fs.readFile(ticketNumbersPath, 'utf-8');
             const ticketNumbers = JSON.parse(data);
-            
+
             // Increment the number for this ticket type
             ticketNumbers[ticketType] = (ticketNumbers[ticketType] || 0) + 1;
-            
+
             // Save back to file
             await fs.writeFile(ticketNumbersPath, JSON.stringify(ticketNumbers, null, 4));
-            
+
             return ticketNumbers[ticketType];
         } catch (error) {
             this.client.logger.error({
@@ -725,7 +725,7 @@ export default class UtilityHandler {
                 error,
                 handler: 'UtilityHandler'
             });
-            
+
             // Fallback to 1 if file doesn't exist or is corrupted
             return 1;
         }
@@ -734,11 +734,11 @@ export default class UtilityHandler {
     public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number): Promise<TextChannel | null> {
         try {
             const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
-            
+
             // Get admin and owner role IDs
             const adminRoleId = this.stripRole(this.roles.admin);
             const ownerRoleId = this.stripRole(this.roles.owner);
-            
+
             // Create the channel with proper permissions
             const channel = await guild.channels.create({
                 name: channelName,
@@ -806,16 +806,16 @@ export default class UtilityHandler {
         try {
             const adminRole = this.roles.admin;
             const ownerRole = this.roles.owner;
-            
+
             // Create welcome message
             const welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
-            
+
             // Create embed with form data using fields for better organization
             const embed = new EmbedBuilder()
                 .setTitle(`${this.capitalizeFirstLetter(ticketType)} Ticket`)
                 .setColor(this.colours.lightblue)
                 .setTimestamp()
-                .setAuthor({ 
+                .setAuthor({
                     name: `User: ${channel.guild.members.cache.get(userId)?.user.username || 'Unknown User'}`,
                     iconURL: channel.guild.members.cache.get(userId)?.user.displayAvatarURL() || undefined
                 });
@@ -851,7 +851,7 @@ export default class UtilityHandler {
                     );
                     break;
             }
-            
+
             // Create close button
             const closeButton = new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
@@ -862,7 +862,7 @@ export default class UtilityHandler {
                 );
 
             await channel.send({ content: welcomeMessage, embeds: [embed], components: [closeButton] });
-            
+
             this.client.logger.log({
                 message: `Sent welcome message to ticket channel: ${channel.name}`,
                 handler: 'UtilityHandler'
@@ -875,4 +875,158 @@ export default class UtilityHandler {
             });
         }
     }
+
+    //#region componentsV2
+
+    //cleans up a componentsV2-container
+    public cleanContainer(containerData: any) :any {
+        const newContainer: any = {};
+
+        if (containerData.type) newContainer.type = containerData.type;
+        if (containerData.accentColor) newContainer.accent_color = containerData.accentColor;
+
+        if (containerData.components?.length > 0) {
+            //depending on component type...
+            newContainer.components = containerData.components.map((component: any) => {
+                return this.cleanComponent(component);
+            });
+        }
+
+        return newContainer;
+    }
+
+    private cleanComponent(node: any) :any {
+        let result: any = {};
+
+        //ActionRow
+        if (node.type == 1) {
+            result = {
+                type: node.type
+            };
+
+            result.components = node.components.map((component: any) => {
+                return this.cleanComponent(component);
+            });
+        }
+
+        //Button
+        if (node.type == 2) {
+            result = {
+                type: node.type,
+                style: node.style,
+                custom_id: node.customId
+            };
+
+            if (node.label) result.label = node.label;
+            if (node.emoji) result.emoji = node.emoji;
+            if (node.url) result.url = node.url;
+        }
+
+        //String Select
+        if (node.type == 3) {
+            result = {
+                type: node.type,
+                custom_id: node.customId
+            };
+
+            if (node.placeholder) result.placeholder = node.placeholder;
+
+            result.options = node.options.map((option: any) => {
+                let optionResult: any = {};
+
+                if (option.label) optionResult.label = option.label;
+                if (option.value) optionResult.value = option.value;
+                if (option.description) optionResult.description = option.description;
+
+                if (option.emoji) {
+                    const emoji: any = {};
+
+                    if (option.emoji.name) emoji.name = option.emoji.name;
+                    if (option.emoji.id) emoji.id = option.emoji.id;
+                    if (option.emoji.animated) emoji.animated = option.emoji.animated;
+
+                    optionResult.emoji = emoji;
+                }
+
+                return optionResult;
+            });
+        }
+
+        //Section
+        if (node.type == 9) {
+            result = {
+                type: node.type
+            };
+
+            result.components = node.components.map((component: any) => {
+                return this.cleanComponent(component);
+            });
+
+            result.accessory = this.cleanComponent(node.accessory);
+        }
+
+        //Text Display
+        if (node.type == 10) {
+            result = {
+                type: node.type,
+                content: node.content
+            };
+        }
+
+        //Thumbnail
+        if (node.type == 11) {
+            result = {
+                type: node.type,
+                media: {
+                    url: node.media.url
+                }
+            };
+
+            if (node.description) result.description = node.description;
+        }
+
+        //Media Gallery
+        if (node.type == 12) {
+            result = {
+                type: node.type
+            };
+
+            result.items = node.items.map((item: any) => {
+                let itemResult: any = {};
+
+                itemResult.media = {
+                    url: item.media.url
+                };
+
+                if (item.description) itemResult.description = item.description;
+
+                return itemResult;
+            });
+        }
+
+        //Separator
+        if (node.type == 14) {
+            result = {
+                type: node.type,
+                spacing: node.spacing
+            };
+        }
+
+        //Container
+        if (node.type == 17) {
+            result = {
+                type: node.type
+            };
+
+            if (node.accentColor) result.accent_color = node.accentColor;
+
+            result.components = node.components.map((component: any) => {
+                return this.cleanComponent(component);
+            });
+        }
+
+        return result;
+    }
+
+    //#endregion
 }
