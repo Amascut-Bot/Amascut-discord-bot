@@ -1,9 +1,10 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember } from "discord.js";
 import BotInteraction from "../../types/BotInteraction";
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
 const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
+const contentCreatorRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_CONTENT_CREATOR_ROLE}` : `${process.env.PROD_CONTENT_CREATOR_ROLE}`;
 
 interface MonitoredStreamer {
     id: string;
@@ -64,6 +65,9 @@ export default class AddStreamer extends BotInteraction {
         let userName = interaction.options.getString('username', true).toLowerCase();
         const discordUser = interaction.options.getUser('discord-user', true);
 
+        const user = await interaction.guild?.members.fetch(discordUser.id);
+        const userRoles = await user?.roles.cache.map(role => role.id) || [];
+
         const match = userName.match(/\/([^\/]+)\/?$/);
         if (match) {
             userName = match[1];
@@ -79,6 +83,10 @@ export default class AddStreamer extends BotInteraction {
 
         if (streamers.some(s => s.id === streamerInfo.id)) {
             return interaction.editReply({ content: `**${streamerInfo.display_name}** is already on the notification list.` });
+        }
+
+        if (!userRoles.includes(contentCreatorRoleId)) {
+            user?.roles.add(contentCreatorRoleId);
         }
 
         const newStreamer: MonitoredStreamer = {
@@ -102,4 +110,4 @@ export default class AddStreamer extends BotInteraction {
 
         await interaction.editReply({ content: `Successfully added **${streamerInfo.display_name}** to the notification list. Linked to **${discordUser.tag}**.` });
     }
-} 
+}
