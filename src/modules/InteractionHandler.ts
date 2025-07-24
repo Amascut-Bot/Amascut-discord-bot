@@ -5,6 +5,7 @@ import BotInteraction from '../types/BotInteraction';
 import ButtonHandler from './ButtonHandler';
 import StringSelectHandler from './StringSelectHandler';
 import EventEmitter = require('events');
+import TicketHandler from './TicketHandler';
 
 export default interface InteractionHandler {
     client: Bot;
@@ -85,19 +86,19 @@ export default class InteractionHandler extends EventEmitter {
     async exec(interaction: Interaction): Promise<any> {
         if (interaction.isButton()) {
             if (interaction.inCachedGuild()) {
-                this.client.logger.log({ 
-                    message: `[InteractionHandler] Routing guild button interaction "${interaction.customId}" to ButtonHandler`, 
-                    handler: this.constructor.name 
+                this.client.logger.log({
+                    message: `[InteractionHandler] Routing guild button interaction "${interaction.customId}" to ButtonHandler`,
+                    handler: this.constructor.name
                 }, true);
                 return new ButtonHandler(this.client, interaction.customId, interaction);
             }
             else if (interaction.customId.startsWith('ticket:download_transcript_')) {
-                this.client.logger.log({ 
-                    message: `[InteractionHandler] Routing DM transcript download button "${interaction.customId}" to ButtonHandler static method`, 
-                    handler: this.constructor.name 
+                this.client.logger.log({
+                    message: `[InteractionHandler] Routing DM transcript download button "${interaction.customId}" to ButtonHandler static method`,
+                    handler: this.constructor.name
                 }, true);
                 const forumPostId = interaction.customId.substring('ticket:download_transcript_'.length);
-                return ButtonHandler.handleDMTranscriptDownload(this.client, interaction, forumPostId);
+                return TicketHandler.handleDMTranscriptDownload(this.client, interaction, forumPostId);
             }
         }
 
@@ -108,9 +109,9 @@ export default class InteractionHandler extends EventEmitter {
                     return command.handleModalSubmit(interaction);
                 }
             }
-            
+
             if (interaction.customId.startsWith('ticket:') || interaction.customId.startsWith('ticket_')) {
-                return this.handleTicketModalSubmit(interaction);
+                return new TicketHandler(this.client, interaction.customId, interaction);
             }
         }
 
@@ -196,9 +197,9 @@ export default class InteractionHandler extends EventEmitter {
                 }
 
                 this.client.logger.log({
-                    handler: this.constructor.name, 
-                    user: `${interaction.user.username} | ${interaction.user.id}`, 
-                    message: `Executing Command ${command.name}`, 
+                    handler: this.constructor.name,
+                    user: `${interaction.user.username} | ${interaction.user.id}`,
+                    message: `Executing Command ${command.name}`,
                     uid: `(@${command.uid})`
                 }, true);
                 await command.run(interaction);
@@ -222,83 +223,6 @@ export default class InteractionHandler extends EventEmitter {
 
         if (interaction.isStringSelectMenu() && interaction.inCachedGuild()) {
             return new StringSelectHandler(this.client, interaction.customId, interaction);
-        }
-    }
-    
-    async handleTicketModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
-        if (!interaction.inCachedGuild()) return;
-        
-        await interaction.deferReply({ ephemeral: true });
-        
-        try {
-            const customIdParts = interaction.customId.split('_');
-            const ticketType = customIdParts[1];
-            const userId = customIdParts[2];
-            
-            if (userId !== interaction.user.id) {
-                await interaction.editReply({ content: 'This modal is not for you.' });
-                return;
-            }
-            
-            const formData: any = {};
-            formData.rsn = interaction.fields.getTextInputValue('rsn');
-            
-            switch (ticketType) {
-                case 'report':
-                    formData.reported_user = interaction.fields.getTextInputValue('reported_user');
-                    formData.reason = interaction.fields.getTextInputValue('reason');
-                    formData.description = interaction.fields.getTextInputValue('description');
-                    break;
-                case 'suggestion':
-                    formData.suggestion = interaction.fields.getTextInputValue('suggestion');
-                    formData.reason = interaction.fields.getTextInputValue('reason');
-                    break;
-                case 'contentcreator':
-                    formData.platform_url = interaction.fields.getTextInputValue('platform_url');
-                    formData.additional = interaction.fields.getTextInputValue('additional');
-                    break;
-                case 'other':
-                    formData.assistance = interaction.fields.getTextInputValue('assistance');
-                    break;
-            }
-            
-            const ticketNumber = await this.client.util.getNextTicketNumber(ticketType);
-            
-            const ticketChannel = await this.client.util.createTicketChannel(
-                interaction.guild,
-                ticketType,
-                interaction.user.id,
-                ticketNumber
-            );
-            
-            if (!ticketChannel) {
-                await interaction.editReply({ 
-                    content: 'Failed to create ticket channel. Please try again or contact an administrator.' 
-                });
-                return;
-            }
-            
-            await this.client.util.sendTicketWelcomeMessage(
-                ticketChannel,
-                interaction.user.id,
-                ticketType,
-                formData
-            );
-            
-            await interaction.editReply({
-                content: `Your ticket has been created! Please check <#${ticketChannel.id}> for further assistance.`
-            });
-            
-        } catch (error) {
-            this.client.logger.error({
-                message: 'Failed to handle ticket modal submission',
-                error,
-                handler: 'InteractionHandler'
-            });
-            
-            await interaction.editReply({
-                content: 'An error occurred while creating your ticket. Please try again or contact an administrator.'
-            });
         }
     }
 }

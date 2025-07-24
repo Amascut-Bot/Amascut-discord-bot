@@ -1,0 +1,1283 @@
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
+import Bot from '../Bot';
+import axios from 'axios';
+import TranscriptGenerator from './TranscriptGenerator';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import { Ticket } from '../entity/Ticket';
+
+const ticketTranscriptChannelId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_TICKET_TRANSCRIPT_CHANNEL}` : `${process.env.PROD_TICKET_TRANSCRIPT_CHANNEL}`;
+
+export default interface TicketHandler { client: Bot; id: string; interaction: Interaction }
+
+export default class TicketHandler {
+    constructor(client: Bot, id: string, interaction: Interaction) {
+        this.client = client;
+        this.id = id;
+        this.interaction = interaction;
+
+        if (interaction.isModalSubmit()) {
+            this.handleTicketModalSubmit(interaction);
+        }
+
+        if (id.startsWith('ticket:download_transcript_')) {
+            const forumPostId = id.substring('ticket:download_transcript_'.length);
+            this.client.logger.log({
+                message: `[ButtonHandler] Matched transcript download button. Forum post ID: "${forumPostId}"`,
+                handler: this.constructor.name
+            }, true);
+            this.handleTranscriptDownload(interaction as ButtonInteraction<'cached'>, forumPostId);
+            return;
+        }
+
+        switch (id) {
+            case 'ticket:create_suggestion': this.handleTicketSuggestion(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_report': this.handleTicketReport(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_contentcreator': this.handleTicketContentCreator(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_other': this.handleTicketOther(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket_close': this.handleTicketClose(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket_close_confirm': this.handleTicketCloseConfirm(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket_open': this.handleTicketOpen(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket_delete': this.handleTicketDelete(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket_delete_confirm': this.handleTicketDeleteConfirm(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket_delete_cancel': this.handleTicketDeleteCancel(interaction as ButtonInteraction<'cached'>); break;
+        }
+    }
+
+    //#region MODAL HANDLERS
+    private async handleTicketSuggestion(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_suggestion_${interaction.user.id}`)
+            .setTitle('Submit a Suggestion');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const suggestionInput = new TextInputBuilder()
+            .setCustomId('suggestion')
+            .setLabel('Briefly describe your suggestion')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const reasonInput = new TextInputBuilder()
+            .setCustomId('reason')
+            .setLabel('Why do you think your suggestion would work?')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(suggestionInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow);
+        await interaction.showModal(modal);
+    }
+
+    private async handleTicketReport(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_report_${interaction.user.id}`)
+            .setTitle('Submit a Report');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const reportedUserInput = new TextInputBuilder()
+            .setCustomId('reported_user')
+            .setLabel('RSN/Discord User you are reporting')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(100);
+
+        const reasonInput = new TextInputBuilder()
+            .setCustomId('reason')
+            .setLabel('What is the reason for your report?')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(200);
+
+        const descriptionInput = new TextInputBuilder()
+            .setCustomId('description')
+            .setLabel('Briefly describe the issue')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reportedUserInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonInput);
+        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
+        await interaction.showModal(modal);
+    }
+
+    private async handleTicketContentCreator(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_contentcreator_${interaction.user.id}`)
+            .setTitle('Content Creator Application');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const platformInput = new TextInputBuilder()
+            .setCustomId('platform_url')
+            .setLabel("What's your streaming platform URL?")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(200);
+
+        const additionalInput = new TextInputBuilder()
+            .setCustomId('additional')
+            .setLabel("Anything else you'd like to add?")
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(platformInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(additionalInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow);
+        await interaction.showModal(modal);
+    }
+
+    private async handleTicketOther(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_other_${interaction.user.id}`)
+            .setTitle('Other Support Request');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const assistanceInput = new TextInputBuilder()
+            .setCustomId('assistance')
+            .setLabel('How can we assist you?')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(assistanceInput);
+
+        modal.addComponents(firstRow, secondRow);
+        await interaction.showModal(modal);
+    }
+
+    private async handleTicketModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
+        if (!interaction.inCachedGuild()) return;
+
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            const customIdParts = interaction.customId.split('_');
+            const ticketType = customIdParts[1];
+            const userId = customIdParts[2];
+
+            if (userId !== interaction.user.id) {
+                await interaction.editReply({ content: 'This modal is not for you.' });
+                return;
+            }
+
+            const formData: any = {};
+            formData.rsn = interaction.fields.getTextInputValue('rsn');
+
+            switch (ticketType) {
+                case 'report':
+                    formData.reported_user = interaction.fields.getTextInputValue('reported_user');
+                    formData.reason = interaction.fields.getTextInputValue('reason');
+                    formData.description = interaction.fields.getTextInputValue('description');
+                    break;
+                case 'suggestion':
+                    formData.suggestion = interaction.fields.getTextInputValue('suggestion');
+                    formData.reason = interaction.fields.getTextInputValue('reason');
+                    break;
+                case 'contentcreator':
+                    formData.platform_url = interaction.fields.getTextInputValue('platform_url');
+                    formData.additional = interaction.fields.getTextInputValue('additional');
+                    break;
+                case 'other':
+                    formData.assistance = interaction.fields.getTextInputValue('assistance');
+                    break;
+            }
+
+            const ticketNumber = await this.getNextTicketNumber(ticketType);
+
+            const ticketChannel = await this.createTicketChannel(
+                interaction.guild,
+                ticketType,
+                interaction.user.id,
+                ticketNumber
+            );
+
+            if (!ticketChannel) {
+                await interaction.editReply({
+                    content: 'Failed to create ticket channel. Please try again or contact an administrator.'
+                });
+                return;
+            }
+
+            await this.sendTicketWelcomeMessage(
+                ticketChannel,
+                interaction.user.id,
+                ticketType,
+                formData
+            );
+
+            await this.saveTicketSubmit(interaction.user.id, ticketChannel.id, ticketType);
+
+            await interaction.editReply({
+                content: `Your ticket has been created! Please check <#${ticketChannel.id}> for further assistance.`
+            });
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to handle ticket modal submission',
+                error,
+                handler: 'InteractionHandler'
+            });
+
+            await interaction.editReply({
+                content: 'An error occurred while creating your ticket. Please try again or contact an administrator.'
+            });
+        }
+    }
+
+    //#endregion
+
+    //#region CLOSE HANDLERS
+    private async handleTicketClose(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const channelName = interaction.channel?.name;
+        if (!channelName || !channelName.includes('-')) {
+            await interaction.reply({ content: 'This command can only be used in ticket channels.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+
+        const hasPermission = await this.canCloseTicket(interaction);
+        if (!hasPermission) {
+            await interaction.reply({ content: 'You do not have permission to close this ticket.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+        const confirmEmbed = new EmbedBuilder()
+            .setTitle('Close Ticket')
+            .setDescription('Are you sure you would like to close this ticket?')
+            .setColor(0xff9999);
+
+        const confirmButtons = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('ticket_close_confirm')
+                    .setLabel('Close')
+                    .setStyle(ButtonStyle.Danger),
+                new ButtonBuilder()
+                    .setCustomId('ticket_close_cancel')
+                    .setLabel('Cancel')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+
+        await interaction.reply({ embeds: [confirmEmbed], components: [confirmButtons], flags: MessageFlags.Ephemeral });
+    }
+
+    private async handleTicketCloseConfirm(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        try {
+            const channel = interaction.channel as TextChannel;
+
+            let ticketUserId: string | null = null;
+
+            const messages = await channel.messages.fetch({ limit: 20 });
+            const welcomeMessage = messages.find(msg =>
+                msg.content && (
+                    msg.content.includes('your ticket has been created') ||
+                    msg.content.includes('ticket has been created')
+                ) && msg.content.match(/<@(\d+)>/)
+            );
+
+            if (welcomeMessage) {
+                const userIdMatch = welcomeMessage.content.match(/<@(\d+)>/);
+                if (userIdMatch) {
+                    ticketUserId = userIdMatch[1];
+                }
+            }
+
+            if (!ticketUserId) {
+                for (const [id, overwrite] of channel.permissionOverwrites.cache) {
+                    if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
+                        const adminRoleId = this.client.util.stripRole(this.client.util.roles.admin);
+                        const ownerRoleId = this.client.util.stripRole(this.client.util.roles.owner);
+
+                        if (id !== adminRoleId && id !== ownerRoleId && id !== this.client.user?.id) {
+                            ticketUserId = id;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!ticketUserId) {
+                await interaction.editReply({
+                    content: 'Could not identify ticket opener. Please use the Delete button instead to remove this ticket, or contact an administrator.'
+                });
+                return;
+            }
+
+            await channel.permissionOverwrites.delete(ticketUserId);
+
+            const closedEmbed = new EmbedBuilder()
+                .setTitle('Ticket Closed')
+                .setDescription(`Ticket Closed by <@${interaction.user.id}>`)
+                .setColor(0xff0000)
+                .setTimestamp();
+
+            const controlsEmbed = new EmbedBuilder()
+                .setTitle('Support team ticket controls')
+                .setColor(0x99ccff);
+
+            const controlButtons = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('ticket_open')
+                        .setLabel('Open')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId('ticket_delete')
+                        .setLabel('Delete')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+            await interaction.editReply({ content: 'Ticket has been closed successfully.' });
+
+            await channel.send({ embeds: [closedEmbed] });
+            await channel.send({ embeds: [controlsEmbed], components: [controlButtons] });
+
+            this.client.logger.log({
+                message: `Ticket ${channel.name} closed by ${interaction.user.username} (${interaction.user.id})`,
+                handler: this.constructor.name
+            }, true);
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to close ticket',
+                error,
+                handler: this.constructor.name
+            });
+
+            await interaction.editReply({ content: 'An error occurred while closing the ticket. Please try again.' });
+        }
+    }
+
+    private async handleTicketCloseCancel(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        await interaction.update({ content: 'Ticket closure cancelled.', embeds: [], components: [] });
+    }
+
+    private async canCloseTicket(interaction: ButtonInteraction<'cached'>): Promise<boolean> {
+        const hasRolePermissions = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        if (hasRolePermissions) return true;
+
+        const channel = interaction.channel as TextChannel;
+        const userPermissions = channel.permissionOverwrites.cache.get(interaction.user.id);
+
+        return userPermissions !== undefined;
+    }
+
+    //#endregion
+
+    //#region SUPPORT TEAM CONTROLS
+    private async logTicketToForum(channel: TextChannel, user: any, logReason: string): Promise<string | null> {
+        const messages = await channel.messages.fetch({ limit: 100 });
+        const messageArray = Array.from(messages.values()).reverse();
+
+        const transcriptBuffer = await TranscriptGenerator.createTranscript(messages, channel.name);
+        const transcriptAttachment = new AttachmentBuilder(transcriptBuffer, { name: `${channel.name}-transcript.html` });
+
+        const welcomeMessage = messages.find(msg =>
+            msg.content.includes('your ticket has been created') &&
+            msg.content.match(/<@(\d+)>,/)
+        );
+
+        let ticketOpener = 'Unknown';
+        let ticketType = 'unknown';
+
+        if (welcomeMessage) {
+            const userIdMatch = welcomeMessage.content.match(/<@(\d+)>,/);
+            if (userIdMatch) {
+                const userId = userIdMatch[1];
+                try {
+                    const guildUser = await channel.guild.members.fetch(userId);
+                    ticketOpener = guildUser.user.username;
+                } catch {
+                    ticketOpener = `User ID: ${userId}`;
+                }
+            }
+        }
+
+        const channelNameParts = channel.name.split('-');
+        if (channelNameParts.length > 0) {
+            ticketType = channelNameParts[0];
+        }
+
+        const ticketEmbedMessage = messages.find(msg =>
+            msg.author.id === this.client.user?.id &&
+            msg.embeds.length > 0 &&
+            msg.embeds[0].title?.includes('Ticket') &&
+            !msg.embeds[0].title?.includes('Closed') &&
+            msg.embeds[0].fields && msg.embeds[0].fields.length > 0
+        );
+        const originalTicketEmbed = ticketEmbedMessage?.embeds[0];
+
+        let forumTitle = `${ticketType}-${ticketOpener}`;
+
+        if (ticketType === 'report' && originalTicketEmbed?.fields) {
+            const reportedUserField = originalTicketEmbed.fields.find(field =>
+                field.name === 'Reported User'
+            );
+
+            if (reportedUserField) {
+                const reportedUser = reportedUserField.value.replace(/```/g, '').trim();
+                forumTitle = `Report-${ticketOpener}-${reportedUser}`;
+            }
+        }
+
+        const summaryEmbed = new EmbedBuilder()
+            .setTitle(`Ticket Log: ${channel.name}`)
+            .setColor(0x99ccff)
+            .addFields(
+                { name: 'Ticket Opener', value: ticketOpener, inline: false },
+                { name: 'Ticket Type', value: ticketType, inline: false },
+                { name: 'Log Generated By', value: `${user.username} (${user.id})`, inline: false },
+                { name: 'Log Reason', value: logReason, inline: false },
+                { name: 'Generated At', value: new Date().toISOString(), inline: false },
+                { name: 'Channel', value: channel.name, inline: false },
+                { name: 'Message Count', value: messageArray.length.toString(), inline: false }
+            );
+
+        const forumChannel = await channel.guild.channels.fetch(ticketTranscriptChannelId);
+        if (!forumChannel || !forumChannel.isThreadOnly()) {
+            throw new Error('Could not find or access the forum channel.');
+        }
+
+        const tagName = ticketType === 'contentcreator' ? 'Content Creator' :
+                       ticketType.charAt(0).toUpperCase() + ticketType.slice(1);
+
+        const availableTags = forumChannel.availableTags;
+        const matchingTag = availableTags.find(tag =>
+            tag.name.toLowerCase() === tagName.toLowerCase() ||
+            (ticketType === 'contentcreator' && tag.name.toLowerCase() === 'content creator') ||
+            (ticketType === 'report' && tag.name.toLowerCase() === 'reports')
+        );
+
+        try {
+            const forumPost = await forumChannel.threads.create({
+                name: forumTitle,
+                message: {
+                    embeds: originalTicketEmbed ? [summaryEmbed, originalTicketEmbed] : [summaryEmbed],
+                    files: [transcriptAttachment]
+                },
+                appliedTags: matchingTag ? [matchingTag.id] : []
+            });
+
+            let currentBlock = '';
+            const maxLength = 1900;
+
+            let currentDate = '';
+
+            for (const message of messageArray) {
+                if (message.author.id === this.client.user?.id) {
+                    continue;
+                }
+
+                const messageDate = message.createdAt.toLocaleDateString();
+                const timeOnly = message.createdAt.toLocaleTimeString();
+                const author = message.author.username;
+                const content = (message.content || '')
+                    .replace(/<@!?(\d+)>/g, '@$1')
+                    .replace(/<@&(\d+)>/g, '@&$1');
+
+                if (currentDate !== messageDate) {
+                    currentDate = messageDate;
+                    const dateHeader = `\n**--- ${messageDate} ---**\n`;
+
+                    if (currentBlock.length + dateHeader.length > maxLength) {
+                        await forumPost.send({ content: currentBlock });
+                        currentBlock = dateHeader;
+                    } else {
+                        currentBlock += dateHeader;
+                    }
+                }
+
+                const messageBlock = `**[${timeOnly}] ${author}:** ${content || '*No text content*'}\n`;
+
+                const hasAttachments = message.attachments.size > 0;
+
+                if (currentBlock.length + messageBlock.length > maxLength && currentBlock.length > 0) {
+                    await forumPost.send({ content: currentBlock });
+                    currentBlock = '';
+                }
+
+                currentBlock += messageBlock;
+
+                if (hasAttachments) {
+                    for (const attachment of message.attachments.values()) {
+                        const attachmentBlock = `**[${timeOnly}] ${author}:** ${attachment.url}\n`;
+
+                        if (currentBlock.length + attachmentBlock.length > maxLength) {
+                            await forumPost.send({ content: currentBlock });
+                            currentBlock = attachmentBlock;
+                        } else {
+                            currentBlock += attachmentBlock;
+                        }
+                    }
+                }
+
+                if (message.embeds.length > 0) {
+                    const embedInfo = `*[${author} sent ${message.embeds.length} embed(s)]*\n`;
+
+                    if (currentBlock.length + embedInfo.length > maxLength) {
+                        await forumPost.send({ content: currentBlock });
+                        currentBlock = embedInfo;
+                    } else {
+                        currentBlock += embedInfo;
+                    }
+                }
+            }
+
+            if (currentBlock.trim()) {
+                await forumPost.send({ content: currentBlock });
+            }
+
+            return forumPost.id;
+        } catch(error) {
+            this.client.logger.error({
+                message: `Failed to create forum post for transcript log for channel ${channel.name}`,
+                error,
+                handler: this.constructor.name
+            });
+            return null;
+        }
+    }
+
+    private async handleTicketOpen(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        // Check if user has admin/owner permissions
+        const hasPermission = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        if (!hasPermission) {
+            await interaction.reply({ content: 'You do not have permission to use this command.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        try {
+            const channel = interaction.channel as TextChannel;
+
+            // Find the ticket opener using multiple methods (same as close functionality)
+            let ticketUserId: string | null = null;
+
+            // Method 1: Look for welcome message
+            const messages = await channel.messages.fetch({ limit: 20 });
+            const welcomeMessage = messages.find(msg =>
+                msg.content && (
+                    msg.content.includes('your ticket has been created') ||
+                    msg.content.includes('ticket has been created')
+                ) && msg.content.match(/<@(\d+)>/)
+            );
+
+            if (welcomeMessage) {
+                const userIdMatch = welcomeMessage.content.match(/<@(\d+)>/);
+                if (userIdMatch) {
+                    ticketUserId = userIdMatch[1];
+                }
+            }
+
+            // Method 2: Look for closed ticket message (since this is reopening)
+            if (!ticketUserId) {
+                const closedMessage = messages.find(msg =>
+                    msg.embeds.length > 0 &&
+                    msg.embeds[0].title === 'Ticket Closed' &&
+                    msg.embeds[0].description?.match(/Ticket Closed by <@(\d+)>/)
+                );
+
+                if (closedMessage) {
+                    // We know the ticket was closed, but we need the original opener
+                    // Let's try to find any message that mentions a user
+                    const anyUserMention = messages.find(msg =>
+                        msg.content && msg.content.match(/<@(\d+)>/) &&
+                        !msg.content.includes('Ticket Closed by')
+                    );
+
+                    if (anyUserMention) {
+                        const userIdMatch = anyUserMention.content.match(/<@(\d+)>/);
+                        if (userIdMatch) {
+                            ticketUserId = userIdMatch[1];
+                        }
+                    }
+                }
+            }
+
+            // Method 3: Extract from channel name or ask admin
+            if (!ticketUserId) {
+                await interaction.editReply({
+                    content: 'Could not identify the original ticket opener. Please manually add the user back to this channel, or contact an administrator.'
+                });
+                return;
+            }
+
+            // Re-add user's permissions to the channel
+            await channel.permissionOverwrites.create(ticketUserId, {
+                ViewChannel: true,
+                SendMessages: true,
+                ReadMessageHistory: true,
+                AttachFiles: true,
+                EmbedLinks: true
+            });
+
+            // Find and delete the support team controls message
+            const controlsMessage = messages.find(msg =>
+                msg.embeds.length > 0 &&
+                msg.embeds[0].title === 'Support team ticket controls'
+            );
+
+            if (controlsMessage) {
+                try {
+                    await controlsMessage.delete();
+                } catch (error) {
+                    this.client.logger.error({
+                        message: 'Failed to delete support team controls message',
+                        error,
+                        handler: this.constructor.name
+                    });
+                }
+            }
+
+            // Send reopened message
+            const reopenEmbed = new EmbedBuilder()
+                .setTitle('Ticket Reopened')
+                .setDescription(`This ticket has been reopened by <@${interaction.user.id}>.`)
+                .setColor(0x00ff00)
+                .setTimestamp();
+
+            await channel.send({ embeds: [reopenEmbed] });
+
+            await interaction.editReply({ content: 'Ticket has been reopened successfully.' });
+
+            this.client.logger.log({
+                message: `Ticket ${channel.name} reopened by ${interaction.user.username} (${interaction.user.id})`,
+                handler: this.constructor.name
+            }, true);
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to reopen ticket',
+                error,
+                handler: this.constructor.name
+            });
+
+            await interaction.editReply({ content: 'An error occurred while reopening the ticket. Please try again.' });
+        }
+    }
+
+    private async handleTicketDelete(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        // Check if user has admin/owner permissions
+        const hasPermission = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        if (!hasPermission) {
+            await interaction.reply({ content: 'You do not have permission to use this command.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+
+        // Create final confirmation for deletion
+        const confirmEmbed = new EmbedBuilder()
+            .setTitle('Delete Ticket')
+            .setDescription('Are you sure you want to **permanently delete** this ticket channel?\n\n**This action cannot be undone!**')
+            .setColor(0xff0000);
+
+        const confirmButtons = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('ticket_delete_confirm')
+                    .setLabel('Delete Forever')
+                    .setStyle(ButtonStyle.Danger),
+                new ButtonBuilder()
+                    .setCustomId('ticket_delete_cancel')
+                    .setLabel('Cancel')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+
+        await interaction.reply({ embeds: [confirmEmbed], components: [confirmButtons], flags: MessageFlags.Ephemeral });
+    }
+
+    private async handleTicketDeleteConfirm(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        // Check if user has admin/owner permissions
+        const hasPermission = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        if (!hasPermission) {
+            await interaction.reply({ content: 'You do not have permission to use this command.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        try {
+            const channel = interaction.channel as TextChannel;
+
+            // First, log the ticket to the forum, which now also attaches the transcript
+            await interaction.editReply({ content: 'Archiving ticket to forum...' });
+            const forumPostId = await this.logTicketToForum(channel, interaction.user, 'Automatically logged before deletion');
+
+            if (!forumPostId) {
+                await interaction.editReply({ content: 'Error: Failed to archive ticket to the forum. Aborting deletion.' });
+                return;
+            }
+
+            // New: Attempt to find the ticket opener and send them a DM with a download button
+            const ticketOpenerId = await this.findTicketOpener(channel);
+            this.client.logger.log({
+                message: `[Transcript] Found ticket opener ID: ${ticketOpenerId} for channel ${channel.name}`,
+                handler: this.constructor.name
+            }, true);
+
+            if (ticketOpenerId) {
+                try {
+                    const ticketOpener = await this.client.users.fetch(ticketOpenerId);
+                    this.client.logger.log({
+                        message: `[Transcript] Fetched user ${ticketOpener.username} (${ticketOpener.id})`,
+                        handler: this.constructor.name
+                    }, true);
+
+                    const dmEmbed = new EmbedBuilder()
+                        .setTitle('Ticket Closed')
+                        .setDescription(`Your ticket **#${channel.name}** has been closed and archived. You can download a copy of the transcript at any time.`)
+                        .setColor(0x99ccff)
+                        .setTimestamp();
+
+                    const buttonId = `ticket:download_transcript_${forumPostId}`;
+                    const downloadButton = new ActionRowBuilder<ButtonBuilder>()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(buttonId)
+                                .setLabel('Download Transcript')
+                                .setStyle(ButtonStyle.Primary)
+                        );
+
+                    this.client.logger.log({
+                        message: `[Transcript] Sending DM to ${ticketOpener.username} with button ID: "${buttonId}"`,
+                        handler: this.constructor.name
+                    }, true);
+
+                    await ticketOpener.send({
+                        embeds: [dmEmbed],
+                        components: [downloadButton]
+                    });
+
+                    this.client.logger.log({
+                        message: `[Transcript] Successfully sent DM to ${ticketOpener.username}`,
+                        handler: this.constructor.name
+                    }, true);
+
+                    await interaction.followUp({ content: `A DM has been sent to ${ticketOpener.username} with a download link.`, flags: MessageFlags.Ephemeral });
+
+                } catch (dmError: any) {
+                    this.client.logger.error({
+                        message: `Failed to DM transcript button to user ${ticketOpenerId}`,
+                        error: { message: dmError.message, stack: dmError.stack, name: dmError.name },
+                        handler: this.constructor.name
+                    });
+                    await interaction.followUp({ content: 'Could not send DM to the user. They may have DMs disabled.', flags: MessageFlags.Ephemeral });
+                }
+            } else {
+                await interaction.followUp({ content: 'Warning: Could not identify the ticket opener to send a DM.', flags: MessageFlags.Ephemeral });
+            }
+
+            this.client.logger.log({
+                message: `Ticket ${channel.name} deleted by ${interaction.user.username} (${interaction.user.id})`,
+                handler: this.constructor.name
+            }, true);
+
+            await interaction.followUp({ content: 'Ticket archived. The channel will be deleted in 5 seconds...' });
+
+            // Delete the channel after a short delay
+            setTimeout(async () => {
+                try {
+                    await channel.delete('Ticket deleted by admin/owner');
+                    await this.saveTicketClose(channel.id, interaction.user.id, forumPostId);
+                } catch (error) {
+                    this.client.logger.error({
+                        message: 'Failed to delete ticket channel',
+                        error,
+                        handler: this.constructor.name
+                    });
+                }
+            }, 5000);
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to delete ticket',
+                error,
+                handler: this.constructor.name
+            });
+
+            await interaction.editReply({ content: 'An error occurred while deleting the ticket. Please try again.' });
+        }
+    }
+
+    private async handleTicketDeleteCancel(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        await interaction.update({ content: 'Ticket deletion cancelled.', embeds: [], components: [] });
+    }
+
+    //#endregion
+
+    //#region TRANSCRIPT SYSTEM
+    private async findTicketOpener(channel: TextChannel): Promise<string | null> {
+        const messages = await channel.messages.fetch({ limit: 20 });
+        const welcomeMessage = messages.find(msg =>
+            msg.author.id === this.client.user?.id &&
+            msg.content &&
+            msg.content.includes('ticket has been created') &&
+            msg.mentions.users.first()
+        );
+
+        if (welcomeMessage && welcomeMessage.mentions.users.first()) {
+            return welcomeMessage.mentions.users.first()!.id;
+        }
+
+        for (const [id, overwrite] of channel.permissionOverwrites.cache) {
+            if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
+                const isAdmin = id === this.client.util.stripRole(this.client.util.roles.admin);
+                const isOwner = id === this.client.util.stripRole(this.client.util.roles.owner);
+                const isBot = id === this.client.user?.id;
+
+                if (!isAdmin && !isOwner && !isBot) {
+                    return id;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static async handleDMTranscriptDownload(client: Bot, interaction: ButtonInteraction, forumPostId: string): Promise<void> {
+        client.logger.log({
+            message: `[Transcript] handleDMTranscriptDownload called with forumPostId: "${forumPostId}", user: ${interaction.user.id}`,
+            handler: 'ButtonHandler'
+        }, true);
+
+        try {
+            await interaction.deferReply({ ephemeral: true });
+            client.logger.log({
+                message: `[Transcript] Successfully deferred reply for post ${forumPostId}`,
+                handler: 'ButtonHandler'
+            }, true);
+        } catch (error: any) {
+            client.logger.error({
+                message: `[Transcript] FAILED to defer reply for post ${forumPostId}`,
+                error: {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                },
+                handler: 'ButtonHandler'
+            });
+            return;
+        }
+
+        client.logger.log({ message: `[Transcript] Received download request for post ${forumPostId}.`, handler: 'ButtonHandler' }, true);
+
+        try {
+            client.logger.log({ message: `[Transcript] Fetching forum channel ${ticketTranscriptChannelId}...`, handler: 'ButtonHandler' }, true);
+            const forumChannel = await client.channels.fetch(ticketTranscriptChannelId);
+            if (!forumChannel || !forumChannel.isThreadOnly()) {
+                await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
+                return;
+            }
+            client.logger.log({ message: `[Transcript] Forum channel found. Fetching thread ${forumPostId}...`, handler: 'ButtonHandler' }, true);
+
+            const thread = await forumChannel.threads.fetch(forumPostId);
+            if (!thread) {
+                await interaction.editReply({ content: 'Error: Could not find the specific transcript for this ticket.' });
+                return;
+            }
+            client.logger.log({ message: `[Transcript] Thread found. Fetching starter message...`, handler: 'ButtonHandler' }, true);
+
+            const starterMessage = await thread.fetchStarterMessage();
+            if (!starterMessage || starterMessage.attachments.size === 0) {
+                await interaction.editReply({ content: 'Error: The archived transcript is missing its attachment.' });
+                return;
+            }
+            client.logger.log({ message: `[Transcript] Starter message found. Getting attachment...`, handler: 'ButtonHandler' }, true);
+
+            const transcriptAttachment = starterMessage.attachments.first();
+            if (!transcriptAttachment) {
+                await interaction.editReply({ content: 'Error: Could not retrieve the transcript attachment.' });
+                return;
+            }
+            client.logger.log({ message: `[Transcript] Attachment found: ${transcriptAttachment.name}. URL: ${transcriptAttachment.url}`, handler: 'ButtonHandler' }, true);
+
+            client.logger.log({ message: `[Transcript] Sending direct link to user...`, handler: 'ButtonHandler' }, true);
+            await interaction.editReply({
+                content: `Here is your transcript - click the link below to view it in your browser:\n\n**[📄 View Transcript](${transcriptAttachment.url})**\n\n*This link will open the transcript in a new browser tab.*`
+            });
+            client.logger.log({ message: `[Transcript] Direct link sent successfully for post ${forumPostId}.`, handler: 'ButtonHandler' }, true);
+
+        } catch (error: any) {
+            client.logger.error({
+                message: `[Transcript] CRITICAL FAILURE while retrieving transcript for forum post ${forumPostId}`,
+                error: {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name,
+                    isAxiosError: error.isAxiosError,
+                    axiosRequest: error.config?.url,
+                    axiosResponseStatus: error.response?.status,
+                    axiosResponseData: error.response?.data?.toString(),
+                },
+                handler: 'ButtonHandler'
+            });
+
+            // Final attempt to notify the user
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', ephemeral: true }).catch(() => {});
+            } else {
+                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => {});
+            }
+        }
+    }
+
+    private async handleTranscriptDownload(interaction: ButtonInteraction, forumPostId: string): Promise<void> {
+        this.client.logger.log({
+            message: `[Transcript] handleTranscriptDownload called with forumPostId: "${forumPostId}", user: ${interaction.user.id}`,
+            handler: this.constructor.name
+        }, true);
+
+        try {
+            await interaction.deferReply({ ephemeral: true });
+            this.client.logger.log({
+                message: `[Transcript] Successfully deferred reply for post ${forumPostId}`,
+                handler: this.constructor.name
+            }, true);
+        } catch (error: any) {
+            this.client.logger.error({
+                message: `[Transcript] FAILED to defer reply for post ${forumPostId}`,
+                error: {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                },
+                handler: this.constructor.name
+            });
+            return;
+        }
+
+        this.client.logger.log({ message: `[Transcript] Received download request for post ${forumPostId}.`, handler: this.constructor.name }, true);
+
+        try {
+            this.client.logger.log({ message: `[Transcript] Fetching forum channel ${ticketTranscriptChannelId}...`, handler: this.constructor.name }, true);
+            const forumChannel = await this.client.channels.fetch(ticketTranscriptChannelId);
+            if (!forumChannel || !forumChannel.isThreadOnly()) {
+                await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
+                return;
+            }
+            this.client.logger.log({ message: `[Transcript] Forum channel found. Fetching thread ${forumPostId}...`, handler: this.constructor.name }, true);
+
+            const thread = await forumChannel.threads.fetch(forumPostId);
+            if (!thread) {
+                await interaction.editReply({ content: 'Error: Could not find the specific transcript for this ticket.' });
+                return;
+            }
+            this.client.logger.log({ message: `[Transcript] Thread found. Fetching starter message...`, handler: this.constructor.name }, true);
+
+            const starterMessage = await thread.fetchStarterMessage();
+            if (!starterMessage || starterMessage.attachments.size === 0) {
+                await interaction.editReply({ content: 'Error: The archived transcript is missing its attachment.' });
+                return;
+            }
+            this.client.logger.log({ message: `[Transcript] Starter message found. Getting attachment...`, handler: this.constructor.name }, true);
+
+            const transcriptAttachment = starterMessage.attachments.first();
+            if (!transcriptAttachment) {
+                await interaction.editReply({ content: 'Error: Could not retrieve the transcript attachment.' });
+                return;
+            }
+            this.client.logger.log({ message: `[Transcript] Attachment found: ${transcriptAttachment.name}. URL: ${transcriptAttachment.url}`, handler: this.constructor.name }, true);
+
+            this.client.logger.log({ message: `[Transcript] Downloading file via axios...`, handler: this.constructor.name }, true);
+            const response = await axios.get(transcriptAttachment.url, {
+                responseType: 'arraybuffer'
+            });
+            this.client.logger.log({ message: `[Transcript] File downloaded successfully. Status: ${response.status}.`, handler: this.constructor.name }, true);
+
+            const newAttachment = new AttachmentBuilder(response.data, { name: transcriptAttachment.name });
+
+            this.client.logger.log({ message: `[Transcript] Replying to interaction with file...`, handler: this.constructor.name }, true);
+            await interaction.editReply({
+                content: 'Here is your transcript:',
+                files: [newAttachment]
+            });
+            this.client.logger.log({ message: `[Transcript] Interaction reply sent successfully for post ${forumPostId}.`, handler: this.constructor.name }, true);
+
+        } catch (error: any) {
+            this.client.logger.error({
+                message: `[Transcript] CRITICAL FAILURE while retrieving transcript for forum post ${forumPostId}`,
+                error: {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name,
+                    isAxiosError: error.isAxiosError,
+                    axiosRequest: error.config?.url,
+                    axiosResponseStatus: error.response?.status,
+                    axiosResponseData: error.response?.data?.toString(),
+                },
+                handler: this.constructor.name
+            });
+
+            // Final attempt to notify the user
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', ephemeral: true }).catch(() => {});
+            } else {
+                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => {});
+            }
+        }
+    }
+
+    //#endregion
+
+    //#region Utilities
+    public async getNextTicketNumber(ticketType: string): Promise<number> {
+        const ticketNumbersPath = path.join(process.cwd(), 'ticket-numbers.json');
+
+        try {
+            const data = await fs.readFile(ticketNumbersPath, 'utf-8');
+            const ticketNumbers = JSON.parse(data);
+
+            // Increment the number for this ticket type
+            ticketNumbers[ticketType] = (ticketNumbers[ticketType] || 0) + 1;
+
+            // Save back to file
+            await fs.writeFile(ticketNumbersPath, JSON.stringify(ticketNumbers, null, 4));
+
+            return ticketNumbers[ticketType];
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to read/write ticket numbers file',
+                error,
+                handler: 'UtilityHandler'
+            });
+
+            // Fallback to 1 if file doesn't exist or is corrupted
+            return 1;
+        }
+    }
+
+    public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number): Promise<TextChannel | null> {
+        try {
+            const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
+            const { roles, stripRole } = this.client.util
+
+            // Get admin and owner role IDs
+            const adminRoleId = stripRole(roles.admin);
+            const ownerRoleId = stripRole(roles.owner);
+
+            // Create the channel with proper permissions
+            const channel = await guild.channels.create({
+                name: channelName,
+                type: ChannelType.GuildText,
+                parent: null, // No category as requested
+                permissionOverwrites: [
+                    {
+                        id: guild.roles.everyone.id,
+                        deny: [PermissionFlagsBits.ViewChannel]
+                    },
+                    {
+                        id: userId,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                            PermissionFlagsBits.AttachFiles,
+                            PermissionFlagsBits.EmbedLinks
+                        ]
+                    },
+                    {
+                        id: adminRoleId,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                            PermissionFlagsBits.AttachFiles,
+                            PermissionFlagsBits.EmbedLinks,
+                            PermissionFlagsBits.ManageMessages,
+                            PermissionFlagsBits.ManageChannels
+                        ]
+                    },
+                    {
+                        id: ownerRoleId,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                            PermissionFlagsBits.AttachFiles,
+                            PermissionFlagsBits.EmbedLinks,
+                            PermissionFlagsBits.ManageMessages,
+                            PermissionFlagsBits.ManageChannels
+                        ]
+                    }
+                ]
+            });
+
+            this.client.logger.log({
+                message: `Created ticket channel: ${channelName} for user ${userId}`,
+                handler: 'UtilityHandler'
+            }, true);
+
+            return channel;
+        } catch (error) {
+            this.client.logger.error({
+                message: `Failed to create ticket channel for type: ${ticketType}`,
+                error,
+                handler: 'UtilityHandler'
+            });
+            return null;
+        }
+    }
+
+    public async sendTicketWelcomeMessage(channel: TextChannel, userId: string, ticketType: string, formData: any): Promise<void> {
+        try {
+            const { roles, colours, capitalizeFirstLetter } = this.client.util
+            const adminRole = roles.admin;
+            const ownerRole = roles.owner;
+
+            // Create welcome message
+            const welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
+
+            // Create embed with form data using fields for better organization
+            const embed = new EmbedBuilder()
+                .setTitle(`${capitalizeFirstLetter(ticketType)} Ticket`)
+                .setColor(colours.lightblue)
+                .setTimestamp()
+                .setAuthor({
+                    name: `User: ${channel.guild.members.cache.get(userId)?.user.username || 'Unknown User'}`,
+                    iconURL: channel.guild.members.cache.get(userId)?.user.displayAvatarURL() || undefined
+                });
+
+            // Format the form data based on ticket type using fields
+            switch (ticketType) {
+                case 'suggestion':
+                    embed.addFields(
+                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Suggestion', value: `\`\`\`${formData.suggestion}\`\`\``, inline: false },
+                        { name: 'Why would this work?', value: `\`\`\`${formData.reason}\`\`\``, inline: false }
+                    );
+                    break;
+                case 'report':
+                    embed.addFields(
+                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Reported User', value: `\`\`\`${formData.reported_user}\`\`\``, inline: false },
+                        { name: 'Reason', value: `\`\`\`${formData.reason}\`\`\``, inline: false },
+                        { name: 'Description', value: `\`\`\`${formData.description}\`\`\``, inline: false }
+                    );
+                    break;
+                case 'contentcreator':
+                    embed.addFields(
+                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Platform URL', value: `\`\`\`${formData.platform_url}\`\`\``, inline: false },
+                        { name: 'Additional Information', value: `\`\`\`${formData.additional}\`\`\``, inline: false }
+                    );
+                    break;
+                case 'other':
+                    embed.addFields(
+                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'How can we assist?', value: `\`\`\`${formData.assistance}\`\`\``, inline: false }
+                    );
+                    break;
+            }
+
+            // Create close button
+            const closeButton = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('ticket_close')
+                        .setLabel('Close')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+
+            await channel.send({ content: welcomeMessage, embeds: [embed], components: [closeButton] });
+
+            this.client.logger.log({
+                message: `Sent welcome message to ticket channel: ${channel.name}`,
+                handler: 'UtilityHandler'
+            }, true);
+        } catch (error) {
+            this.client.logger.error({
+                message: `Failed to send welcome message to ticket channel: ${channel.name}`,
+                error,
+                handler: 'UtilityHandler'
+            });
+        }
+    }
+    //#endregion
+
+    //#region Database
+
+    private async saveTicketSubmit(userOpen: string, channelId: string, ticketType: string): Promise<void> {
+        const { dataSource } = this.client;
+        const ticketRepository = dataSource.getRepository(Ticket);
+        const ticketObject = new Ticket();
+
+        ticketObject.channelId = channelId;
+        ticketObject.userOpen = userOpen;
+
+        // 0 = Suggestion, 1 = Report, 2 = Content Creator, 3 = Other
+        switch (ticketType) {
+            case 'report':
+                ticketObject.ticketType = 1;
+                break;
+            case 'suggestion':
+                ticketObject.ticketType = 0;
+                break;
+            case 'contentcreator':
+                ticketObject.ticketType = 2;
+                break;
+            case 'other':
+                ticketObject.ticketType = 3;
+                break;
+        }
+
+        await ticketRepository.save(ticketObject);
+    }
+
+    private async saveTicketClose(channelId: string, userClose: string, forumPostId: string): Promise<void> {
+        const { dataSource } = this.client;
+        const ticketRepository = dataSource.getRepository(Ticket);
+
+        const existingEntry = await ticketRepository.findOne({
+            where: {
+                channelId: channelId
+            }
+        });
+
+        if (existingEntry) {
+            existingEntry.userClose = userClose;
+            existingEntry.forumPostId = forumPostId;
+            await ticketRepository.save(existingEntry);
+        } else {
+            this.client.logger.log({ message: `[Ticket System] Ticket with Channel-Id ${channelId} could not be found.`, handler: this.constructor.name }, true);
+        }
+    }
+
+    //#endregion
+}

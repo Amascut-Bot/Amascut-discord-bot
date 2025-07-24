@@ -59,7 +59,7 @@ export default class Host extends BotInteraction {
 
         const role11Button = new ButtonBuilder()
             .setCustomId('host_select11')
-            .setLabel('Role 1 - First')
+            .setLabel('Role 1')
             .setEmoji('⚔️')
             .setStyle(ButtonStyle.Secondary);
 
@@ -77,7 +77,7 @@ export default class Host extends BotInteraction {
 
         const role12Button = new ButtonBuilder()
             .setCustomId('host_select12')
-            .setLabel('Role 1 - Second')
+            .setLabel('Role 1')
             .setEmoji('⚔️')
             .setStyle(ButtonStyle.Secondary);
 
@@ -95,7 +95,7 @@ export default class Host extends BotInteraction {
 
         const role21Button = new ButtonBuilder()
             .setCustomId('host_select21')
-            .setLabel('Role 2 - First')
+            .setLabel('Role 2')
             .setEmoji('⚔️')
             .setStyle(ButtonStyle.Secondary);
 
@@ -113,7 +113,7 @@ export default class Host extends BotInteraction {
 
         const role22Button = new ButtonBuilder()
             .setCustomId('host_select22')
-            .setLabel('Role 2 - Second')
+            .setLabel('Role 2')
             .setEmoji('⚔️')
             .setStyle(ButtonStyle.Secondary);
 
