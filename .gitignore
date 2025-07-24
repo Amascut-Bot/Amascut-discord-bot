@@ -47,3 +47,4 @@ lerna-debug.log*
 # Bot Archives
 /upload_archives/
 /message-tags.json
+ticket-numbers.json
