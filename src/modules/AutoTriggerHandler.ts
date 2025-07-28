@@ -11,7 +11,7 @@ export default class AutoTriggerHandler {
         'YOUR SOUL IS MINE!',
         'Well, well. I see the menagerie is all here.',
         'Silence!',
-        'I AM. THE GOD. OF. DESCTRUCTION.',
+        'I AM. THE GOD. OF. DESTRUCTION.',
         'Your soul is WEAK.',
         'I will not be denied.',
         'It is NOT over!'
