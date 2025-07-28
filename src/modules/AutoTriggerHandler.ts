@@ -7,6 +7,16 @@ export default class AutoTriggerHandler {
     private static readonly MEOW_REPLY_CHANCE = 50;
     private static readonly TAUNT_CHANCE = 10;
 
+    private static readonly tauntMessages = [
+        'YOUR SOUL IS MINE!',
+        'Well, well. I see the menagerie is all here.',
+        'Silence!',
+        'I AM. THE GOD. OF. DESCTRUCTION.',
+        'Your soul is WEAK.',
+        'I will not be denied.',
+        'It is NOT over!'
+    ];
+
     constructor(client: Bot) {
         this.client = client;
     }
@@ -81,7 +91,7 @@ export default class AutoTriggerHandler {
             }
         }
 
-        await message.reply('YOUR SOUL IS MINE!');
+        await message.reply(AutoTriggerHandler.tauntMessages[Math.floor(Math.random() * AutoTriggerHandler.tauntMessages.length)]);
         return true;
     }
 
