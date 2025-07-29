@@ -25,7 +25,7 @@ export default class ClearKillTime extends BotInteraction {
         await interaction.deferReply({ ephemeral: true });
 
         const killTimeSubmissionRepository = this.client.dataSource.getRepository(KillTimeSubmission);
-        
+
         try {
             await killTimeSubmissionRepository.clear();
             await interaction.editReply({ content: 'All kill time submissions have been successfully cleared from the database.' });
@@ -38,4 +38,4 @@ export default class ClearKillTime extends BotInteraction {
             await interaction.editReply({ content: 'An error occurred while trying to clear the kill time submissions.' });
         }
     }
-} 
+}

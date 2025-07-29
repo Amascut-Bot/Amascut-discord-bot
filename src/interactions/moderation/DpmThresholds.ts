@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
 import BotInteraction from "../../types/BotInteraction";
+import { getRoles } from "../../GuildSpecifics";
 
 export default class DpmThresholds extends BotInteraction {
     get name() {
@@ -44,8 +45,8 @@ export default class DpmThresholds extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction) {
         // Check permissions
         const hasPermissions = await this.client.util.hasRolePermissions(
-            this.client, 
-            ['moderator', 'admin', 'owner'], 
+            this.client,
+            ['moderator', 'admin', 'owner'],
             interaction
         );
 
@@ -66,7 +67,7 @@ export default class DpmThresholds extends BotInteraction {
             });
 
             const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
-            
+
             if (interaction.replied || interaction.deferred) {
                 await interaction.editReply({
                     content: `❌ **Error:** ${errorMessage}`
@@ -84,7 +85,7 @@ export default class DpmThresholds extends BotInteraction {
         await interaction.deferReply({ ephemeral: true });
 
         const currentThresholds = await this.client.util.getDpm();
-        
+
         // Get new values from options, or keep current values
         const newThresholds = {
             adept: interaction.options.getInteger('adept') ?? currentThresholds.adept,
@@ -110,17 +111,17 @@ export default class DpmThresholds extends BotInteraction {
             // Provide more helpful error message with current values
             const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
             const currentValues = `\n\n**Current thresholds:**\n• Adept: ${currentThresholds.adept}k\n• Mastery: ${currentThresholds.mastery}k\n• Extreme: ${currentThresholds.extreme}k\n\n**Your values:**\n• Adept: ${newThresholds.adept}k\n• Mastery: ${newThresholds.mastery}k\n• Extreme: ${newThresholds.extreme}k\n\n**Remember:** Adept < Mastery < Extreme`;
-            
+
             await interaction.editReply({
                 content: `❌ **Error:** ${errorMessage}${currentValues}`
             });
             return;
         }
 
-        const { colours, roles } = this.client.util;
+        const { colours } = this.client.util;
 
         const descriptionLines = providedOptions.map(key => {
-            const roleMention = roles[key as keyof typeof roles];
+            const roleMention = getRoles(interaction.guild?.id)[key];
             const newValue = newThresholds[key as keyof typeof newThresholds];
             return `${roleMention} threshold has successfully updated to **${newValue}k DPM**.`;
         });

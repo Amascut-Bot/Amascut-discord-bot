@@ -29,11 +29,11 @@ export default class ImportUsers extends BotInteraction {
 
         // Check if user has admin or owner role from .env
         const hasPermissions = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
-        
+
         if (!hasPermissions) {
-            await interaction.reply({ 
-                content: 'You do not have permissions to run this command. This incident has been logged.', 
-                ephemeral: true 
+            await interaction.reply({
+                content: 'You do not have permissions to run this command. This incident has been logged.',
+                ephemeral: true
             });
             this.client.logger.log({
                 message: `Attempted restricted permissions. { command: ${this.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
@@ -46,7 +46,7 @@ export default class ImportUsers extends BotInteraction {
 
         const verifiedRoleId = '1390353573216387072';
         const role = await interaction.guild.roles.fetch(verifiedRoleId);
-        
+
         if (!role) {
             await interaction.editReply({ content: 'Could not find the Verified role. Please check the role ID.' });
             return;
@@ -66,13 +66,13 @@ export default class ImportUsers extends BotInteraction {
             for (const userId of userIds) {
                 try {
                     const member = await interaction.guild.members.fetch(userId);
-                    
+
                     // Skip if user already has the role
                     if (member.roles.cache.has(role.id)) {
                         skippedCount++;
                         continue;
                     }
-                    
+
                     await member.roles.add(role);
                     successCount++;
                     if (logChannel && logChannel.isTextBased()) {
@@ -82,7 +82,7 @@ export default class ImportUsers extends BotInteraction {
                     notFound.push(userId);
                 }
             }
-            
+
             const logMessage = {
                 message: `Import process completed. Granted '${role.name}' to ${successCount} users. ${skippedCount} users already had the role. ${notFound.length} users not found.`,
                 user: interaction.user.username,
@@ -120,4 +120,4 @@ export default class ImportUsers extends BotInteraction {
             }
         }
     }
-} 
+}

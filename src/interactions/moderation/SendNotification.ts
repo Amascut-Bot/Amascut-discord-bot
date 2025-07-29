@@ -88,8 +88,8 @@ export default class SendNotification extends BotInteraction {
             return;
         }
 
-        const targetChannels = interaction.guild?.channels.cache.filter(channel => 
-            channel.parentId === targetInfo.id && 
+        const targetChannels = interaction.guild?.channels.cache.filter(channel =>
+            channel.parentId === targetInfo.id &&
             channel.name.startsWith(targetInfo.prefix) &&
             channel.isTextBased()
         ) as Map<string, TextChannel> | undefined;
@@ -107,7 +107,7 @@ export default class SendNotification extends BotInteraction {
         if (finalEmbedData.thumbnail) {
             finalEmbedData.thumbnail = await this.client.util.reuploadImage(finalEmbedData.thumbnail);
         }
-        
+
         const embed = new EmbedBuilder();
         if (finalEmbedData.title) embed.setTitle(finalEmbedData.title);
         if (finalEmbedData.description) embed.setDescription(finalEmbedData.description);
@@ -134,4 +134,4 @@ export default class SendNotification extends BotInteraction {
 
         await interaction.editReply({ content: `Successfully sent the notification **${notificationName}** to ${channelsSent} out of ${targetChannels.size} target channel(s).` });
     }
-} 
+}

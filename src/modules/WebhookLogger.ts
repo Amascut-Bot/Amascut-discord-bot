@@ -108,7 +108,7 @@ export default class WebhookLogger {
                 console.error('[WebhookLogger] Failed to send INFO batch to webhook:', error);
             }
         }
-        
+
         this.isSending = false;
     }
-} 
+}

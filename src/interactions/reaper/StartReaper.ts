@@ -1,3 +1,4 @@
+import { getChannels, getRoles } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, Message, ButtonBuilder, ActionRowBuilder, ButtonStyle, TextChannel } from 'discord.js';
 
@@ -83,7 +84,7 @@ export default class StartReaper extends BotInteraction {
         await interaction.deferReply({ ephemeral: true });
         const region: string = interaction.options.getString('region', true);
 
-        const { roles, colours, channels } = this.client.util;
+        const { colours } = this.client.util;
 
         const info = await this.ticketToolEmbedContent(interaction);
 
@@ -150,15 +151,15 @@ export default class StartReaper extends BotInteraction {
             `)
             .addFields(fields);
 
-        const channel = await this.client.channels.fetch(channels.reaperScheduling) as TextChannel;
+        const channel = await this.client.channels.fetch(getChannels(interaction.guild?.id).reaperScheduling) as TextChannel;
         await channel.send(
-            { content: `${roles['reaper']}`, embeds: [cardEmbed], components: [groupButtonRow, controlPanel] }
+            { content: `${getRoles(interaction.guild?.id)['reaper']}`, embeds: [cardEmbed], components: [groupButtonRow, controlPanel] }
         )
 
         const replyEmbed = new EmbedBuilder()
             .setTitle('Reaper card created!')
             .setColor(colours.discord.green)
-            .setDescription(`${roles['reaper']} has been notified in <#${channels.reaperScheduling}>`);
+            .setDescription(`${getRoles(interaction.guild?.id)['reaper']} has been notified in <#${getChannels(interaction.guild?.id).reaperScheduling}>`);
         await interaction.editReply({ embeds: [replyEmbed] });
     }
 }

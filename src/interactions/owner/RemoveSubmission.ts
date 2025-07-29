@@ -115,4 +115,4 @@ export default class RemoveSubmission extends BotInteraction {
             }
         }
     }
-} 
+}

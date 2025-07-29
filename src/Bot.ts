@@ -102,7 +102,7 @@ export default class Bot extends Client {
             if (await this.forumTodoHandler.handleForumTodoReaction(reaction, user)) {
                 return;
             }
-    
+
             const activeMessages = await readJsonFile<ActiveMessages>(activeMessagesFilePath);
             let messageData = activeMessages[reaction.message.id];
 
@@ -121,10 +121,10 @@ export default class Bot extends Client {
                 this.logger.log({ message: `[ReactionAdd] Invalid message data format for message ${reaction.message.id}` }, true);
                 return;
             }
-    
+
             const reactionRolesData = await readJsonFile<ReactionRolesData>(reactionRolesFilePath);
             const emojiIdentifier = reaction.emoji.name;
-            
+
             let foundRole: ReactionRole | undefined;
             let foundCategory: string | undefined;
             let foundCategoryRoles: ReactionRole[] | undefined;
@@ -142,18 +142,18 @@ export default class Bot extends Client {
                     break;
                 }
             }
-            
+
             if (!foundRole || !foundCategory || !foundCategoryRoles) {
                  this.logger.log({ message: `[ReactionAdd] No role found for emoji '${emojiIdentifier}' in any associated category for message ${reaction.message.id}. Aborting.` }, true);
                 return;
             }
 
             this.logger.log({ message: `[ReactionAdd] Matched emoji '${emojiIdentifier}' to roleId ${foundRole.roleId} in category '${foundCategory}'` }, true);
-            
+
             const guild = reaction.message.guild;
             if (!guild) return;
             const member = await guild.members.fetch(user.id);
-    
+
             // check if user is eligible for the role
             let isEligible = false;
             if (!foundRole.requiredRoleId) {
@@ -179,10 +179,10 @@ export default class Bot extends Client {
                             return memberRoles.has(r.roleId) || rRequiredIds.every(id => memberRoles.has(id));
                         })
                         .map(r => r.hierarchy);
-                    
+
                     const highestUserHierarchy = userHierarchies.length > 0 ? Math.max(...userHierarchies) : 0;
                     this.logger.log({ message: `[ReactionAdd] Highest hierarchy for user in this category is ${highestUserHierarchy}. Required hierarchy for new role is ${foundRole.hierarchy}.` }, true);
-    
+
                     if (highestUserHierarchy > 0 && foundRole.hierarchy < highestUserHierarchy) {
                         this.logger.log({ message: `[ReactionAdd] User's hierarchy is higher than role's hierarchy. Eligible.` }, true);
                         isEligible = true;
@@ -191,7 +191,7 @@ export default class Bot extends Client {
             }
 
             this.logger.log({ message: `[ReactionAdd] User ${user.id} eligibility is: ${isEligible}` }, true);
-    
+
             if (isEligible) {
                 try {
                     this.logger.log({ message: `[ReactionAdd] Adding role ${foundRole.roleId} to user ${user.id}` }, true);
@@ -225,11 +225,11 @@ export default class Bot extends Client {
                     return;
                 }
             }
-    
+
             const activeMessages = await readJsonFile<ActiveMessages>(activeMessagesFilePath);
             let messageData = activeMessages[reaction.message.id];
             if (!messageData) return;
-            
+
             // Handle both old format (direct categories) and new format (object with categories property)
             let categories: string[];
             if (typeof messageData === 'string') {
@@ -243,7 +243,7 @@ export default class Bot extends Client {
                 return;
             }
 
-    
+
             const reactionRolesData = await readJsonFile<ReactionRolesData>(reactionRolesFilePath);
             const emojiIdentifier = reaction.emoji.name;
 
@@ -252,7 +252,7 @@ export default class Bot extends Client {
             for (const category of categories) {
                 const categoryRoles = reactionRolesData[category];
                 if (!categoryRoles) continue;
-    
+
             const reactionRole = categoryRoles.find(r => r.emoji === emojiIdentifier);
                 if (reactionRole) {
                     foundRole = reactionRole;
@@ -261,10 +261,10 @@ export default class Bot extends Client {
             }
 
             if (!foundRole) return;
-    
+
             const guild = reaction.message.guild;
             if (!guild) return;
-            
+
             try {
                 const member = await guild.members.fetch(user.id);
                 if (member.roles.cache.has(foundRole.roleId)) {
@@ -310,7 +310,7 @@ export default class Bot extends Client {
         }
 
         this.logger.log({ message: `[Cache] Caching ${messageIds.length} tracked messages...` }, true);
-        
+
         let cachedCount = 0;
 
         for (const guild of this.guilds.cache.values()) {
@@ -351,7 +351,7 @@ export default class Bot extends Client {
                 .setDescription(`${role} was ${action} ${preposition} ${member.user} via reaction role.`)
                 .setColor(this.color)
                 .setTimestamp();
-            
+
             await logChannel.send({ embeds: [embed] });
         } catch (error) {
             this.logger.error({ message: `Failed to send reaction role log`, error });

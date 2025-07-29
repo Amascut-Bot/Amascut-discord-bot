@@ -2,6 +2,7 @@ import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 import { Reaper } from '../../entity/Reaper';
 import { ReaperParticipation } from '../../entity/ReaperParticipation';
+import { getRoles } from '../../GuildSpecifics';
 
 export default class ReaperLeaderboard extends BotInteraction {
     get name() {
@@ -70,7 +71,7 @@ export default class ReaperLeaderboard extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ ephemeral: false });
         const { dataSource } = this.client;
-        const { colours, roles } = this.client.util;
+        const { colours } = this.client.util;
         const timespan = interaction.options.getString('timespan', true);
 
         const now = new Date();
@@ -105,7 +106,7 @@ export default class ReaperLeaderboard extends BotInteraction {
             .from(Reaper, 'reaper')
             .groupBy('reaper.host')
             .orderBy('count', 'DESC');
-                    
+
         const reapersParticipatedQuery = dataSource.createQueryBuilder()
             .select('reaperParticipation.participant', 'user')
             .addSelect('COUNT(*)', 'count')
@@ -131,7 +132,7 @@ export default class ReaperLeaderboard extends BotInteraction {
             .setTimestamp()
             .setTitle(`Amascut Reaper Team Leaderboard - ${timespan}`)
             .setColor(colours.tan)
-            .setDescription(`> There has been **${totalReapers}** reaper${totalReapers !== 1 ? 's' : ''} recorded and **${reapersParticipated.length}** unique ${roles.reaper} members!`)
+            .setDescription(`> There has been **${totalReapers}** reaper${totalReapers !== 1 ? 's' : ''} recorded and **${reapersParticipated.length}** unique ${getRoles(interaction.guild?.id).reaper} members!`)
             .addFields(
                 { name: 'Reapers Hosted', value: this.createFieldFromArray(reapersHosted.slice(0, 10)), inline: true },
                 { name: 'Reapers Participated', value: this.createFieldFromArray(reapersParticipated.slice(0, 10)), inline: true }

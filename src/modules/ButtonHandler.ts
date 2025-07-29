@@ -10,6 +10,7 @@ import Bot from '../Bot';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import TicketHandler from './TicketHandler';
+import { getChannels, getRoles } from '../GuildSpecifics';
 
 // ===============================
 // CONSTANTS
@@ -109,7 +110,7 @@ export default class ButtonHandler {
     // ===============================
     public getUpkeepMembers = async (pastDate: Date, interaction: ButtonInteraction<'cached'>) => {
         const { dataSource } = this.client;
-        const { roles, stripRole } = this.client.util;
+        const { stripRole } = this.client.util;
 
         const trialsParticipated = await dataSource.createQueryBuilder()
             .select('trialParticipation.participant', 'user')
@@ -126,7 +127,7 @@ export default class ButtonHandler {
         })
 
         const trialTeamMembers = await interaction.guild?.members.fetch().then(members => {
-            return members.filter(member => member.roles.cache.has(stripRole(roles.trialTeam))).map(member => member.id)
+            return members.filter(member => member.roles.cache.has(stripRole(getRoles(interaction.guild?.id).trialTeam))).map(member => member.id)
         });
 
         const sortableArray: any = [];
@@ -307,7 +308,7 @@ export default class ButtonHandler {
     // ROLE ASSIGNMENT SYSTEM
     // ===============================
     public async assignMatchmakingRole(interaction: ButtonInteraction<'cached'>, cleanRoleId: string, trialeeId: string) {
-        const { roles, colours, channels, stripRole, categorize, getKeyFromValue } = this.client.util;
+        const { colours, stripRole, categorize, getKeyFromValue } = this.client.util;
 
         const hierarchy: Hierarchy = {
             threeSeven: ['noRealm', 'threeSevenRootskips', 'rootskips', 'threeSevenExperienced', 'experienced', 'threeSevenMaster', 'master', 'threeSevenGrandmaster', 'grandmaster'],
@@ -362,7 +363,7 @@ export default class ButtonHandler {
                 const categorizedHierarchy = hierarchy[categorize(role)];
                 const sliceFromIndex: number = categorizedHierarchy.indexOf(role) + 1;
                 const hierarchyList = categorizedHierarchy.slice(sliceFromIndex);
-                const hierarchyIdList = hierarchyList.map((item: string) => stripRole(roles[item]));
+                const hierarchyIdList = hierarchyList.map((item: string) => stripRole(getRoles(interaction.guild?.id)[item]));
                 const intersection = hierarchyIdList.filter((roleId: string) => userRoles.includes(roleId));
                 if (intersection.length === 0) {
                     return false
@@ -373,55 +374,55 @@ export default class ButtonHandler {
             catch (err) { return false }
         }
 
-        const role = getKeyFromValue(roles, `<@&${cleanRoleId}>`);
+        const role = getKeyFromValue(getRoles(interaction.guild?.id), `<@&${cleanRoleId}>`);
         const user = await interaction.guild?.members.fetch(trialeeId);
         const userRoles = user?.roles.cache.map(role => role.id) || [];
 
         let sendMessage = false;
         let anyAdditionalRole;
-        const roleObject = await interaction.guild?.roles.fetch(stripRole(roles[role])) as Role;
+        const roleObject = await interaction.guild?.roles.fetch(stripRole(getRoles(interaction.guild?.id)[role])) as Role;
         let embedColour = colours.discord.green;
 
-        const channel = await this.client.channels.fetch(channels.roleConfirmations) as TextChannel;
+        const channel = await this.client.channels.fetch(getChannels(interaction.guild?.id).roleConfirmations) as TextChannel;
 
         if (role in prerequisites) {
             for (const key in prerequisites[role]) {
-                if (userRoles?.includes(stripRole(roles[key])) && hasHigherRole(role)) {
+                if (userRoles?.includes(stripRole(getRoles(interaction.guild?.id)[key])) && hasHigherRole(role)) {
                     break;
                 };
                 let assign = true;
                 prerequisites[role][key].forEach((prereqRole: string) => {
-                    const roleId = stripRole(roles[prereqRole]);
+                    const roleId = stripRole(getRoles(interaction.guild?.id)[prereqRole]);
                     if (!(userRoles?.includes(roleId))) {
                         assign = false;
                     }
                 })
                 if (assign) {
-                    const assignedRoleId = stripRole(roles[key]);
+                    const assignedRoleId = stripRole(getRoles(interaction.guild?.id)[key]);
                     if (!(userRoles?.includes(assignedRoleId)) && !hasHigherRole(role)) {
                         sendMessage = true;
                     }
                     if (!hasHigherRole(role) && !userRoles?.includes(assignedRoleId)) await user?.roles.add(assignedRoleId);
                     embedColour = roleObject.color;
                     prerequisites[role][key].forEach((prereqRole: string) => {
-                        const roleId = stripRole(roles[prereqRole]);
+                        const roleId = stripRole(getRoles(interaction.guild?.id)[prereqRole]);
                         if (userRoles?.includes(roleId)) user?.roles.remove(roleId);
                     })
                     if ((key in removeHierarchy) && !hasHigherRole(role)) {
                         for await (const roleToRemove of removeHierarchy[key]) {
-                            const removeRoleId = stripRole(roles[roleToRemove]);
+                            const removeRoleId = stripRole(getRoles(interaction.guild?.id)[roleToRemove]);
                             if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
                         };
                     }
                     if ((role in removeHierarchy) && !hasHigherRole(role)) {
                         for await (const roleToRemove of removeHierarchy[role]) {
-                            const removeRoleId = stripRole(roles[roleToRemove]);
+                            const removeRoleId = stripRole(getRoles(interaction.guild?.id)[roleToRemove]);
                             if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
                         };
                     }
                     anyAdditionalRole = key;
                 } else {
-                    const roleId = stripRole(roles[role]);
+                    const roleId = stripRole(getRoles(interaction.guild?.id)[role]);
                     if (!hasHigherRole(role) && !userRoles?.includes(roleId)) user?.roles.add(roleId);
                     embedColour = roleObject.color;
                     if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
@@ -429,14 +430,14 @@ export default class ButtonHandler {
                     }
                     if ((role in removeHierarchy) && !hasHigherRole(role)) {
                         for await (const roleToRemove of removeHierarchy[role]) {
-                            const removeRoleId = stripRole(roles[roleToRemove]);
+                            const removeRoleId = stripRole(getRoles(interaction.guild?.id)[roleToRemove]);
                             if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
                         };
                     }
                 }
             }
         } else {
-            const roleId = stripRole(roles[role]);
+            const roleId = stripRole(getRoles(interaction.guild?.id)[role]);
             if (!hasHigherRole(role) && !userRoles?.includes(roleId)) await user?.roles.add(roleId);
             embedColour = roleObject.color;
             if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
@@ -444,7 +445,7 @@ export default class ButtonHandler {
             }
             if (role in removeHierarchy) {
                 for await (const roleToRemove of removeHierarchy[role]) {
-                    const removeRoleId = stripRole(roles[roleToRemove]);
+                    const removeRoleId = stripRole(getRoles(interaction.guild?.id)[roleToRemove]);
                     if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
                 };
             }
@@ -459,15 +460,15 @@ export default class ButtonHandler {
             .setTimestamp()
             .setColor(embedColour)
             .setDescription(`
-            Congratulations to <@${trialeeId}> on achieving ${roles[role]}!
-            ${anyAdditionalRole ? `By achieving this role, they are also awarded ${roles[anyAdditionalRole]}!` : ''}
+            Congratulations to <@${trialeeId}> on achieving ${getRoles(interaction.guild?.id)[role]}!
+            ${anyAdditionalRole ? `By achieving this role, they are also awarded ${getRoles(interaction.guild?.id)[anyAdditionalRole]}!` : ''}
             `);
         if (sendMessage && channel) await channel.send({ embeds: [embed] }).then(message => {
             returnedMessage.id = message.id;
             returnedMessage.url = message.url;
         });
 
-        const logChannel = await this.client.channels.fetch(channels.botRoleLog) as TextChannel;
+        const logChannel = await this.client.channels.fetch(getChannels(interaction.guild?.id).botRoleLog) as TextChannel;
         const buttonRow = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
                 new ButtonBuilder()
@@ -479,8 +480,8 @@ export default class ButtonHandler {
             .setTimestamp()
             .setColor(embedColour)
             .setDescription(`
-            ${roles[role]} was assigned to <@${trialeeId}> by <@${interaction.user.id}>.
-            ${anyAdditionalRole ? `${roles[anyAdditionalRole]} was also assigned.\n` : ''}
+            ${getRoles(interaction.guild?.id)[role]} was assigned to <@${trialeeId}> by <@${interaction.user.id}>.
+            ${anyAdditionalRole ? `${getRoles(interaction.guild?.id)[anyAdditionalRole]} was also assigned.\n` : ''}
             **Message**: [${returnedMessage.id}](${returnedMessage.url})
             `);
         if (sendMessage) await logChannel.send({ embeds: [logEmbed], components: [buttonRow] });
@@ -490,8 +491,8 @@ export default class ButtonHandler {
     // DATABASE OPERATIONS
     // ===============================
     public async sendReaperSquadMessage(interaction: ButtonInteraction<'cached'>, reaperId: string, fields: APIEmbedField[]): Promise<void> {
-        const { channels, colours, roles } = this.client.util;
-        const channel = await this.client.channels.fetch(channels.reaperSquad) as TextChannel;
+        const { colours } = this.client.util;
+        const channel = await this.client.channels.fetch(getChannels(interaction.guild?.id).reaperSquad) as TextChannel;
         let userString = '';
         fields.forEach((member: APIEmbedField) => {
             if (member.value !== '`Empty`' && !member.value.includes('Reaper')) {
@@ -504,7 +505,7 @@ export default class ButtonHandler {
             .setColor(colours.tan)
             .setDescription(`
             Congratulations to <@${reaperId}> on achieving their first solak kill!\n
-            ${roles.reaper} ${userString}
+            ${getRoles(interaction.guild?.id).reaper} ${userString}
             `);
         await channel.send({ embeds: [embed] });
     }
@@ -1075,7 +1076,7 @@ export default class ButtonHandler {
 
     private async approveDPM(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        const { colours, channels, hasRolePermissions, hasOverridePermissions } = this.client.util;
+        const { colours, hasRolePermissions, hasOverridePermissions } = this.client.util;
         const rolePermissions = await hasRolePermissions(this.client, ['admin', 'owner'], interaction);
         const overridePermissions = await hasOverridePermissions(interaction, 'dpm');
         const replyEmbed: EmbedBuilder = new EmbedBuilder();
@@ -1106,7 +1107,7 @@ export default class ButtonHandler {
                 'extreme': ['mastery', 'initiate', 'adept'],
             };
 
-            const { roles, stripRole, getKeyFromValue } = this.client.util;
+            const { stripRole, getKeyFromValue } = this.client.util;
             const user = await interaction.guild?.members.fetch(submission.userId);
             let userAlreadyHadRole = false;
 
@@ -1117,10 +1118,10 @@ export default class ButtonHandler {
                 await user.roles.add(submission.roleId);
 
                 // Remove inferior roles
-                const roleKey = getKeyFromValue(roles, `<@&${submission.roleId}>`);
+                const roleKey = getKeyFromValue(getRoles(interaction.guild?.id), `<@&${submission.roleId}>`);
                 if (roleKey in removeHierarchy) {
                     for await (const roleToRemove of removeHierarchy[roleKey]) {
-                        const removeRoleId = stripRole(roles[roleToRemove]);
+                        const removeRoleId = stripRole(getRoles(interaction.guild?.id)[roleToRemove]);
                         if (user.roles.cache.has(removeRoleId)) await user.roles.remove(removeRoleId);
                     };
                 }
@@ -1151,7 +1152,7 @@ export default class ButtonHandler {
             }
 
             const positionInfo = await this.checkDpmLeaderboardPosition(submission);
-            const announcementChannel = await this.client.channels.fetch(channels.roleConfirmations) as TextChannel;
+            const announcementChannel = await this.client.channels.fetch(getChannels(interaction.guild?.id).roleConfirmations) as TextChannel;
 
             if (announcementChannel) {
                 if (submission.roleId && !userAlreadyHadRole) {
@@ -1309,7 +1310,7 @@ export default class ButtonHandler {
             'grandmaster': ['noRealm', 'rootskips', 'experienced', 'master'],
         }
 
-        const { roles, stripRole, getKeyFromValue, categorize, hasRolePermissions, hasOverridePermissions } = this.client.util;
+        const { stripRole, getKeyFromValue, categorize, hasRolePermissions, hasOverridePermissions } = this.client.util;
 
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -1374,11 +1375,11 @@ export default class ButtonHandler {
                 if (removeRole) {
                     await repository.update({ expired: false }, { expired: true });
                     reportCount = 3;
-                    const roleKey = getKeyFromValue(roles, dirtyRoleId);
+                    const roleKey = getKeyFromValue(getRoles(interaction.guild?.id), dirtyRoleId);
                     const category = categorize(roleKey);
                     const combinationKey = combinationParent[roleKey] ? combinationParent[roleKey] : '';
                     const roleId = stripRole(dirtyRoleId);
-                    const combinationRoleId = combinationKey ? stripRole(roles[combinationKey]) : '';
+                    const combinationRoleId = combinationKey ? stripRole(getRoles(interaction.guild?.id)[combinationKey]) : '';
                     const userId = dirtyReportedUserId.slice(2, -1);
                     const user = await interaction.guild?.members.fetch(userId);
                     let userRoles = user?.roles.cache.map(role => role.id) || [];
@@ -1399,10 +1400,10 @@ export default class ButtonHandler {
                         userRoles = userRoles.filter(item => item !== roleId);
                         const combinedCategoryIndex = categories.combined.indexOf(combinationKey);
                         const newCombinedCategoryIndex: number | null = combinedCategoryIndex !== 0 ? combinedCategoryIndex - 1 : null;
-                        if ((newCombinedCategoryIndex !== null) && userRoles.includes(stripRole(roles[categories.combined[newCombinedCategoryIndex]]))) {
+                        if ((newCombinedCategoryIndex !== null) && userRoles.includes(stripRole(getRoles(interaction.guild?.id)[categories.combined[newCombinedCategoryIndex]]))) {
                             embedMessage = `
                             ${dirtyRoleId} was removed.
-                            <@${user.id}> already has <@&${roles[categories[category][newCombinedCategoryIndex]]}>.
+                            <@${user.id}> already has <@&${getRoles(interaction.guild?.id)[categories[category][newCombinedCategoryIndex]]}>.
                             No degraded role was assigned.
                             `
                             sendRoleRemovalDM(user);
@@ -1416,53 +1417,53 @@ export default class ButtonHandler {
                                     for (const key in prerequisites[newRoleKey]) {
                                         let assign = true;
                                         prerequisites[newRoleKey][key].forEach((prereqRole: string) => {
-                                            const roleId = stripRole(roles[prereqRole]);
+                                            const roleId = stripRole(getRoles(interaction.guild?.id)[prereqRole]);
                                             if (!(userRoles?.includes(roleId))) {
                                                 assign = false;
                                             }
                                         })
                                         if (assign) {
-                                            const assignedRoleId = stripRole(roles[key]);
+                                            const assignedRoleId = stripRole(getRoles(interaction.guild?.id)[key]);
                                             if (!userRoles?.includes(assignedRoleId)) await user?.roles.add(assignedRoleId);
                                             prerequisites[newRoleKey][key].forEach((prereqRole: string) => {
-                                                const roleId = stripRole(roles[prereqRole]);
+                                                const roleId = stripRole(getRoles(interaction.guild?.id)[prereqRole]);
                                                 if (userRoles?.includes(roleId)) user?.roles.remove(roleId);
                                             })
                                             if (key in removeHierarchy) {
                                                 for await (const roleToRemove of removeHierarchy[key]) {
-                                                    const removeRoleId = stripRole(roles[roleToRemove]);
+                                                    const removeRoleId = stripRole(getRoles(interaction.guild?.id)[roleToRemove]);
                                                     if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
                                                 };
                                             }
                                             if (newRoleKey in removeHierarchy) {
                                                 for await (const roleToRemove of removeHierarchy[newRoleKey]) {
-                                                    const removeRoleId = stripRole(roles[roleToRemove]);
+                                                    const removeRoleId = stripRole(getRoles(interaction.guild?.id)[roleToRemove]);
                                                     if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
                                                 };
                                             }
                                             anyAdditionalRole = key;
                                         } else {
-                                            const roleId = stripRole(roles[newRoleKey]);
+                                            const roleId = stripRole(getRoles(interaction.guild?.id)[newRoleKey]);
                                             if (!userRoles?.includes(roleId)) user?.roles.add(roleId);
                                             if (newRoleKey in removeHierarchy) {
                                                 for await (const roleToRemove of removeHierarchy[newRoleKey]) {
-                                                    const removeRoleId = stripRole(roles[roleToRemove]);
+                                                    const removeRoleId = stripRole(getRoles(interaction.guild?.id)[roleToRemove]);
                                                     if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
                                                 };
                                             }
                                         }
                                     }
                                 } else {
-                                    const roleId = stripRole(roles[newRoleKey]);
+                                    const roleId = stripRole(getRoles(interaction.guild?.id)[newRoleKey]);
                                     if (!userRoles?.includes(roleId)) await user?.roles.add(roleId);
                                     if (newRoleKey in removeHierarchy) {
                                         for await (const roleToRemove of removeHierarchy[newRoleKey]) {
-                                            const removeRoleId = stripRole(roles[roleToRemove]);
+                                            const removeRoleId = stripRole(getRoles(interaction.guild?.id)[roleToRemove]);
                                             if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
                                         };
                                     }
                                 }
-                                embedMessage = `${dirtyRoleId} was degraded into ${anyAdditionalRole ? `${roles[anyAdditionalRole]}` : `${roles[newRoleKey]}`}.\n`;
+                                embedMessage = `${dirtyRoleId} was degraded into ${anyAdditionalRole ? `${getRoles(interaction.guild?.id)[anyAdditionalRole]}` : `${getRoles(interaction.guild?.id)[newRoleKey]}`}.\n`;
                                 sendRoleRemovalDM(user);
                             }
                         }
@@ -1475,7 +1476,7 @@ export default class ButtonHandler {
                                 const categorizedHierarchy = categories[categorize(role)];
                                 const sliceFromIndex: number = categorizedHierarchy.indexOf(role) + 1;
                                 const hierarchyList = categorizedHierarchy.slice(sliceFromIndex);
-                                const hierarchyIdList = hierarchyList.map((item: string) => stripRole(roles[item]));
+                                const hierarchyIdList = hierarchyList.map((item: string) => stripRole(getRoles(interaction.guild?.id)[item]));
                                 const intersection = hierarchyIdList.filter((roleId: string) => userRoles.includes(roleId));
                                 if (intersection.length === 0) {
                                     return false
@@ -1495,14 +1496,14 @@ export default class ButtonHandler {
                             embedMessage = `There is no role to degrade to.`
                         } else if (newCategoryIndex >= 0) {
                             const degradedRoleKey = categories[category][newCategoryIndex];
-                            const degradedRoleId = stripRole(roles[degradedRoleKey]);
+                            const degradedRoleId = stripRole(getRoles(interaction.guild?.id)[degradedRoleKey]);
                             if (!hasHigherRole(degradedRoleKey)) {
                                 await user?.roles.add(degradedRoleId);
                                 degradedRoleAdded = true;
                             }
 
                             const oppositeRoleKey = prerequisites[roleKey][combinationKey][0];
-                            const oppositeRoleId = stripRole(roles[oppositeRoleKey]);
+                            const oppositeRoleId = stripRole(getRoles(interaction.guild?.id)[oppositeRoleKey]);
                             if (!hasHigherRole(oppositeRoleKey)) {
                                 await user?.roles.add(oppositeRoleId);
                                 oppositeRoleAdded = true;
@@ -1657,7 +1658,7 @@ export default class ButtonHandler {
 
     private async approveKillTime(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        const { colours, channels, hasRolePermissions, hasOverridePermissions } = this.client.util;
+        const { colours, hasRolePermissions, hasOverridePermissions } = this.client.util;
         const rolePermissions = await hasRolePermissions(this.client, ['admin', 'owner'], interaction);
         const overridePermissions = await hasOverridePermissions(interaction, 'killtime');
         const replyEmbed: EmbedBuilder = new EmbedBuilder();
@@ -1723,9 +1724,9 @@ export default class ButtonHandler {
     // UTILITY METHODS
     // ===============================
     public async grantTrialRole(interaction: ButtonInteraction<'cached'>, cleanRoleId: string, trialeeId: string) {
-        const { roles, stripRole, getKeyFromValue } = this.client.util;
-        const roleKey = getKeyFromValue(roles, `<@&${cleanRoleId}>`);
-        const roleId = stripRole(roles[roleKey]);
+        const { stripRole, getKeyFromValue } = this.client.util;
+        const roleKey = getKeyFromValue(getRoles(interaction.guild?.id), `<@&${cleanRoleId}>`);
+        const roleId = stripRole(getRoles(interaction.guild?.id)[roleKey]);
         const user = await interaction.guild.members.fetch(trialeeId);
         if (!user.roles.cache.has(roleId)) {
             await user.roles.add(roleId);
@@ -1770,7 +1771,7 @@ export default class ButtonHandler {
                 return await interaction.editReply({embeds: [addResultEmbed]});
             }
         } else if (roleIds.length > 1) {
-            const { categorize, stripRole, roles, hierarchy } = this.client.util;
+            const { categorize, stripRole, hierarchy } = this.client.util;
 
             //special logic for hierarchy tags
             const hasRoleOrHigher = (role: string) => {
@@ -1779,7 +1780,7 @@ export default class ButtonHandler {
                     const categorizedHierarchy = hierarchy[categorize(role)];
                     const sliceFromIndex: number = categorizedHierarchy.indexOf(role);
                     const hierarchyList = categorizedHierarchy.slice(sliceFromIndex);
-                    const hierarchyIdList = hierarchyList.map((item: string) => stripRole(roles[item]));
+                    const hierarchyIdList = hierarchyList.map((item: string) => stripRole(getRoles(interaction.guild?.id)[item]));
                     const intersection = hierarchyIdList.filter((roleId: string) => userRoles.includes(roleId));
                     if (intersection.length === 0) {
                         return false
@@ -1802,7 +1803,7 @@ export default class ButtonHandler {
                             roleReqError += ", ";
                         }
 
-                        roleReqError += roles[roleIds[i]];
+                        roleReqError += getRoles(interaction.guild?.id)[roleIds[i]];
                     }
                 } else {
                     if (userRoles.includes(roleIds[i])) {

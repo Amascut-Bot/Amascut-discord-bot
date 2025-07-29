@@ -59,10 +59,10 @@ export default class GivePoints extends BotInteraction {
             placeholder.role = 'Placeholder';
             const newPlaceholder = await repository.save(placeholder);
 
-            const newData: any = [...Array(quantity)].map(() => ({ 
-                participant: user.id, 
-                role: 'Placeholder', 
-                trial: newPlaceholder 
+            const newData: any = [...Array(quantity)].map(() => ({
+                participant: user.id,
+                role: 'Placeholder',
+                trial: newPlaceholder
             }));
 
             await dataSource
@@ -81,11 +81,11 @@ export default class GivePoints extends BotInteraction {
             placeholder.recipient = 'Placeholder';
             const newPlaceholder = await reaperRepo.save(placeholder);
 
-            const newData: any = [...Array(quantity)].map(() => ({ 
-                participant: user.id, 
-                reaper: newPlaceholder 
+            const newData: any = [...Array(quantity)].map(() => ({
+                participant: user.id,
+                reaper: newPlaceholder
             }));
-            
+
             await dataSource
                 .createQueryBuilder()
                 .insert()

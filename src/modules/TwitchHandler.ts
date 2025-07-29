@@ -5,13 +5,14 @@ import * as path from 'path';
 import * as cron from 'node-cron';
 import { EmbedBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize, TextDisplayBuilder, MessageFlags, SectionBuilder, ThumbnailBuilder, MediaGalleryBuilder } from 'discord.js';
 import 'dotenv/config';
+import { getRoles, getChannels } from '../GuildSpecifics';
 
 const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
 const dashboardDataFilePath = path.join(process.cwd(), 'dashboard-data.json');
 const notificationsFilePath = path.join(process.cwd(), 'notifications.json');
-const contentCreatorRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_CONTENT_CREATOR_ROLE}` : `${process.env.PROD_CONTENT_CREATOR_ROLE}`;
-const liveRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_LIVE_ROLE}` : `${process.env.PROD_LIVE_ROLE}`;
-const contentCreatorChannelId = `${process.env.TWITCH_NOTIFICATION_CHANNEL}`
+const contentCreatorRoleId = getRoles(process.env.GUILD_ID).CONTENT_CREATOR_ROLE;
+const liveRoleId = getRoles(process.env.GUILD_ID).LIVE_ROLE;
+const contentCreatorChannelId = getChannels(process.env.GUILD_ID).TWITCH_NOTIFICATION_CHANNEL;
 
 interface MonitoredStreamer {
     id: string;

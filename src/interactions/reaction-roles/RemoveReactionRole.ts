@@ -37,7 +37,7 @@ async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
 }
 
 export default class RemoveReactionRole extends BotInteraction {
-    
+
     constructor(client: Bot) {
         super(client);
         this.category = 'reaction-roles';
@@ -89,7 +89,7 @@ export default class RemoveReactionRole extends BotInteraction {
                 await interaction.respond([]);
                 return;
             }
-            
+
             const roles = reactionRolesData[category];
             const filtered = roles.filter(role => {
                 const roleName = interaction.guild?.roles.cache.get(role.roleId)?.name || role.roleId;
@@ -97,9 +97,9 @@ export default class RemoveReactionRole extends BotInteraction {
             }).slice(0, 25);
 
             await interaction.respond(
-                filtered.map(role => ({ 
-                    name: interaction.guild?.roles.cache.get(role.roleId)?.name || role.roleId, 
-                    value: role.roleId 
+                filtered.map(role => ({
+                    name: interaction.guild?.roles.cache.get(role.roleId)?.name || role.roleId,
+                    value: role.roleId
                 }))
             );
         }
@@ -128,7 +128,7 @@ export default class RemoveReactionRole extends BotInteraction {
         const removedEmoji = removedRole.emoji;
 
         const activeMessages = await readJsonFile<ActiveMessages>(activeMessagesFilePath);
-        
+
         const messagesToUpdate = Object.keys(activeMessages).filter(msgId => {
             const categories = activeMessages[msgId];
             if (Array.isArray(categories)) {
@@ -178,7 +178,7 @@ export default class RemoveReactionRole extends BotInteraction {
                                     await reaction.remove();
                                 }
                             }
-                            break; 
+                            break;
                         } catch (e) {
                             console.error(e);
                         }
@@ -188,8 +188,8 @@ export default class RemoveReactionRole extends BotInteraction {
                 this.client.logger.error({ message: `Could not update reactions on message ${messageId}`, error });
             }
         }
-        
+
         const roleName = interaction.guild.roles.cache.get(roleIdToRemove)?.name || 'Unknown Role';
         await interaction.editReply({ content: `Successfully removed the role '${roleName}' from the '${category}' category and updated active messages.` });
     }
-} 
+}

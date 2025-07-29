@@ -74,7 +74,7 @@ export default class RemovePoints extends BotInteraction {
             });
             if (participationToDelete) {
                 await participationRepo.remove(participationToDelete);
-            } 
+            }
         }
 
         if (team === 'reaper') {
@@ -100,7 +100,7 @@ export default class RemovePoints extends BotInteraction {
             });
             if (participationToDelete) {
                 await participationRepo.remove(participationToDelete);
-                
+
             }
         }
 

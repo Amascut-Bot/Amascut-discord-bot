@@ -28,7 +28,7 @@ async function readReactionRoles(): Promise<ReactionRolesData> {
 }
 
 export default class ListReactionRole extends BotInteraction {
-    
+
     constructor(client: Bot) {
         super(client);
         this.category = 'reaction-roles';
@@ -67,7 +67,7 @@ export default class ListReactionRole extends BotInteraction {
             .setColor(this.client.color)
             .setTitle('Configured Reaction Roles')
             .setTimestamp();
-        
+
         let currentLength = 0;
 
         for (const category of categories) {
@@ -98,7 +98,7 @@ export default class ListReactionRole extends BotInteraction {
 
             const emojiWidth = Math.max(header.emoji.length, ...roleData.map(r => r.emoji.length));
             const roleWidth = Math.max(header.role.length, ...roleData.map(r => r.role.length));
-            
+
             let table = '```\n';
             table += `${header.emoji.padEnd(emojiWidth)} | ${header.role.padEnd(roleWidth)} | ${header.required}\n`;
             table += `${'-'.repeat(emojiWidth)} | ${'-'.repeat(roleWidth)} | ${'-'.repeat(header.required.length)}\n`;
@@ -133,4 +133,4 @@ export default class ListReactionRole extends BotInteraction {
             await interaction.followUp({ embeds: [embeds[i]] });
         }
     }
-} 
+}

@@ -46,7 +46,7 @@ async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
 }
 
 export default class PostReactionRole extends BotInteraction {
-    
+
     constructor(client: Bot) {
         super(client);
         this.category = 'reaction-roles';
@@ -145,7 +145,7 @@ export default class PostReactionRole extends BotInteraction {
         }
 
         const activeMessages = await readJsonFile<NewActiveMessages>(activeMessagesFilePath);
-        
+
         const messageData = activeMessages[messageId] || {
             channelId: message.channel.id,
             categories: [],
@@ -167,4 +167,4 @@ export default class PostReactionRole extends BotInteraction {
 
         await interaction.editReply({ content: `Successfully posted reaction roles for category '${category}' on message ${messageId}.` });
     }
-} 
+}

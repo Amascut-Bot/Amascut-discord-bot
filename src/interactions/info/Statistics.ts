@@ -5,6 +5,7 @@ import { ReaperParticipation } from '../../entity/ReaperParticipation';
 import { TrialParticipation } from '../../entity/TrialParticipation';
 import { Reaper } from '../../entity/Reaper';
 import { Trial } from '../../entity/Trial';
+import { getRoles } from '../../GuildSpecifics';
 
 export default class Stats extends BotInteraction {
     get name() {
@@ -22,7 +23,7 @@ export default class Stats extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction) {
 
         const { dataSource } = this.client;
-        const { colours, roles, stripRole } = this.client.util;
+        const { colours, stripRole } = this.client.util;
 
         await interaction.deferReply({ ephemeral: true });
 
@@ -36,8 +37,8 @@ export default class Stats extends BotInteraction {
 
         const userRoles = user?.roles.cache.map(role => role.id) || [];
 
-        if (!userRoles.includes(stripRole(roles['trialTeam'])) && !userRoles.includes(stripRole(roles['reaper']))) {
-            errorEmbed.setDescription(`You need ${roles.trialTeam} or ${roles.reaper} to use this command.`);
+        if (!userRoles.includes(stripRole(getRoles(interaction.guild?.id)['trialTeam'])) && !userRoles.includes(stripRole(getRoles(interaction.guild?.id)['reaper']))) {
+            errorEmbed.setDescription(`You need ${getRoles(interaction.guild?.id).trialTeam} or ${getRoles(interaction.guild?.id).reaper} to use this command.`);
             return await interaction.editReply({ embeds: [errorEmbed] });
         }
 
@@ -59,7 +60,7 @@ export default class Stats extends BotInteraction {
         let description = `\`\`Joined:\`\` ${joinTime}`;
 
         if (reapersParticipated.count) {
-            description += `\n\n> ${roles.reaper}\n\n`
+            description += `\n\n> ${getRoles(interaction.guild?.id).reaper}\n\n`
             const reapersHosted = await dataSource.createQueryBuilder()
                 .select('COUNT(*)', 'count')
                 .from(Reaper, 'reaper')
@@ -72,7 +73,7 @@ export default class Stats extends BotInteraction {
         }
 
         if (trialsParticipated.count) {
-            description += `\n\n> ${roles.trialTeam}\n\n`
+            description += `\n\n> ${getRoles(interaction.guild?.id).trialTeam}\n\n`
             const trialsHosted = await dataSource.createQueryBuilder()
                 .select('COUNT(*)', 'count')
                 .from(Trial, 'trial')

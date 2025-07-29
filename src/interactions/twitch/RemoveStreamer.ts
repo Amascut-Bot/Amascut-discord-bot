@@ -87,4 +87,4 @@ export default class RemoveStreamer extends BotInteraction {
 
         await interaction.editReply({ content: `Successfully removed **${userNameToRemove}** from the notification list.` });
     }
-} 
+}

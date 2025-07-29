@@ -20,7 +20,7 @@ export default class GuildMemberAdd extends BotEvent {
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
         const days = Math.floor(hours / 24);
-    
+
         if (days > 0) return `${days} day${days > 1 ? 's' : ''}`;
         if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
         if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''}`;
@@ -29,7 +29,7 @@ export default class GuildMemberAdd extends BotEvent {
 
     async run(member: GuildMember) {
         if (member.user.bot) return;
-        
+
         // Only process members joining the specified guild
         if (member.guild.id !== process.env.GUILD_ID) return;
 
@@ -52,7 +52,7 @@ export default class GuildMemberAdd extends BotEvent {
                     )
                     .setThumbnail(member.user.displayAvatarURL())
                     .setTimestamp();
-                
+
                 const rolesToPing = ['1389526658167603230', '1389387255386341386'];
                 const pingContent = rolesToPing.map(id => `<@&${id}>`).join(' ');
                 await adminChannel.send({ content: pingContent, embeds: [embed] });
@@ -71,7 +71,7 @@ export default class GuildMemberAdd extends BotEvent {
                 error
             });
         }
-        
+
         if (!role) {
             return this.client.logger.log({
                 message: `Role with ID ${roleId} not found in guild ${member.guild.name}.`,
@@ -119,4 +119,4 @@ export default class GuildMemberAdd extends BotEvent {
         //     }
         // }
     }
-} 
+}

@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, AutocompleteInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ModalSubmitInteraction, TextChannel } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
 import { DpmSubmission } from '../../entity/DpmSubmission';
+import { getChannels, getRoles } from '../../GuildSpecifics';
 
 export default class DPMSubmit extends BotInteraction {
     get name() {
@@ -36,7 +37,7 @@ export default class DPMSubmit extends BotInteraction {
 
     async autocomplete(interaction: AutocompleteInteraction) {
         const focusedOption = interaction.options.getFocused(true);
-        
+
         if (focusedOption.name === 'style') {
             const focusedValue = focusedOption.value;
             const choices = ['Necromancy', 'Hybrid', 'Tribrid', 'Magic', 'Ranged', 'Melee'];
@@ -130,7 +131,7 @@ export default class DPMSubmit extends BotInteraction {
         // Extract timestamp from customId to get the stored data
         const timestamp = interaction.customId.split('_').pop();
         const cacheKey = `${interaction.user.id}_${timestamp}`;
-        
+
         this.client.logger.log({
             message: `Looking for cache key: ${cacheKey}`,
             handler: 'DPMSubmit'
@@ -184,7 +185,7 @@ export default class DPMSubmit extends BotInteraction {
         const savedSubmission = await this.client.dataSource.getRepository(DpmSubmission).save(dpmSubmission);
 
         // Create submission embed (keeping exact same format)
-        const { colours, roles } = this.client.util;
+        const { colours } = this.client.util;
         const submissionEmbed = new EmbedBuilder()
             .setTitle('DPM Submission')
             .setColor(colours.lightblue)
@@ -212,7 +213,7 @@ export default class DPMSubmit extends BotInteraction {
         const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(approveButton, rejectButton);
 
         // Send to admin channel
-        const adminChannel = this.client.channels.cache.get(this.client.util.channels.botRoleLog) as TextChannel;
+        const adminChannel = this.client.channels.cache.get(getChannels(interaction.guild?.id).botRoleLog) as TextChannel;
         if (adminChannel?.isTextBased()) {
             await adminChannel.send(`**First Screenshot:** ${firstScreenshot}\n**Second Screenshot:** ${secondScreenshot}`);
             await adminChannel.send({ embeds: [submissionEmbed], components: [actionRow] });
@@ -221,20 +222,20 @@ export default class DPMSubmit extends BotInteraction {
         const successEmbed = new EmbedBuilder()
             .setTitle('Your DPM submission has been received!')
             .setColor(colours.discord.green)
-            .setDescription(`An ${roles.admin} will review your submission and handle it shortly.`);
+            .setDescription(`An ${getRoles(interaction.guild?.id).admin} will review your submission and handle it shortly.`);
         return await interaction.editReply({ embeds: [successEmbed] });
     }
 
     private parseTime(timeString: string): number | null {
         const timeRegex = /^(\d+):(\d{2})(?:\.(\d))?$/;
         const match = timeString.match(timeRegex);
-        
+
         if (!match) return null;
-        
+
         const minutes = parseInt(match[1]);
         const seconds = parseInt(match[2]);
         const ticks = match[3] ? parseInt(match[3]) : 0;
-        
+
         return minutes * 60 + seconds + ticks * 0.6;
     }
 

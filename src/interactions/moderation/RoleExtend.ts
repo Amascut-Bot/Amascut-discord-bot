@@ -5,7 +5,7 @@ import Bot from "../../Bot";
 const LOG_CHANNEL_ID = '1045192967754883172';
 
 export default class RoleExtend extends BotInteraction {
-    
+
     constructor(client: Bot) {
         super(client);
         this.category = 'moderation';
@@ -84,7 +84,7 @@ export default class RoleExtend extends BotInteraction {
                 content: "Invalid command usage. You must either specify a 'user' to extend the role for, or set 'mass' to 'True' to extend it for everyone."
             });
         }
-        
+
         const runIdentifier = `(Dry Run #${Date.now()})`;
         const executionIdentifier = `(Execution #${Date.now()})`;
         const identifier = dryRun ? runIdentifier : executionIdentifier;
@@ -112,11 +112,11 @@ export default class RoleExtend extends BotInteraction {
         if (massExtend) {
             try {
                 await interaction.editReply({ content: `${identifier} Fetching members with the ${currentRole.name} role... This might take a while.` });
-                
+
                 await interaction.guild.members.fetch();
-                
+
                 const membersWithRole = interaction.guild.members.cache.filter(member => member.roles.cache.has(currentRole.id));
-                
+
                 if (membersWithRole.size === 0) {
                     return interaction.followUp({ content: `${identifier} No one has the ${currentRole.name} role.`, ephemeral: true });
                 }
@@ -162,10 +162,10 @@ export default class RoleExtend extends BotInteraction {
                 .setDescription(description)
                 .setColor(this.client.color)
                 .setTimestamp();
-            
+
             await logChannel.send({ embeds: [embed] });
         } catch (error) {
             this.client.logger.error({ message: `Failed to send role extension log`, error });
         }
     }
-} 
+}

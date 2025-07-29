@@ -19,14 +19,14 @@ export default class EventHandler {
     async build() {
         if (this.built) return this;
         const eventFiles = readdirSync(`${this.client.location}/src/events`).filter((file) => file.endsWith('.ts'));
-        
+
         for (const file of eventFiles) {
             try {
                 const { default: EventClass } = await import(`${this.client.location}/src/events/${file}`);
                 const botEvent: BotEvent = new EventClass(this.client);
-                
+
                 this.client.logger.log({ message: `Event '${botEvent.name}' loaded.`, handler: this.constructor.name, uid: `(@${botEvent.uid})` }, true);
-                
+
                 if (botEvent.enabled) {
                     this.client[botEvent.fireOnce ? 'once' : 'on'](botEvent.name, (...args) => botEvent.exec(...args));
                     this.client.logger.log({ message: `Listener attached for event '${botEvent.name}'.`, handler: this.constructor.name }, true);

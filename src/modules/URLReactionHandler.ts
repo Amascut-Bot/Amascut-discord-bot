@@ -1,10 +1,11 @@
 import { Message } from 'discord.js';
 import Bot from '../Bot';
+import { getChannels } from '../GuildSpecifics';
 
 export default class URLReactionHandler {
     private client: Bot;
-    private static readonly URL_REACTION_CHANNEL_ID = '1393623447212527769';
-    
+    private static readonly URL_REACTION_CHANNEL_ID = getChannels(process.env.GUILD_ID).MUSIC_CHANNEL;
+
     constructor(client: Bot) {
         this.client = client;
     }
@@ -21,20 +22,20 @@ export default class URLReactionHandler {
         try {
             await message.react('👍');
             await message.react('👎');
-            
-            this.client.logger.log({ 
+
+            this.client.logger.log({
                 message: `Added URL reactions to message ${message.id}`,
                 handler: this.constructor.name
             }, true);
-            
+
             return true;
         } catch (error) {
-            this.client.logger.error({ 
-                message: `Failed to add URL reactions to message ${message.id}`, 
+            this.client.logger.error({
+                message: `Failed to add URL reactions to message ${message.id}`,
                 error: error as Error,
                 handler: this.constructor.name
             });
-            
+
             return false;
         }
     }
@@ -43,4 +44,4 @@ export default class URLReactionHandler {
         const urlPattern = /https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/gi;
         return urlPattern.test(text);
     }
-} 
+}

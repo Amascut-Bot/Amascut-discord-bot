@@ -13,6 +13,7 @@ import {
     TextChannel
 } from 'discord.js';
 import { KillTimeSubmission } from '../../entity/KillTimeSubmission';
+import { getChannels } from '../../GuildSpecifics';
 
 export default class KillTimeSubmit extends BotInteraction {
     get name() {
@@ -135,7 +136,7 @@ export default class KillTimeSubmit extends BotInteraction {
             teamDescription += `\n**DPS 2:** ${dps2Rsn}\n**DPS 3:** ${dps3Rsn}`;
         }
 
-        const { colours, channels } = this.client.util;
+        const { colours } = this.client.util;
         const submissionEmbed = new EmbedBuilder()
             .setColor(colours.lightblue)
             .setDescription(`
@@ -161,11 +162,11 @@ export default class KillTimeSubmit extends BotInteraction {
                     .setStyle(ButtonStyle.Danger)
             );
 
-        const approvalChannel = await this.client.channels.fetch(channels.botRoleLog) as TextChannel;
+        const approvalChannel = await this.client.channels.fetch(getChannels(interaction.guild?.id).botRoleLog) as TextChannel;
         if (approvalChannel) {
         await approvalChannel.send({ embeds: [submissionEmbed], components: [buttons] });
         }
 
         await submitted.editReply({ content: 'Your submission has been sent for approval!' });
     }
-} 
+}

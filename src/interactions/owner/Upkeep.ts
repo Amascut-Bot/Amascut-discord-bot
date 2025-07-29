@@ -2,6 +2,7 @@ import BotInteraction from '../../types/BotInteraction';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 import { Trial } from '../../entity/Trial';
 import { TrialParticipation } from '../../entity/TrialParticipation';
+import { getRoles } from '../../GuildSpecifics';
 
 export default class Upkeep extends BotInteraction {
     get name() {
@@ -26,7 +27,7 @@ export default class Upkeep extends BotInteraction {
 
     public getUpkeepMembers = async (pastDate: Date, interaction: ChatInputCommandInteraction) => {
         const { dataSource } = this.client;
-        const { roles, stripRole } = this.client.util;
+        const { stripRole } = this.client.util;
         // Get all trials since pastDate but only grab the first 10
         const trialsParticipated = await dataSource.createQueryBuilder()
             .select('trialParticipation.participant', 'user')
@@ -44,7 +45,7 @@ export default class Upkeep extends BotInteraction {
         })
 
         const trialTeamMembers = await interaction.guild?.members.fetch().then(members => {
-            return members.filter(member => member.roles.cache.has(stripRole(roles.trialTeam))).map(member => member.id)
+            return members.filter(member => member.roles.cache.has(stripRole(getRoles(interaction.guild?.id).trialTeam))).map(member => member.id)
         });
 
         const sortableArray: any = [];
