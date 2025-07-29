@@ -6,7 +6,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { DpmSubmission } from '../entity/DpmSubmission';
 import { KillTimeSubmission } from '../entity/KillTimeSubmission';
-import fetch from 'node-fetch';
+import axios from 'axios';
 
 export default interface UtilityHandler {
     client: Bot;
@@ -678,14 +678,13 @@ export default class UtilityHandler {
             }
 
             console.log(`--- DEBUG: Fetching image from ${url}`);
-            const response = await fetch(url);
-            if (!response.ok) {
+            const response = await axios.get(url, { responseType: 'arraybuffer' });
+
+            if (response.status !== 200) {
                 throw new Error(`Failed to fetch image: ${response.statusText}`);
             }
-            const arrayBuffer = await response.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
 
-            const attachment = new AttachmentBuilder(buffer, { name: 'image.png' });
+            const attachment = new AttachmentBuilder(Buffer.from(response.data, 'binary'), { name: 'image.png' });
 
             console.log(`--- DEBUG: Sending attachment to Discord channel...`);
             const message = await botAssetChannel.send({ files: [attachment] });
