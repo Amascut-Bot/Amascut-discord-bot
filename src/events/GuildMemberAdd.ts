@@ -1,6 +1,7 @@
 import { GuildMember, Role, EmbedBuilder, TextChannel } from 'discord.js';
 import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
+import { getChannels, getRoles } from '../GuildSpecifics';
 
 export default class GuildMemberAdd extends BotEvent {
     get name(): string {
@@ -38,7 +39,7 @@ export default class GuildMemberAdd extends BotEvent {
         const oneWeek = 7 * 24 * 60 * 60 * 1000;
 
         if (accountAge < oneWeek) {
-            const adminChannelId = '1389379617915408448';
+            const adminChannelId = getChannels(member.guild.id).ADMIN_CHANNEL;
             const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
 
             if (adminChannel) {
@@ -53,13 +54,13 @@ export default class GuildMemberAdd extends BotEvent {
                     .setThumbnail(member.user.displayAvatarURL())
                     .setTimestamp();
 
-                const rolesToPing = ['1389526658167603230', '1389387255386341386'];
+                const rolesToPing = [getRoles(adminChannel.guild.id).owner, getRoles(adminChannel.guild.id).admin];
                 const pingContent = rolesToPing.map(id => `<@&${id}>`).join(' ');
                 await adminChannel.send({ content: pingContent, embeds: [embed] });
             }
         }
 
-        const roleId = '1389655724946100345';
+        const roleId = getRoles(member.guild.id).member;
         let role: Role | null | undefined;
 
         try {
@@ -95,7 +96,7 @@ export default class GuildMemberAdd extends BotEvent {
 
         // TODO: Welcome message temporarily disabled - may be re-enabled in future
         // Send welcome message
-        // const welcomeChannelId = '1389379873348255864';
+        // const welcomeChannelId = '1389379873348255864'; // IF YOU THINK ABOUT ENABLING THIS, PUT IT IN GuildSpecifics.ts!
         // const welcomeChannel = await this.client.channels.fetch(welcomeChannelId) as TextChannel;
 
         // if (welcomeChannel) {

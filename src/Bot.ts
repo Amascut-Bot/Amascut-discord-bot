@@ -14,11 +14,12 @@ import { DataSource } from "typeorm"
 import { AppDataSource } from './DataSource';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { getChannels } from './GuildSpecifics';
 
 // Interfaces and helpers for Reaction Roles
 const reactionRolesFilePath = path.join(process.cwd(), 'reaction-roles.json');
 const activeMessagesFilePath = path.join(process.cwd(), 'active-reaction-messages.json');
-const LOG_CHANNEL_ID = '1389413228794216648';
+const LOG_CHANNEL_ID = getChannels(process.env.GUILD_ID).LOG_CHANNEL_ID;
 
 interface ReactionRole {
     emoji: string;

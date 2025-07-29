@@ -195,7 +195,7 @@ export default class TwitchHandler {
             console.log(`--- DEBUG: About to send embed to channel ---`);
             try {
                 const sentMessage = await (channel as TextChannel).send({
-                    content: `<@&1390408053114933381> https://twitch.tv/${streamData.user_name}`,
+                    content: `${getRoles((channel as TextChannel).guild.id).TWITCH_NOTIFICATION_ROLE} https://twitch.tv/${streamData.user_name}`,
                     embeds: [embed]
                 });
                 console.log(`--- DEBUG: Successfully sent message with ID: ${sentMessage.id} ---`);

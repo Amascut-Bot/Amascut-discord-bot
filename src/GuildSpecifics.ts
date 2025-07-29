@@ -28,6 +28,8 @@ export function getChannels(guildId: string | undefined) : Channels {
             TICKET_TRANSCRIPT_CHANNEL: '1397705706358050948',
             MUSIC_CHANNEL: '000000000000000000',
             CUTE_PETS_CHANNEL: '000000000000000000',
+            LOG_CHANNEL_ID: '000000000000000000',
+            ADMIN_CHANNEL: '000000000000000000',
         }
     }
 
@@ -50,6 +52,8 @@ export function getChannels(guildId: string | undefined) : Channels {
             TICKET_TRANSCRIPT_CHANNEL: '1397705706358050948',
             MUSIC_CHANNEL: '1399769752246816841',
             CUTE_PETS_CHANNEL: '1391860639063871579',
+            LOG_CHANNEL_ID: '1391860640674484228',
+            ADMIN_CHANNEL: '1391860637369372764',
         }
     }
 
@@ -72,6 +76,8 @@ export function getChannels(guildId: string | undefined) : Channels {
             TICKET_TRANSCRIPT_CHANNEL: '1390801555724308591',
             MUSIC_CHANNEL: '1393623447212527769',
             CUTE_PETS_CHANNEL: '1389643125408010290',
+            LOG_CHANNEL_ID: '1389413228794216648',
+            ADMIN_CHANNEL: '1389379617915408448',
         }
     }
 
@@ -124,9 +130,11 @@ export function getRoles(guildId: string | undefined) : Roles {
             extreme: '000000000000000000',
             CONTENT_CREATOR_ROLE: '00000000000000000',
             LIVE_ROLE: '00000000000000000',
+            TWITCH_NOTIFICATION_ROLE: '00000000000000000',
             MEOW_ROLE: '00000000000000000',
             serverAnnouncements: '000000000000000000',
             goodMorning: '000000000000000000',
+            member: '000000000000000000',
         }
     }
 
@@ -173,9 +181,11 @@ export function getRoles(guildId: string | undefined) : Roles {
             extreme: '000000000000000000',
             CONTENT_CREATOR_ROLE: '1391860635456901393',
             LIVE_ROLE: '1391860635456901398',
+            TWITCH_NOTIFICATION_ROLE: '1391860635347849376',
             MEOW_ROLE: '1391860635456901395',
             serverAnnouncements: '000000000000000000',
             goodMorning: '000000000000000000',
+            member: '1391860635406700566',
         }
     }
 
@@ -222,9 +232,11 @@ export function getRoles(guildId: string | undefined) : Roles {
             extreme: '000000000000000000',
             CONTENT_CREATOR_ROLE: '1390007451482587216',
             LIVE_ROLE: '1390396115148476426',
+            TWITCH_NOTIFICATION_ROLE: '1390408053114933381',
             MEOW_ROLE: '1390696959630774302',
             serverAnnouncements: '000000000000000000',
             goodMorning: '000000000000000000',
+            member: '1389655724946100345',
         }
     }
 

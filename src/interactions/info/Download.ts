@@ -2,6 +2,7 @@ import BotInteraction from '../../types/BotInteraction';
 import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, AttachmentBuilder, ChannelType, APIEmbed } from 'discord.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { getChannels } from '../../GuildSpecifics';
 
 export default class Download extends BotInteraction {
     get name() {
@@ -178,7 +179,7 @@ export default class Download extends BotInteraction {
 
             // Send log message
             try {
-                const logChannelId = '1389412380626255872';
+                const logChannelId = getChannels(interaction.guild?.id).uploadLogChannel;
                 const logChannel = await this.client.channels.fetch(logChannelId);
                 if (logChannel instanceof TextChannel) {
                     // Create a new attachment to be sent to the log channel
