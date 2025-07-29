@@ -7,16 +7,11 @@ interface Roles {
 }
 
 export function getChannels(guildId: string | undefined) : Channels {
-    //command run outside a guild
-    if (guildId === undefined) {
-        return {
-
-        }
-    }
+    let result = {}
 
     //AGOD Bot Testing (Alex)
     if (guildId === '856557117832691752') {
-        return {
+        result =  {
             TWITCH_NOTIFICATION_CHANNEL: '000000000000000000',
             roleConfirmations: '000000000000000000',
             achievementsAndLogs: '000000000000000000',
@@ -38,7 +33,7 @@ export function getChannels(guildId: string | undefined) : Channels {
 
     //AGOD Bot Testing (Patze)
     if (guildId === '1391860635347849367') {
-        return {
+        result = {
             TWITCH_NOTIFICATION_CHANNEL: '1391860639063871581',
             roleConfirmations: '1391860638577594521',
             achievementsAndLogs: '1391860638577594528',
@@ -60,7 +55,7 @@ export function getChannels(guildId: string | undefined) : Channels {
 
     //Amascut, Goddess of Destruction
     if (guildId === '885457551397912596') {
-        return {
+        result = {
             TWITCH_NOTIFICATION_CHANNEL: '1390391961172836494',
             roleConfirmations: '1389392006891045116',
             achievementsAndLogs: '1389393398829682739',
@@ -80,22 +75,15 @@ export function getChannels(guildId: string | undefined) : Channels {
         }
     }
 
-    //unknown guild
-    return {
-
-    }
+    return result;
 }
 
 export function getRoles(guildId: string | undefined) : Roles {
-    //command run outside a guild
-    if (guildId === undefined) {
-        return {
-        }
-    }
+    let result = {};
 
     //AGOD Bot Testing (Alex)
     if (guildId === '856557117832691752') {
-        return {
+        result = {
             owner: '885457712710828043',
             admin: '00000000000000000',
             duoMaster: '00000000000000000',
@@ -144,7 +132,7 @@ export function getRoles(guildId: string | undefined) : Roles {
 
     //AGOD Bot Testing (Patze)
     if (guildId === '1391860635347849367') {
-        return {
+        result = {
             owner: '1391860635507363886',
             admin: '1391860635507363883',
             duoMaster: '00000000000000000',
@@ -193,7 +181,7 @@ export function getRoles(guildId: string | undefined) : Roles {
 
     //Amascut, Goddess of Destruction
     if (guildId === '885457551397912596') {
-        return {
+        result = {
             owner: '1389387255386341386',
             admin: '1389526658167603230',
             duoMaster: '000000000000000000',
@@ -240,8 +228,5 @@ export function getRoles(guildId: string | undefined) : Roles {
         }
     }
 
-    //unknown guild
-    return {
-
-    }
+    return Object.fromEntries(Object.entries(result).map(([key, value]) => [key, `<@&${value}>`]));
 }

@@ -72,7 +72,7 @@ export default class AutoTriggerHandler {
 
         if (Math.floor(Math.random() * AutoTriggerHandler.MEOW_REPLY_CHANCE) === 0) {
             const emoji = this.client.emojiCache.get('meow');
-            const roleId = getRoles(message.guild?.id).MEOW_ROLE;
+            const roleId = this.client.util.stripRole(getRoles(message.guild?.id).MEOW_ROLE);
             const role = await message.guild!.roles.fetch(roleId);
 
             if (emoji && role && message.member && !message.member.roles.cache.has(roleId)) {
