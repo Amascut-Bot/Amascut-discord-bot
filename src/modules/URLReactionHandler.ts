@@ -6,13 +6,14 @@ export default class URLReactionHandler {
     private client: Bot;
     private static readonly MUSIC_CHANNEL_ID = getChannels(process.env.GUILD_ID).MUSIC_CHANNEL;
     private static readonly CUTE_PETS_CHANNEL_ID = getChannels(process.env.GUILD_ID).CUTE_PETS_CHANNEL;
+    private static readonly achievementsAndLogs = getChannels(process.env.GUILD_ID).achievementsAndLogs;
 
     constructor(client: Bot) {
         this.client = client;
     }
 
     async handleURLReactions(message: Message): Promise<boolean> {
-        if (message.channel.id !== URLReactionHandler.MUSIC_CHANNEL_ID && message.channel.id !== URLReactionHandler.CUTE_PETS_CHANNEL_ID) {
+        if (message.channel.id !== URLReactionHandler.MUSIC_CHANNEL_ID && message.channel.id !== URLReactionHandler.CUTE_PETS_CHANNEL_ID && message.channel.id !== URLReactionHandler.achievementsAndLogs) {
             return false;
         }
 
@@ -28,7 +29,18 @@ export default class URLReactionHandler {
             else if (message.channel.id === URLReactionHandler.CUTE_PETS_CHANNEL_ID) {
                 await message.react('❤️');
 
-                const emojis = ['cute', 'POGSLIDECOG', 'hypers', 'bulbaOWO'];
+                const emojis = ['cute', 'bulbaOWO'];
+
+                for (let index = 0; index < emojis.length; index++) {
+                    const emoji = await this.client.emojiCache.get(emojis[index]);
+
+                    if (emoji) {
+                        await message.react(emoji);
+                    }
+                }
+            }
+            else if (message.channel.id === URLReactionHandler.achievementsAndLogs) {
+                const emojis = ['POGSLIDECOG', 'hypers'];
 
                 for (let index = 0; index < emojis.length; index++) {
                     const emoji = await this.client.emojiCache.get(emojis[index]);
