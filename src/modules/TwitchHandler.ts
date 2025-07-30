@@ -255,10 +255,10 @@ export default class TwitchHandler {
             const member = await guild.members.fetch(userId);
 
             if (isLive) {
-                await member.roles.add(liveRoleId);
+                await member.roles.add(this.client.util.stripRole(liveRoleId));
                 this.client.logger.log({ message: `Added 'Live on Twitch' role to ${member.user.tag}`, handler: this.constructor.name }, true);
             } else {
-                await member.roles.remove(liveRoleId);
+                await member.roles.remove(this.client.util.stripRole(liveRoleId));
                 this.client.logger.log({ message: `Removed 'Live on Twitch' role from ${member.user.tag}`, handler: this.constructor.name }, true);
             }
         } catch (error) {
@@ -447,7 +447,7 @@ export default class TwitchHandler {
 
             // Get all members with the content creator role
             const contentCreators = guild.members.cache.filter(member =>
-                member.roles.cache.has(contentCreatorRoleId)
+                member.roles.cache.has(this.client.util.stripRole(contentCreatorRoleId))
             );
 
             console.log(`--- DEBUG: Found ${contentCreators.size} content creators ---`);
@@ -469,11 +469,11 @@ export default class TwitchHandler {
 
             // Separate live streamers from offline content creators
             const liveStreamers = contentCreators.filter(member =>
-                member.roles.cache.has(liveRoleId)
+                member.roles.cache.has(this.client.util.stripRole(liveRoleId))
             );
 
             const offlineCreators = contentCreators.filter(member =>
-                !member.roles.cache.has(liveRoleId)
+                !member.roles.cache.has(this.client.util.stripRole(liveRoleId))
             );
 
             console.log(`--- DEBUG: ${liveStreamers.size} live streamers, ${offlineCreators.size} offline creators ---`);
