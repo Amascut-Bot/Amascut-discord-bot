@@ -5,7 +5,7 @@ import Bot from "../../Bot";
 const LOG_CHANNEL_ID = '1390351711868158102';
 
 export default class RoleRemoval extends BotInteraction {
-    
+
     constructor(client: Bot) {
         super(client);
         this.category = 'moderation';
@@ -88,12 +88,12 @@ export default class RoleRemoval extends BotInteraction {
         if (massRemove) {
             try {
                 await interaction.editReply({ content: `Fetching members with the ${role.name} role... This might take a while.` });
-                
+
                 // Fetch all members to ensure cache is up-to-date
                 await interaction.guild.members.fetch();
-                
+
                 const membersWithRole = interaction.guild.members.cache.filter(member => member.roles.cache.has(role.id));
-                
+
                 if (membersWithRole.size === 0) {
                     return interaction.followUp({ content: `No one has the ${role.name} role.`, ephemeral: true });
                 }
@@ -135,10 +135,10 @@ export default class RoleRemoval extends BotInteraction {
                 .setDescription(description)
                 .setColor(this.client.color)
                 .setTimestamp();
-            
+
             await logChannel.send({ embeds: [embed] });
         } catch (error) {
             this.client.logger.error({ message: `Failed to send role removal log`, error });
         }
     }
-} 
+}

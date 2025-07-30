@@ -1,3 +1,4 @@
+import { getChannels, getRoles } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, EmbedBuilder, Role, SlashCommandBuilder, TextChannel } from 'discord.js';
 
@@ -20,9 +21,9 @@ export default class DPM extends BotInteraction {
 
     public getRole = async (interaction: ChatInputCommandInteraction, damage: number) => {
         let roleToAssign;
-        const { stripRole, roles } = this.client.util;
+        const { stripRole } = this.client.util;
         const { adept, mastery, extreme } = await this.client.util.getDpm();
-        
+
         // check thresholds from highest to lowest
         if (damage >= extreme) {
             roleToAssign = 'extreme';
@@ -34,7 +35,7 @@ export default class DPM extends BotInteraction {
 
         if (!roleToAssign) return;
 
-        const role = await interaction.guild?.roles.fetch(stripRole(roles[roleToAssign])) as Role;
+        const role = await interaction.guild?.roles.fetch(stripRole(getRoles(interaction.guild.id)[roleToAssign])) as Role;
 
         return role;
     }
@@ -44,7 +45,7 @@ export default class DPM extends BotInteraction {
         const time: string = interaction.options.getString('time', true);
         const damage: string = interaction.options.getString('damage', true);
 
-        const { colours, channels, calcDPMInThousands, isValidDamage, isValidTime } = this.client.util;
+        const { colours, calcDPMInThousands, isValidDamage, isValidTime } = this.client.util;
 
         const errorEmbed = new EmbedBuilder()
             .setColor(colours.discord.red)
@@ -69,9 +70,9 @@ export default class DPM extends BotInteraction {
             ${role ? `\n> This DPM qualifies for the <@&${role.id}> role!` : ''}
             `);
 
-        const channel = await this.client.channels.fetch(channels.dpmCalc) as TextChannel;
+        const channel = await this.client.channels.fetch(getChannels(interaction.guild?.id).dpmCalc) as TextChannel;
         await channel.send({ embeds: [DPMEmbed] });
-        
+
         const successEmbed = new EmbedBuilder()
             .setColor(colours.discord.green)
             .setDescription(`

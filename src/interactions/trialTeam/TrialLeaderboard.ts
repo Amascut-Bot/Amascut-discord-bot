@@ -2,6 +2,7 @@ import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 import { Trial } from '../../entity/Trial';
 import { TrialParticipation } from '../../entity/TrialParticipation';
+import { getRoles } from '../../GuildSpecifics';
 
 export default class TrialLeaderboard extends BotInteraction {
     get name() {
@@ -70,7 +71,7 @@ export default class TrialLeaderboard extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ ephemeral: false });
         const { dataSource } = this.client;
-        const { colours, roles } = this.client.util;
+        const { colours } = this.client.util;
         const timespan = interaction.options.getString('timespan', true);
 
         const now = new Date();
@@ -114,12 +115,12 @@ export default class TrialLeaderboard extends BotInteraction {
             .leftJoin(Trial, 'trial', 'trial.id = trialParticipation.trialId')
             .groupBy('trialParticipation.participant')
             .orderBy('count', 'DESC');
-        
+
         if (startDate) {
             trialsHostedQuery.where('trial.created_at >= :startDate', { startDate });
             trialsParticipatedQuery.where('trial.created_at >= :startDate', { startDate });
         }
-        
+
         const trialsHosted = await trialsHostedQuery.getRawMany();
         const trialsParticipated = await trialsParticipatedQuery.getRawMany();
 
@@ -133,7 +134,7 @@ export default class TrialLeaderboard extends BotInteraction {
             .setTimestamp()
             .setTitle(`Amascut Trial Team Leaderboard - ${timespan}`)
             .setColor(colours.darkPurple)
-            .setDescription(`> There has been **${totalTrials}** trial${totalTrials !== 1 ? 's' : ''} recorded and **${trialsParticipated.length}** unique ${roles.trialTeam} members!`)
+            .setDescription(`> There has been **${totalTrials}** trial${totalTrials !== 1 ? 's' : ''} recorded and **${trialsParticipated.length}** unique ${getRoles(interaction.guild?.id).trialTeam} members!`)
             .addFields(
                 { name: 'Trials Hosted', value: this.createFieldFromArray(trialsHosted.slice(0, 10)), inline: true },
                 { name: 'Trials Participated', value: this.createFieldFromArray(trialsParticipated.slice(0, 10)), inline: true }

@@ -1,5 +1,6 @@
 import { StringSelectMenuInteraction, InteractionResponse, Message, EmbedBuilder, Role, MessageFlags } from 'discord.js';
 import Bot from '../Bot';
+import { getRoles } from '../GuildSpecifics';
 
 export default interface StringSelectHandler { client: Bot; id: string; interaction: StringSelectMenuInteraction }
 
@@ -68,7 +69,7 @@ export default class StringSelectHandler {
                 return await interaction.editReply({embeds: [addResultEmbed]});
             }
         } else if (roleIds.length > 1) {
-            const { categorize, stripRole, roles, hierarchy } = this.client.util;
+            const { categorize, stripRole, hierarchy } = this.client.util;
 
             //special logic for hierarchy tags
             const hasRoleOrHigher = (role: string) => {
@@ -77,7 +78,7 @@ export default class StringSelectHandler {
                     const categorizedHierarchy = hierarchy[categorize(role)];
                     const sliceFromIndex: number = categorizedHierarchy.indexOf(role);
                     const hierarchyList = categorizedHierarchy.slice(sliceFromIndex);
-                    const hierarchyIdList = hierarchyList.map((item: string) => stripRole(roles[item]));
+                    const hierarchyIdList = hierarchyList.map((item: string) => stripRole(getRoles(interaction.guild?.id)[item]));
                     const intersection = hierarchyIdList.filter((roleId: string) => userRoles.includes(roleId));
                     if (intersection.length === 0) {
                         return false
@@ -100,7 +101,7 @@ export default class StringSelectHandler {
                             roleReqError += ", ";
                         }
 
-                        roleReqError += roles[roleIds[i]];
+                        roleReqError += getRoles(interaction.guild?.id)[roleIds[i]];
                     }
                 } else {
                     if (userRoles.includes(roleIds[i])) {

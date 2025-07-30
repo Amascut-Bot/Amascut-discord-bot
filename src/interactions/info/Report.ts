@@ -1,6 +1,7 @@
 import BotInteraction from '../../types/BotInteraction';
 import { ActionRowBuilder, Attachment, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder, Role, SlashCommandBuilder, TextChannel, User } from 'discord.js';
 import { Report } from "../../entity/Report"
+import { getChannels, getRoles } from '../../GuildSpecifics';
 
 interface CombinationParent {
     [roleKey: string]: string;
@@ -68,7 +69,7 @@ export default class Say extends BotInteraction {
         const userResponse: User = interaction.options.getUser('user', true);
         const role: string = interaction.options.getString('role', true);
 
-        const { colours, roles, channels, stripRole } = this.client.util;
+        const { colours, stripRole } = this.client.util;
 
         let success = true;
         let errorMessage = 'An error has occurred!';
@@ -77,9 +78,9 @@ export default class Say extends BotInteraction {
         const userRoles = user?.roles.cache.map(role => role.id) || [];
 
         const hasRoleOrCombinationRole = () => {
-            const roleId = stripRole(roles[role]);
+            const roleId = stripRole(getRoles(interaction.guild?.id)[role]);
             if (this.combinationParent[role]) {
-                const combinationRoleId = stripRole(roles[this.combinationParent[role]]);
+                const combinationRoleId = stripRole(getRoles(interaction.guild?.id)[this.combinationParent[role]]);
                 return userRoles.includes(roleId) || userRoles.includes(combinationRoleId);
                 // The case where theres no parent (NoRealm) but the role still exists
             } else if (!this.combinationParent[role] && roleId) {
@@ -94,11 +95,11 @@ export default class Say extends BotInteraction {
                 try {
                     const reportRepository = this.client.dataSource.getRepository(Report);
                     const [_dbReports, reportsCount] = await reportRepository.findAndCount({
-                        where: { 
+                        where: {
                             reportedUser: `<@${userResponse.id}>`,
-                            role: roles[role],
+                            role: getRoles(interaction.guild?.id)[role],
                             expired: false
-                        } 
+                        }
                     })
                     return reportsCount;
                 } catch {
@@ -106,7 +107,7 @@ export default class Say extends BotInteraction {
                 }
             }
 
-            const roleObject = await interaction.guild?.roles.fetch(stripRole(roles[role])) as Role;
+            const roleObject = await interaction.guild?.roles.fetch(stripRole(getRoles(interaction.guild?.id)[role])) as Role;
 
             const reportCount = await getReportsForRole();
 
@@ -117,11 +118,11 @@ export default class Say extends BotInteraction {
                 > **General**\n
                 \`Submitter:\` <@${interaction.user.id}>
                 \`Reported User:\` <@${userResponse.id}>
-                \`Role:\` ${roles[role]}\n
+                \`Role:\` ${getRoles(interaction.guild?.id)[role]}\n
                 > **Evidence**\n
                 \`\`\`${description}\`\`\`${evidence ? `\n\`URL:\` [${evidence}](${evidence})` : ''}${screenshot ? '\n_Additionally see embedded image below._' : ''}
                 ${evidence || screenshot ? '\n' : ''}> **Moderation**\n
-                This user currently has **${reportCount}** report${reportCount !== 1 ? 's' : ''} for <@&${stripRole(roles[role])}>.
+                This user currently has **${reportCount}** report${reportCount !== 1 ? 's' : ''} for <@&${stripRole(getRoles(interaction.guild?.id)[role])}>.
                 `);
 
             const buttonRow = new ActionRowBuilder<ButtonBuilder>()
@@ -145,20 +146,20 @@ export default class Say extends BotInteraction {
             }
 
             if (success) {
-                const logChannel = await this.client.channels.fetch(channels.reportLog) as TextChannel;
+                const logChannel = await this.client.channels.fetch(getChannels(interaction.guild?.id).reportLog) as TextChannel;
                 await logChannel.send({ embeds: [logEmbed], components: [buttonRow] });
             }
 
             const userEmbed = new EmbedBuilder()
                 .setTitle(success ? 'Your report has been submitted!' : 'An error has occurred!')
                 .setColor(success ? colours.discord.green : colours.discord.red)
-                .setDescription(success ? `An ${roles.admin} will review your report and handle it shortly.` : 'Your file upload must be an image.');
+                .setDescription(success ? `An ${getRoles(interaction.guild?.id).admin} will review your report and handle it shortly.` : 'Your file upload must be an image.');
             return await interaction.editReply({ embeds: [userEmbed] });
         } else {
             if (this.combinationParent[role]) {
-                errorMessage = `This user does not have ${roles[role]} or its combination role, ${roles[this.combinationParent[role]]}.`;
+                errorMessage = `This user does not have ${getRoles(interaction.guild?.id)[role]} or its combination role, ${getRoles(interaction.guild?.id)[this.combinationParent[role]]}.`;
             } else {
-                errorMessage = `This user does not have ${roles[role]}.`;
+                errorMessage = `This user does not have ${getRoles(interaction.guild?.id)[role]}.`;
             }
             const userEmbed = new EmbedBuilder()
                 .setTitle('An error has occurred!')

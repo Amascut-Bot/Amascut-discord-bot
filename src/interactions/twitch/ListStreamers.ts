@@ -62,4 +62,4 @@ export default class ListStreamers extends BotInteraction {
 
         await interaction.editReply({ embeds: [embed] });
     }
-} 
+}

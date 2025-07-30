@@ -64,12 +64,12 @@ export default class ListNotifications extends BotInteraction {
             .setColor(this.client.color)
             .setTitle('Active Notification Templates')
             .setTimestamp();
-        
+
         let fields = [];
         for (const name of notificationNames) {
             const notif = notifications[name];
             const pingRole = notif.pingRoleId ? `<@&${notif.pingRoleId}>` : 'None';
-            
+
             const fieldValue = "```" + `Target: ${notif.target}\nPing Role: ${pingRole}` + "```";
 
             fields.push({
@@ -77,7 +77,7 @@ export default class ListNotifications extends BotInteraction {
                 value: fieldValue
             });
         }
-        
+
         // Handle embed field limits
         const fieldChunks = [];
         for (let i = 0; i < fields.length; i += 25) {
@@ -99,4 +99,4 @@ export default class ListNotifications extends BotInteraction {
             }
         }
     }
-} 
+}

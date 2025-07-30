@@ -6,7 +6,8 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { DpmSubmission } from '../entity/DpmSubmission';
 import { KillTimeSubmission } from '../entity/KillTimeSubmission';
-import fetch from 'node-fetch';
+import axios from 'axios';
+import { getRoles, getChannels } from '../GuildSpecifics';
 
 export default interface UtilityHandler {
     client: Bot;
@@ -16,15 +17,6 @@ export default interface UtilityHandler {
     loadingText: string;
     imageUrlCache: Map<string, string>;
     reuploadImage(url: string): Promise<string>;
-}
-
-interface Channels {
-    [channelName: string]: string;
-    botAssetChannel: string;
-}
-
-interface Roles {
-    [roleName: string]: string;
 }
 
 interface Emojis {
@@ -72,39 +64,6 @@ export default class UtilityHandler {
             gem1: '<:gem1:1057231061375008799>',
             gem2: '<:gem2:1057231076239605770>',
             gem3: '<:gem3:1057231089854324736>',
-        }
-    }
-
-    get channels(): Channels {
-        if (process.env.ENVIRONMENT === 'DEVELOPMENT') {
-            return {
-                roleConfirmations: process.env.DEV_ROLE_CONFIRMATIONS_CHANNEL!,
-                achievementsAndLogs: process.env.DEV_ACHIEVEMENTS_LOG_CHANNEL!,
-                botRoleLog: process.env.DEV_BOT_ROLE_LOG_CHANNEL!,
-                reportLog: process.env.DEV_REPORT_LOG_CHANNEL!,
-                tempVCCategory: process.env.DEV_TEMP_VC_CATEGORY!,
-                tempVCCreate: process.env.DEV_TEMP_VC_CREATE_CHANNEL!,
-                dpmCalc: process.env.DEV_DPM_CALC_CHANNEL!,
-                trialScheduling: process.env.DEV_TRIAL_SCHEDULING_CHANNEL!,
-                reaperScheduling: process.env.DEV_REAPER_SCHEDULING_CHANNEL!,
-                reaperSquad: process.env.DEV_REAPER_SQUAD_CHANNEL!,
-                uploadLogChannel: process.env.DEV_UPLOAD_LOG_CHANNEL!,
-                botAssetChannel: process.env.DEV_BOT_ASSET_CHANNEL!,
-            }
-        }
-        return {
-            roleConfirmations: process.env.PROD_ROLE_CONFIRMATIONS_CHANNEL!,
-            achievementsAndLogs: process.env.PROD_ACHIEVEMENTS_LOG_CHANNEL!,
-            botRoleLog: process.env.PROD_BOT_ROLE_LOG_CHANNEL!,
-            reportLog: process.env.PROD_REPORT_LOG_CHANNEL!,
-            tempVCCategory: process.env.PROD_TEMP_VC_CATEGORY!,
-            tempVCCreate: process.env.PROD_TEMP_VC_CREATE_CHANNEL!,
-            dpmCalc: process.env.PROD_DPM_CALC_CHANNEL!,
-            trialScheduling: process.env.PROD_TRIAL_SCHEDULING_CHANNEL!,
-            reaperScheduling: process.env.PROD_REAPER_SCHEDULING_CHANNEL!,
-            reaperSquad: process.env.PROD_REAPER_SQUAD_CHANNEL!,
-            uploadLogChannel: process.env.PROD_UPLOAD_LOG_CHANNEL!,
-            botAssetChannel: process.env.PROD_BOT_ASSET_CHANNEL!,
         }
     }
 
@@ -219,7 +178,7 @@ export default class UtilityHandler {
     // Get DPM role ID based on DPM value
     public async getDpmRole(dpm: number): Promise<string> {
         let roleToAssign;
-        const { stripRole, roles } = this;
+        const { stripRole } = this;
         const { adept, mastery, extreme } = await this.getDpm();
 
         if (dpm >= extreme) {
@@ -232,96 +191,7 @@ export default class UtilityHandler {
 
         if (!roleToAssign) return '';
 
-        return stripRole(roles[roleToAssign]);
-    }
-
-    get roles(): Roles {
-        if (process.env.ENVIRONMENT === 'DEVELOPMENT') {
-            return {
-                duoMaster: `<@&${process.env.DEV_DUO_MASTER_ROLE!}>`,
-                threeSevenMaster: `<@&${process.env.DEV_3_7_MASTER_ROLE!}>`,
-                master: `<@&${process.env.DEV_MASTER_ROLE!}>`,
-                solakAddict: `<@&${process.env.DEV_SOLAK_ADDICT_ROLE!}>`,
-                trialTeam: `<@&${process.env.DEV_TRIAL_TEAM_ROLE!}>`,
-                            admin: `<@&${process.env.DEV_ADMIN_ROLE!}>`,
-            owner: `<@&${process.env.DEV_OWNER_ROLE!}>`,
-                duoRootskips: `<@&${process.env.DEV_DUO_ROOTSKIPS_ROLE!}>`,
-                threeSevenRootskips: `<@&${process.env.DEV_3_7_ROOTSKIPS_ROLE!}>`,
-                rootskips: `<@&${process.env.DEV_ROOTSKIPS_ROLE!}>`,
-                noRealm: `<@&${process.env.DEV_NO_REALM_ROLE!}>`,
-                duoExperienced: `<@&${process.env.DEV_DUO_EXPERIENCED_ROLE!}>`,
-                threeSevenExperienced: `<@&${process.env.DEV_3_7_EXPERIENCED_ROLE!}>`,
-                experienced: `<@&${process.env.DEV_EXPERIENCED_ROLE!}>`,
-                teacher: `<@&${process.env.DEV_TEACHER_ROLE!}>`,
-                learner: `<@&${process.env.DEV_LEARNER_ROLE!}>`,
-                community: `<@&${process.env.DEV_COMMUNITY_ROLE!}>`,
-                booster: `<@&${process.env.DEV_BOOSTER_ROLE!}>`,
-                nitroBooster: `<@&${process.env.DEV_NITRO_BOOSTER_ROLE!}>`,
-                cosmetic: `<@&${process.env.DEV_COSMETIC_ROLE!}>`,
-                participant: `<@&${process.env.DEV_PARTICIPANT_ROLE!}>`,
-                reaper: `<@&${process.env.DEV_REAPER_ROLE!}>`,
-                tank: `<@&${process.env.DEV_TANK_ROLE!}>`,
-                dps: `<@&${process.env.DEV_DPS_ROLE!}>`,
-                support: `<@&${process.env.DEV_SUPPORT_ROLE!}>`,
-                learnerOfTheWeek: `<@&${process.env.DEV_LEARNER_OF_THE_WEEK_ROLE!}>`,
-                staff: `<@&${process.env.DEV_STAFF_ROLE!}>`,
-                moderator: `<@&${process.env.DEV_MODERATOR_ROLE!}>`,
-                solak: `<@&${process.env.DEV_SOLAK_ROLE!}>`,
-                tempRole: `<@&${process.env.DEV_TEMP_ROLE!}>`,
-                tankNotNeeded: `<@&${process.env.DEV_TANK_NOT_NEEDED_ROLE!}>`,
-                dpsNotNeeded: `<@&${process.env.DEV_DPS_NOT_NEEDED_ROLE!}>`,
-                supportNotNeeded: `<@&${process.env.DEV_SUPPORT_NOT_NEEDED_ROLE!}>`,
-                learners: `<@&${process.env.DEV_LEARNERS_ROLE!}>`,
-                learnersNotNeeded: `<@&${process.env.DEV_LEARNERS_NOT_NEEDED_ROLE!}>`,
-                adept: `<@&${process.env.DEV_ADEPT_ROLE!}>`,
-                mastery: `<@&${process.env.DEV_MASTERY_ROLE!}>`,
-                extreme: `<@&${process.env.DEV_EXTREME_ROLE!}>`,
-                serverAnnouncements: `<@&${process.env.DEV_SERVER_ANNOUNCEMENTS_ROLE!}>`,
-                goodMorning: `<@&${process.env.DEV_GOOD_MORNING_ROLE!}>`,
-            }
-        }
-        return {
-            duoMaster: `<@&${process.env.PROD_DUO_MASTER_ROLE!}>`,
-            threeSevenMaster: `<@&${process.env.PROD_3_7_MASTER_ROLE!}>`,
-            master: `<@&${process.env.PROD_MASTER_ROLE!}>`,
-            solakAddict: `<@&${process.env.PROD_SOLAK_ADDICT_ROLE!}>`,
-            trialTeam: `<@&${process.env.PROD_TRIAL_TEAM_ROLE!}>`,
-            admin: `<@&${process.env.PROD_ADMIN_ROLE!}>`,
-            owner: `<@&${process.env.PROD_OWNER_ROLE!}>`,
-            duoRootskips: `<@&${process.env.PROD_DUO_ROOTSKIPS_ROLE!}>`,
-            threeSevenRootskips: `<@&${process.env.PROD_3_7_ROOTSKIPS_ROLE!}>`,
-            rootskips: `<@&${process.env.PROD_ROOTSKIPS_ROLE!}>`,
-            noRealm: `<@&${process.env.PROD_NO_REALM_ROLE!}>`,
-            duoExperienced: `<@&${process.env.PROD_DUO_EXPERIENCED_ROLE!}>`,
-            threeSevenExperienced: `<@&${process.env.PROD_3_7_EXPERIENCED_ROLE!}>`,
-            experienced: `<@&${process.env.PROD_EXPERIENCED_ROLE!}>`,
-            teacher: `<@&${process.env.PROD_TEACHER_ROLE!}>`,
-            learner: `<@&${process.env.PROD_LEARNER_ROLE!}>`,
-            community: `<@&${process.env.PROD_COMMUNITY_ROLE!}>`,
-            booster: `<@&${process.env.PROD_BOOSTER_ROLE!}>`,
-            nitroBooster: `<@&${process.env.PROD_NITRO_BOOSTER_ROLE!}>`,
-            cosmetic: `<@&${process.env.PROD_COSMETIC_ROLE!}>`,
-            participant: `<@&${process.env.PROD_PARTICIPANT_ROLE!}>`,
-            reaper: `<@&${process.env.PROD_REAPER_ROLE!}>`,
-            tank: `<@&${process.env.PROD_TANK_ROLE!}>`,
-            dps: `<@&${process.env.PROD_DPS_ROLE!}>`,
-            support: `<@&${process.env.PROD_SUPPORT_ROLE!}>`,
-            learnerOfTheWeek: `<@&${process.env.PROD_LEARNER_OF_THE_WEEK_ROLE!}>`,
-            staff: `<@&${process.env.PROD_STAFF_ROLE!}>`,
-            moderator: `<@&${process.env.PROD_MODERATOR_ROLE!}>`,
-            solak: `<@&${process.env.PROD_SOLAK_ROLE!}>`,
-            tempRole: `<@&${process.env.PROD_TEMP_ROLE!}>`,
-            tankNotNeeded: `<@&${process.env.PROD_TANK_NOT_NEEDED_ROLE!}>`,
-            dpsNotNeeded: `<@&${process.env.PROD_DPS_NOT_NEEDED_ROLE!}>`,
-            supportNotNeeded: `<@&${process.env.PROD_SUPPORT_NOT_NEEDED_ROLE!}>`,
-            learners: `<@&${process.env.PROD_LEARNERS_ROLE!}>`,
-            learnersNotNeeded: `<@&${process.env.PROD_LEARNERS_NOT_NEEDED_ROLE!}>`,
-            adept: `<@&${process.env.PROD_ADEPT_ROLE!}>`,
-            mastery: `<@&${process.env.PROD_MASTERY_ROLE!}>`,
-            extreme: `<@&${process.env.PROD_EXTREME_ROLE!}>`,
-            serverAnnouncements: `<@&${process.env.PROD_SERVER_ANNOUNCEMENTS_ROLE!}>`,
-            goodMorning: `<@&${process.env.PROD_GOOD_MORNING_ROLE!}>`,
-        }
+        return stripRole(getRoles(process.env.GUILD_ID)[roleToAssign]);
     }
 
     get categories(): Categories {
@@ -394,7 +264,7 @@ export default class UtilityHandler {
     public hasRolePermissions = async (client: Bot, roleList: string[], interaction: Interaction) => {
         if (this.config.owners.includes(interaction.user.id)) return true;
         if (!interaction.inCachedGuild()) return;
-        const validRoleIds = roleList.map((key) => this.stripRole(this.roles[key]));
+        const validRoleIds = roleList.map((key) => this.stripRole(getRoles(interaction.guild.id)[key]));
         const user = await interaction.guild.members.fetch(interaction.user.id);
         const userRoles = user.roles.cache.map((role) => role.id);
         const intersection = validRoleIds.filter((roleId) => userRoles.includes(roleId));
@@ -657,7 +527,7 @@ export default class UtilityHandler {
     public async reuploadImage(url: string): Promise<string> {
         console.log(`--- DEBUG: Entered reuploadImage function for URL: ${url}`);
 
-        const assetChannelId = this.channels.botAssetChannel;
+        const assetChannelId = getChannels(process.env.GUILD_ID).botAssetChannel;
         console.log(`--- DEBUG: Read assetChannelId from this.channels. It is: ${assetChannelId}`);
 
         if (!assetChannelId || assetChannelId === 'YOUR_CHANNEL_ID_HERE') {
@@ -678,14 +548,13 @@ export default class UtilityHandler {
             }
 
             console.log(`--- DEBUG: Fetching image from ${url}`);
-            const response = await fetch(url);
-            if (!response.ok) {
+            const response = await axios.get(url, { responseType: 'arraybuffer' });
+
+            if (response.status !== 200) {
                 throw new Error(`Failed to fetch image: ${response.statusText}`);
             }
-            const arrayBuffer = await response.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
 
-            const attachment = new AttachmentBuilder(buffer, { name: 'image.png' });
+            const attachment = new AttachmentBuilder(Buffer.from(response.data, 'binary'), { name: 'image.png' });
 
             console.log(`--- DEBUG: Sending attachment to Discord channel...`);
             const message = await botAssetChannel.send({ files: [attachment] });

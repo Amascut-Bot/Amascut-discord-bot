@@ -32,7 +32,7 @@ async function writeReactionRoles(data: ReactionRolesData): Promise<void> {
 }
 
 export default class AddReactionRole extends BotInteraction {
-    
+
     constructor(client: Bot) {
         super(client);
         this.category = 'reaction-roles';
@@ -88,7 +88,7 @@ export default class AddReactionRole extends BotInteraction {
         const emojiInput = interaction.options.getString('emoji', true);
         const roleGiven = interaction.options.getRole('role-given', true) as Role;
         const hierarchy = interaction.options.getInteger('hierarchy');
-        
+
         const requiredRoles: Role[] = [];
         const requiredRole1 = interaction.options.getRole('required-role') as Role | null;
         if (requiredRole1) requiredRoles.push(requiredRole1);
@@ -129,7 +129,7 @@ export default class AddReactionRole extends BotInteraction {
             hierarchy: newHierarchy,
             requiredRoleId: requiredRoleIds.length > 0 ? requiredRoleIds : null,
         };
-        
+
         if (reactionRoles[category].some(rr => rr.emoji === newReactionRole.emoji)) {
             return interaction.editReply({ content: `The emoji ${emojiInput} already exists in the '${category}' category.` });
         }
@@ -145,4 +145,4 @@ export default class AddReactionRole extends BotInteraction {
 
         await interaction.editReply({ content: `Successfully added the reaction role ${roleGiven.name} with emoji ${emojiInput} to the '${category}' category.` });
     }
-} 
+}

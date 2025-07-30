@@ -5,13 +5,14 @@ import * as path from 'path';
 import * as cron from 'node-cron';
 import { EmbedBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize, TextDisplayBuilder, MessageFlags, SectionBuilder, ThumbnailBuilder, MediaGalleryBuilder } from 'discord.js';
 import 'dotenv/config';
+import { getRoles, getChannels } from '../GuildSpecifics';
 
 const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
 const dashboardDataFilePath = path.join(process.cwd(), 'dashboard-data.json');
 const notificationsFilePath = path.join(process.cwd(), 'notifications.json');
-const contentCreatorRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_CONTENT_CREATOR_ROLE}` : `${process.env.PROD_CONTENT_CREATOR_ROLE}`;
-const liveRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_LIVE_ROLE}` : `${process.env.PROD_LIVE_ROLE}`;
-const contentCreatorChannelId = `${process.env.TWITCH_NOTIFICATION_CHANNEL}`
+const contentCreatorRoleId = getRoles(process.env.GUILD_ID).CONTENT_CREATOR_ROLE;
+const liveRoleId = getRoles(process.env.GUILD_ID).LIVE_ROLE;
+const contentCreatorChannelId = getChannels(process.env.GUILD_ID).TWITCH_NOTIFICATION_CHANNEL;
 
 interface MonitoredStreamer {
     id: string;
@@ -194,7 +195,7 @@ export default class TwitchHandler {
             console.log(`--- DEBUG: About to send embed to channel ---`);
             try {
                 const sentMessage = await (channel as TextChannel).send({
-                    content: `<@&1390408053114933381> https://twitch.tv/${streamData.user_name}`,
+                    content: `${getRoles((channel as TextChannel).guild.id).TWITCH_NOTIFICATION_ROLE} https://twitch.tv/${streamData.user_name}`,
                     embeds: [embed]
                 });
                 console.log(`--- DEBUG: Successfully sent message with ID: ${sentMessage.id} ---`);
@@ -254,10 +255,10 @@ export default class TwitchHandler {
             const member = await guild.members.fetch(userId);
 
             if (isLive) {
-                await member.roles.add(liveRoleId);
+                await member.roles.add(this.client.util.stripRole(liveRoleId));
                 this.client.logger.log({ message: `Added 'Live on Twitch' role to ${member.user.tag}`, handler: this.constructor.name }, true);
             } else {
-                await member.roles.remove(liveRoleId);
+                await member.roles.remove(this.client.util.stripRole(liveRoleId));
                 this.client.logger.log({ message: `Removed 'Live on Twitch' role from ${member.user.tag}`, handler: this.constructor.name }, true);
             }
         } catch (error) {
@@ -446,7 +447,7 @@ export default class TwitchHandler {
 
             // Get all members with the content creator role
             const contentCreators = guild.members.cache.filter(member =>
-                member.roles.cache.has(contentCreatorRoleId)
+                member.roles.cache.has(this.client.util.stripRole(contentCreatorRoleId))
             );
 
             console.log(`--- DEBUG: Found ${contentCreators.size} content creators ---`);
@@ -468,11 +469,11 @@ export default class TwitchHandler {
 
             // Separate live streamers from offline content creators
             const liveStreamers = contentCreators.filter(member =>
-                member.roles.cache.has(liveRoleId)
+                member.roles.cache.has(this.client.util.stripRole(liveRoleId))
             );
 
             const offlineCreators = contentCreators.filter(member =>
-                !member.roles.cache.has(liveRoleId)
+                !member.roles.cache.has(this.client.util.stripRole(liveRoleId))
             );
 
             console.log(`--- DEBUG: ${liveStreamers.size} live streamers, ${offlineCreators.size} offline creators ---`);

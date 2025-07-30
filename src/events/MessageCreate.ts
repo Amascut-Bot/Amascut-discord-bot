@@ -39,9 +39,9 @@ export default class MessageCreate extends BotEvent {
                     this.client.logger.log({ message: `Auto-deleted pin notification for bot-pinned message in channel ${message.channel.id}` }, true);
                 }
             } catch (error) {
-                this.client.logger.error({ 
-                    message: `Failed to process pin notification system message in channel ${message.channel.id}`, 
-                    error: error as Error 
+                this.client.logger.error({
+                    message: `Failed to process pin notification system message in channel ${message.channel.id}`,
+                    error: error as Error
                 });
             }
             return;
@@ -147,7 +147,7 @@ export default class MessageCreate extends BotEvent {
 
             for (const commandFile of commandFiles) {
                 if (!commandFile.isFile() || !commandFile.name.endsWith('.ts')) continue;
-                
+
                 commandPromises.push(
                     import(`${this.client.location}/src/interactions/${directory.name}/${commandFile.name}`)
                         .then(interactionModule => {

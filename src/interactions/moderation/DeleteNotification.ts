@@ -56,10 +56,10 @@ export default class DeleteNotification extends BotInteraction {
 
     async run(interaction: ChatInputCommandInteraction) {
         const notificationName = interaction.options.getString('notification_name', true);
-        
+
         try {
             const notifications = await readNotificationsFile();
-            
+
             if (!notifications[notificationName]) {
                 await interaction.reply({ content: `A notification template with the name "${notificationName}" does not exist.`, ephemeral: true });
                 return;
@@ -75,4 +75,4 @@ export default class DeleteNotification extends BotInteraction {
             await interaction.reply({ content: 'An error occurred while deleting the notification template.', ephemeral: true });
         }
     }
-} 
+}

@@ -3,6 +3,7 @@ import { TempChannelsManagerEvents } from '@hunteroi/discord-temp-channels';
 import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import TempChannelManager from '../modules/TempVCHandler';
+import { getChannels } from '../GuildSpecifics';
 export default class Ready extends BotEvent {
     get name(): string {
         return 'ready';
@@ -22,7 +23,7 @@ export default class Ready extends BotEvent {
 
     async run(client: Bot) {
         this.client.logger.log({ message: `[${this.client.user?.username}] Ready! Serving ${this.client.guilds.cache.size} guild(s) with ${this.client.users.cache.size} user(s)` }, true);
-        
+
         // Build the global emoji cache
         this.client.emojiCache.clear();
         for (const guild of this.client.guilds.cache.values()) {
@@ -51,8 +52,8 @@ export default class Ready extends BotEvent {
                 error: error
             });
         });
-        
-        this.client.tempManager.__initParentListener(this.client.util.channels.tempVCCreate);
+
+        this.client.tempManager.__initParentListener(getChannels(process.env.GUILD_ID).tempVCCreate);
         this.client.logger.log({ message: `Running on the ${process.env.ENVIRONMENT} environment` }, true);
         this.client.user?.setPresence({
             activities: [{ name: `Release August 4th!`, type: ActivityType.Watching }]

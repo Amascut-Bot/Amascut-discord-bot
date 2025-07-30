@@ -1,3 +1,4 @@
+import { getChannels, getRoles } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, Message, ButtonBuilder, ActionRowBuilder, ButtonStyle, Role, TextChannel } from 'discord.js';
 
@@ -65,7 +66,7 @@ export default class Pass extends BotInteraction {
         }
 
         const validRoles = this.validBossRolesForTeamSize[info.teamSize] || [];
-        
+
         const filtered = validRoles
             .filter(role => role.toLowerCase().startsWith(focusedOption.value.toLowerCase()))
             .map(role => ({ name: role, value: role }));
@@ -142,11 +143,11 @@ export default class Pass extends BotInteraction {
                 key = 'fours';
             }
         }
-        if (!this.client.util.roles[key]) return;
-        const roleObject = await interaction.guild?.roles.fetch(this.client.util.stripRole(this.client.util.roles[key]));
+        if (!getRoles(interaction.guild?.id)[key]) return;
+        const roleObject = await interaction.guild?.roles.fetch(this.client.util.stripRole(getRoles(interaction.guild?.id)[key]));
         if (!roleObject) return;
         return {
-            key: this.client.util.roles[key],
+            key: getRoles(interaction.guild?.id)[key],
             role: roleObject
         };
     }
@@ -181,16 +182,16 @@ export default class Pass extends BotInteraction {
         return fields;
     }
 
-    public notifyTrialTeam = (rank: string, teamSize: string): string => {
+    public notifyTrialTeam = (rank: string, teamSize: string, interaction: ChatInputCommandInteraction): string => {
         if (['4s', '3-7'].includes(teamSize)) {
             if (rank === 'Grandmaster') {
-                return this.client.util.roles.notifyGM;
+                return getRoles(interaction.guild?.id).notifyGM;
             } else if (rank === 'Master') {
-                return this.client.util.roles.notifyMaster;
+                return getRoles(interaction.guild?.id).notifyMaster;
             } else if (rank === 'Experienced') {
-                return this.client.util.roles.notifyExperienced;
+                return getRoles(interaction.guild?.id).notifyExperienced;
             } else if (teamSize === '4s') {
-                return this.client.util.roles.notify4s;
+                return getRoles(interaction.guild?.id).notify4s;
             } else {
                 return '';
             }
@@ -204,7 +205,7 @@ export default class Pass extends BotInteraction {
         const role: string = interaction.options.getString('role', true);
         const region: string = interaction.options.getString('region', true);
 
-        const { roles, colours, channels } = this.client.util;
+        const { colours } = this.client.util;
 
         const info = await this.ticketToolEmbedContent(interaction);
 
@@ -291,15 +292,15 @@ export default class Pass extends BotInteraction {
             `)
             .addFields(this.getTeamsizeFields(info, role));
 
-        const channel = await this.client.channels.fetch(channels.trialScheduling) as TextChannel;
+        const channel = await this.client.channels.fetch(getChannels(interaction.guild?.id).trialScheduling) as TextChannel;
         await channel.send(
-            { content: this.notifyTrialTeam(info.rank, info.teamSize), embeds: [cardEmbed], components: [info.teamSize === 'Duo' ? duoButtonRow : groupButtonRow, controlPanel] }
+            { content: this.notifyTrialTeam(info.rank, info.teamSize, interaction), embeds: [cardEmbed], components: [info.teamSize === 'Duo' ? duoButtonRow : groupButtonRow, controlPanel] }
         )
 
         const replyEmbed = new EmbedBuilder()
             .setTitle('Trial notification created!')
             .setColor(colours.discord.green)
-            .setDescription(`${roles['trialTeam']} has been notified in <#${channels.trialScheduling}>`);
+            .setDescription(`${getRoles(interaction.guild?.id)['trialTeam']} has been notified in <#${getChannels(interaction.guild?.id).trialScheduling}>`);
         await interaction.editReply({ embeds: [replyEmbed] });
     }
 }

@@ -25,7 +25,7 @@ export default class ClearDpm extends BotInteraction {
         await interaction.deferReply({ ephemeral: true });
 
         const dpmSubmissionRepository = this.client.dataSource.getRepository(DpmSubmission);
-        
+
         try {
             await dpmSubmissionRepository.clear();
             await interaction.editReply({ content: 'All DPM submissions have been successfully cleared from the database.' });
@@ -38,4 +38,4 @@ export default class ClearDpm extends BotInteraction {
             await interaction.editReply({ content: 'An error occurred while trying to clear the DPM submissions.' });
         }
     }
-} 
+}

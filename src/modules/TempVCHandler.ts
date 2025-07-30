@@ -1,5 +1,6 @@
 import { ParentChannelOptions, TempChannelsManager, TempChannelsManagerEvents } from '@hunteroi/discord-temp-channels';
 import Bot from '../Bot';
+import { getChannels } from '../GuildSpecifics';
 
 export default interface TempChannelManager {
     client: Bot;
@@ -25,7 +26,7 @@ export default class TempChannelManager extends TempChannelsManager {
 
     public __initParentListener(channelId: string, options?: ParentChannelOptions): void {
         return this.registerChannel(channelId, options || {
-            childCategory: this.client.util.channels.tempVCCategory,
+            childCategory: getChannels(process.env.GUILD_ID).tempVCCategory,
             childAutoDeleteIfEmpty: true,
             childAutoDeleteIfParentGetsUnregistered: true,
             childAutoDeleteIfOwnerLeaves: false,

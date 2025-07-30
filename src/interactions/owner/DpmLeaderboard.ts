@@ -38,7 +38,7 @@ export default class DpmLeaderboard extends BotInteraction {
             try {
                 const leaderboardEmbeds = await this.client.util.generateDpmLeaderboardEmbeds();
             const channel = interaction.channel as TextChannel;
-            
+
                 const message = await channel.send({ embeds: leaderboardEmbeds });
 
                 const leaderboardConfig = {
@@ -59,4 +59,4 @@ export default class DpmLeaderboard extends BotInteraction {
             }
         }
     }
-} 
+}

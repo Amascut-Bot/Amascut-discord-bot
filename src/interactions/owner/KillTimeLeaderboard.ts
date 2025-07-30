@@ -37,7 +37,7 @@ export default class KillTimeLeaderboard extends BotInteraction {
 
             const leaderboardEmbed = await this.client.util.generateKillTimeLeaderboardEmbed();
             const channel = interaction.channel as TextChannel;
-            
+
             const message = await channel.send({ embeds: [leaderboardEmbed] });
 
             const config = {
@@ -50,4 +50,4 @@ export default class KillTimeLeaderboard extends BotInteraction {
             await interaction.editReply({ content: `Kill Time leaderboard posted successfully. Config file has been updated.` });
         }
     }
-} 
+}

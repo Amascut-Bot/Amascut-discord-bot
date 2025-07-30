@@ -1,5 +1,6 @@
 import BotInteraction from '../../types/BotInteraction';
 import { Attachment, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ModalSubmitInteraction } from 'discord.js';
+import { getRoles } from '../../GuildSpecifics';
 
 export default class Say extends BotInteraction {
     get name() {
@@ -24,16 +25,16 @@ export default class Say extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction) {
         if (!interaction.inCachedGuild()) return;
 
-        const ownerRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? process.env.DEV_OWNER_ROLE! : process.env.PROD_OWNER_ROLE!;
-        const adminRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? process.env.DEV_ADMIN_ROLE! : process.env.PROD_ADMIN_ROLE!;
-        
+        const ownerRoleId = getRoles(interaction.guild.id).OWNER_ROLE;
+        const adminRoleId = getRoles(interaction.guild.id).ADMIN_ROLE;
+
         // Debug logging
         console.log('DEBUG Say Command:');
         console.log('Environment:', process.env.ENVIRONMENT);
         console.log('Owner Role ID from env:', ownerRoleId);
         console.log('Admin Role ID from env:', adminRoleId);
         console.log('User roles:', interaction.member.roles.cache.map(r => r.id));
-        
+
         const hasPermission = interaction.member.roles.cache.has(ownerRoleId) || interaction.member.roles.cache.has(adminRoleId);
 
         console.log('Has permission:', hasPermission);
@@ -59,18 +60,18 @@ export default class Say extends BotInteraction {
         await interaction.showModal(modal);
 
         const filter = (i: ModalSubmitInteraction) => i.customId === 'say-command-modal' && i.user.id === interaction.user.id;
-        
+
         try {
             const modalInteraction = await interaction.awaitModalSubmit({ filter, time: 300_000 }); // 5 minutes
 
             const rawMessage: string = modalInteraction.fields.getTextInputValue('say-message-input');
             const parsedMessage = await this.parseMessage(rawMessage, interaction);
             const channel = interaction.channel as TextChannel;
-            
+
             if (channel && 'send' in channel) {
                 await channel.send(attachment ? { content: parsedMessage, files: [attachment] } : { content: parsedMessage });
             }
-            
+
             await modalInteraction.reply({ content: `Message sent!`, ephemeral: true });
         } catch (err) {
             console.error('Say command error:', err);
@@ -105,7 +106,7 @@ export default class Say extends BotInteraction {
                 return role ? `${role}` : match;
             });
         }
-        
+
         // Emoji Mentions - convert :emoji: to actual emojis
         const emojiRegex = /:(\w+):/g;
         parsedText = parsedText.replace(emojiRegex, (match, emojiName) => {

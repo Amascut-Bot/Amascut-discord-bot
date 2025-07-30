@@ -62,7 +62,7 @@ export default class MigrateReactions extends BotInteraction {
 
         const oldActiveMessages = await readJsonFile<OldActiveMessages>(activeMessagesFilePath);
         const newActiveMessages: NewActiveMessages = {};
-        
+
         let foundCount = 0;
         let notFoundCount = 0;
         const totalMessages = Object.keys(oldActiveMessages).length;
@@ -95,10 +95,10 @@ export default class MigrateReactions extends BotInteraction {
 
             if (foundMessage) {
                 foundCount++;
-                const categories = Array.isArray(oldActiveMessages[messageId]) 
+                const categories = Array.isArray(oldActiveMessages[messageId])
                     ? oldActiveMessages[messageId] as string[]
                     : [oldActiveMessages[messageId] as string];
-                
+
                 newActiveMessages[messageId] = {
                     channelId: foundMessage.channel.id,
                     categories: categories
@@ -120,4 +120,4 @@ export default class MigrateReactions extends BotInteraction {
             await interaction.followUp({ content: 'An error occurred while writing the new active messages file. Please check the logs.', ephemeral: true });
         }
     }
-} 
+}

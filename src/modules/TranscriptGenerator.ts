@@ -153,7 +153,7 @@ export default class TranscriptGenerator {
                 messageBody += this.formatAttachment(attachment);
             });
         }
-        
+
         // Handle embeds
         if (message.embeds.length > 0) {
             message.embeds.forEach(embed => {
@@ -210,4 +210,4 @@ export default class TranscriptGenerator {
             }
         });
     }
-} 
+}

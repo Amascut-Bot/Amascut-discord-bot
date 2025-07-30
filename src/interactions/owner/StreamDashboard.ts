@@ -1,9 +1,10 @@
 import { SlashCommandBuilder } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
+import { getRoles, getChannels } from '../../GuildSpecifics';
 
 export default class StreamDashboard extends BotInteraction {
     public category = 'owner';
-    
+
     public get name(): string {
         return 'stream-dashboard';
     }
@@ -25,9 +26,9 @@ export default class StreamDashboard extends BotInteraction {
     public async run(interaction: any): Promise<void> {
         if (!interaction.inCachedGuild()) return;
 
-        const ownerRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? process.env.DEV_OWNER_ROLE! : process.env.PROD_OWNER_ROLE!;
-        const adminRoleId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? process.env.DEV_ADMIN_ROLE! : process.env.PROD_ADMIN_ROLE!;
-        
+        const ownerRoleId = getRoles(interaction.guild.id).OWNER_ROLE;
+        const adminRoleId = getRoles(interaction.guild.id).ADMIN_ROLE;
+
         const hasPermission = interaction.member.roles.cache.has(ownerRoleId) || interaction.member.roles.cache.has(adminRoleId);
 
         if (!hasPermission) {
@@ -43,11 +44,11 @@ export default class StreamDashboard extends BotInteraction {
             }
 
             await (twitchHandler as any).updateContentCreatorsDashboard();
-            
+
             await interaction.reply({ content: 'Content creators dashboard has been created/updated!', ephemeral: true });
         } catch (error) {
             console.error('Failed to create dashboard:', error);
             await interaction.reply({ content: 'Failed to create the dashboard. Check the logs for details.', ephemeral: true });
         }
     }
-} 
+}

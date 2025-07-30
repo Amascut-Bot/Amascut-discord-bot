@@ -187,4 +187,4 @@ export default class CreateNotification extends BotInteraction {
             await modalInteraction.reply({ content: 'An error occurred while saving the notification template.', ephemeral: true });
         }
     }
-} 
+}

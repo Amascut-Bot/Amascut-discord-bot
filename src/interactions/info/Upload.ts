@@ -3,6 +3,7 @@ import { Attachment, ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuil
 import { parseTree, getNodeValue, ParseError, findNodeAtOffset, Node } from 'jsonc-parser';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { getChannels } from '../../GuildSpecifics';
 
 type ParsedMessage = {
     content: string;
@@ -62,7 +63,7 @@ export default class Upload extends BotInteraction {
         return new SlashCommandBuilder()
             .setName(this.name)
             .setDescription(this.description)
-            .addAttachmentOption((option) => 
+            .addAttachmentOption((option) =>
                 option
                     .setName('file')
                     .setDescription('The text file to parse and send')
@@ -88,20 +89,20 @@ export default class Upload extends BotInteraction {
         }
 
         if (!targetChannel || !('send' in targetChannel)) {
-            return await interaction.editReply({ 
-                content: 'Invalid channel selected. Please choose a text channel.' 
+            return await interaction.editReply({
+                content: 'Invalid channel selected. Please choose a text channel.'
             });
         }
 
         if (!attachment.name?.endsWith('.txt') && attachment.contentType !== 'text/plain') {
-            return await interaction.editReply({ 
-                content: 'Please upload a valid text file (.txt).' 
+            return await interaction.editReply({
+                content: 'Please upload a valid text file (.txt).'
             });
         }
 
         if (attachment.size > 5 * 1024 * 1024) {
-            return await interaction.editReply({ 
-                content: 'File is too large. Please upload a file smaller than 5MB.' 
+            return await interaction.editReply({
+                content: 'File is too large. Please upload a file smaller than 5MB.'
             });
         }
 
@@ -134,8 +135,8 @@ export default class Upload extends BotInteraction {
             }
 
             if (!fileContent.trim()) {
-                return await interaction.editReply({ 
-                    content: 'The uploaded file is empty.' 
+                return await interaction.editReply({
+                    content: 'The uploaded file is empty.'
                 });
             }
 
@@ -168,12 +169,12 @@ export default class Upload extends BotInteraction {
             await Promise.all(uploadPromises);
 
             const sentMessageCount = parsedParts.filter(p => p.content || p.embeds.length > 0).length;
-            
-            await interaction.editReply({ 
-                content: `Successfully parsed your file. Sending ${sentMessageCount} message(s) to ${targetChannel === interaction.channel ? 'this channel' : `<#${targetChannel.id}>`}. This may take a moment...` 
+
+            await interaction.editReply({
+                content: `Successfully parsed your file. Sending ${sentMessageCount} message(s) to ${targetChannel === interaction.channel ? 'this channel' : `<#${targetChannel.id}>`}. This may take a moment...`
             });
 
-            const logChannelId = this.client.util.channels.uploadLogChannel;
+            const logChannelId = getChannels(interaction.guild?.id).uploadLogChannel;
             if (logChannelId && logChannelId !== 'YOUR_CHANNEL_ID_HERE') {
                 const logChannel = await this.client.channels.fetch(logChannelId) as TextChannel;
                 if (logChannel) {
@@ -204,25 +205,25 @@ export default class Upload extends BotInteraction {
 
                     if (finalComponents.length > 0) {
                         sentMessage = await targetChannel.send({
-                            components: finalComponents, 
-                            flags: MessageFlags.IsComponentsV2, 
+                            components: finalComponents,
+                            flags: MessageFlags.IsComponentsV2,
                             allowedMentions: { "parse": [] }
                         });
                     } else {
-                        sentMessage = await targetChannel.send({ 
+                        sentMessage = await targetChannel.send({
                             content: finalContent || undefined,
                             embeds: finalEmbeds,
                             allowedMentions: { "parse": [] }
                         });
                     }
-                    
+
                     part.sentMessage = sentMessage;
 
                     if (part.nameTag) {
                         if (!tags[targetChannel.id]) {
                             tags[targetChannel.id] = {};
                         }
-                        
+
                         const oldMessageId = Object.keys(tags[targetChannel.id]).find(
                             (msgId) => tags[targetChannel.id][msgId] === part.nameTag
                         );
@@ -245,24 +246,24 @@ export default class Upload extends BotInteraction {
                     // Always pin messages that contain Table of Contents
                     const hasTableOfContents = finalEmbeds.some(embed => embed.title && embed.title.toLowerCase().includes('table of contents'))
                                                 || components.some(comps => comps.components.some((component: any) => component.type === 10 && component.content.toLowerCase().includes('table of contents')));
-                    
+
                     if (hasTableOfContents) {
                         try {
                             await sentMessage.pin();
                             this.client.logger.log({ message: `Successfully pinned Table of Contents message ${sentMessage.id}` }, true);
-                            
+
                             // Wait a moment for Discord to create the pin notification system message
                             await new Promise(resolve => setTimeout(resolve, 1500));
-                            
+
                             // Only delete the pin notification if .pin:delete is present in the file
                             if (part.pinAndDeleteOld) {
                                 try {
                                     const messages = await targetChannel.messages.fetch({ limit: 10 });
-                                    const pinNotification = messages.find(msg => 
+                                    const pinNotification = messages.find(msg =>
                                         msg.type === 6 && // MessageType.ChannelPinnedMessage
                                         msg.createdTimestamp > sentMessage.createdTimestamp
                                     );
-                                    
+
                                     if (pinNotification) {
                                         await pinNotification.delete();
                                         this.client.logger.log({ message: `Successfully deleted pin notification system message ${pinNotification.id}` }, true);
@@ -309,13 +310,13 @@ export default class Upload extends BotInteraction {
             if (messagesToEdit.length > 0) {
                 for (const partToEdit of messagesToEdit) {
                     if (!partToEdit.sentMessage) continue;
-    
+
                     let newContent = partToEdit.content;
                     if (newContent) {
                         newContent = this.resolvePlaceholders(newContent, tagToUrlMap, { channelId: targetChannel.id });
                         newContent = this.convertEmojis(newContent, interaction);
                     }
-    
+
                     // Resolve placeholders in embeds too
                     const newEmbeds = partToEdit.embeds.map(embed => {
                         let embedString = JSON.stringify(embed);
@@ -323,7 +324,7 @@ export default class Upload extends BotInteraction {
                         const resolvedEmbed = JSON.parse(embedString);
                         return this.convertEmbedEmojis(resolvedEmbed, interaction);
                     });
-    
+
                     try {
                         await partToEdit.sentMessage.edit({
                             content: newContent || undefined,
@@ -336,7 +337,7 @@ export default class Upload extends BotInteraction {
                     }
 
             await fs.writeFile(tagsFilePath, JSON.stringify(tags, null, 2));
-            
+
             // If we get here, everything was successful with no corrections needed
             await interaction.editReply({ content: 'Your file has been uploaded successfully!' });
 
@@ -381,18 +382,18 @@ export default class Upload extends BotInteraction {
         if (text.length <= maxLength) {
             return [text];
         }
-    
+
         const chunks: string[] = [];
         let remainingText = text;
-    
+
         while (remainingText.length > 0) {
             if (remainingText.length <= maxLength) {
                 chunks.push(remainingText);
                 break;
             }
-    
+
             let splitIndex = maxLength;
-    
+
             // Prefer splitting after a complete component object.
             const componentBreak = remainingText.lastIndexOf('},\n', splitIndex);
             if (componentBreak > 0) {
@@ -404,11 +405,11 @@ export default class Upload extends BotInteraction {
                     splitIndex = lastNewline + 1;
                 }
             }
-    
+
             chunks.push(remainingText.substring(0, splitIndex));
             remainingText = remainingText.substring(splitIndex);
         }
-    
+
         return chunks;
     }
 
@@ -419,30 +420,30 @@ export default class Upload extends BotInteraction {
 
         for (const part of parsedParts) {
             if (!part.hasPlaceholders) continue;
-    
+
             const partIdentifier = part.nameTag ? `the message tagged \`${part.nameTag}\`` : `a message with no tag`;
-    
+
             const checkAndCorrect = (text: string): { corrected: string, hasErrors: boolean } => {
                 let correctedText = text;
                 let hasErrors = false;
-                
+
                 correctedText = correctedText.replace(placeholderRegex, (match, tagName) => {
                     if (definedTags.has(tagName)) {
                         return match;
                     }
-    
+
                     hasErrors = true;
                     const bestMatch = this.findBestMatch(tagName, definedTags);
                     if (bestMatch) {
                         return `$linkmsg_${bestMatch}$`;
                     }
-    
+
                     return match;
                 });
-    
+
                 return { corrected: correctedText, hasErrors };
             };
-            
+
             if (part.rawEmbeds) {
                 for (const rawEmbed of part.rawEmbeds) {
                     const result = checkAndCorrect(rawEmbed);
@@ -485,14 +486,14 @@ export default class Upload extends BotInteraction {
                 }
             }
         }
-        
+
         if (linkErrors.length > 0) {
             await interaction.editReply({ content: 'Your file has link errors and was not uploaded. See details below.' });
-        
+
             const textChunks = linkErrors.map(field => {
                 return `**Found an issue in ${field.name}:**\n${field.value}`;
             });
-        
+
             for (let i = 0; i < textChunks.length; i += 2) {
                 const chunk = textChunks.slice(i, i + 2);
                 await interaction.followUp({
@@ -500,7 +501,7 @@ export default class Upload extends BotInteraction {
                     ephemeral: true,
                 });
             }
-        
+
             return true;
         }
 
@@ -510,18 +511,18 @@ export default class Upload extends BotInteraction {
     private levenshteinDistance(s1: string, s2: string): number {
         s1 = s1.toLowerCase();
         s2 = s2.toLowerCase();
-    
+
         const track = Array(s2.length + 1).fill(null).map(() =>
             Array(s1.length + 1).fill(null)
         );
-    
+
         for (let i = 0; i <= s1.length; i++) {
             track[0][i] = i;
         }
         for (let j = 0; j <= s2.length; j++) {
             track[j][0] = j;
         }
-    
+
         for (let j = 1; j <= s2.length; j++) {
             for (let i = 1; i <= s1.length; i++) {
                 const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
@@ -537,10 +538,10 @@ export default class Upload extends BotInteraction {
 
     private findBestMatch(tag: string, availableTags: Set<string>): string | null {
         if (availableTags.size === 0) return null;
-    
+
         let bestMatch: string | null = null;
         let minDistance = Infinity;
-    
+
         for (const availableTag of availableTags) {
             const distance = this.levenshteinDistance(tag, availableTag);
             if (distance < minDistance) {
@@ -548,13 +549,13 @@ export default class Upload extends BotInteraction {
                 bestMatch = availableTag;
             }
         }
-    
+
         // A match is considered good if its distance is less than half the length
         // of the correct tag. This is a simple heuristic to avoid wildly wrong suggestions.
         if (bestMatch && minDistance <= bestMatch.length / 2) {
             return bestMatch;
         }
-    
+
         return null;
     }
 
@@ -588,7 +589,7 @@ export default class Upload extends BotInteraction {
             }
             currentMessage = { content: '', embeds: [], rawEmbeds: [], components: [], rawComponents: [] };
         };
-        
+
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const trimmedLine = line.trim();
@@ -622,28 +623,28 @@ export default class Upload extends BotInteraction {
                 let jsonBlock = '';
                 let foundJsonBackwards = false;
                 const isComponentsV2 = trimmedLine.startsWith('.componentsV2:json');
-                
+
                 // Check if there's a JSON block before this directive
                 for (let k = i - 1; k >= 0; k--) {
                     const prevLine = lines[k].trim();
-                    
+
                     if (prevLine === '') continue;
-                    
+
                     if (prevLine === '.' || (prevLine.startsWith('.') && (!prevLine.startsWith('.embed:json') || !prevLine.startsWith('.componentsV2:json')))) break;
-                    
+
                     if (prevLine.endsWith('}')) {
                         let braceCount = 0;
                         let jsonLines: string[] = [];
-                        
+
                         for (let j = k; j >= 0; j--) {
                             const jsonLine = lines[j];
                             jsonLines.unshift(jsonLine);
-                            
+
                             for (const char of jsonLine) {
                                 if (char === '}') braceCount++;
                                 if (char === '{') braceCount--;
                             }
-                            
+
                             if (braceCount === 0 && jsonLine.trim().startsWith('{')) {
                                 jsonBlock = jsonLines.join('\n').trim();
                                 foundJsonBackwards = true;
@@ -653,12 +654,12 @@ export default class Upload extends BotInteraction {
                         break;
                     }
                 }
-                
+
                 // If no JSON found backwards, look forwards.
                 if (!foundJsonBackwards) {
                     let braceCount = 0;
                     let inJson = false;
-        
+
                     for (let j = i + 1; j < lines.length; j++) {
                         const jsonLine = lines[j];
                         if (!inJson) {
@@ -668,14 +669,14 @@ export default class Upload extends BotInteraction {
                                 continue;
                             }
                         }
-        
+
                         if (inJson) {
                             jsonBlock += jsonLine + '\n';
                             for (const char of jsonLine) {
                                 if (char === '{') braceCount++;
                                 if (char === '}') braceCount--;
                             }
-        
+
                             if (braceCount === 0 && jsonBlock.trim()) {
                                 i = j; // Skip to end of JSON block
                                 break;
@@ -683,7 +684,7 @@ export default class Upload extends BotInteraction {
                         }
                     }
                 }
-                
+
                 if (jsonBlock.trim()) {
                     const isComponentsV2 = trimmedLine.startsWith('.componentsV2:json');
                     const { errors, correctedData, rawData } = this.processJsonBlock(jsonBlock, i + 1);
@@ -706,17 +707,17 @@ export default class Upload extends BotInteraction {
                 let jsonBlock = '';
                 let braceCount = 0;
                 let jsonStartLine = i;
-                
+
                 // Collect the entire JSON block
                 for (let j = i; j < lines.length; j++) {
                     const jsonLine = lines[j];
                     jsonBlock += jsonLine + '\n';
-                    
+
                     for (const char of jsonLine) {
                         if (char === '{') braceCount++;
                         if (char === '}') braceCount--;
                     }
-                    
+
                     if (braceCount === 0) {
                         // Check if next line is .embed:json
                         if (j + 1 < lines.length && lines[j + 1].trim() === '.embed:json') {
@@ -738,10 +739,10 @@ export default class Upload extends BotInteraction {
                 finalizeCurrentMessage();
                 continue;
             }
-            
+
             currentMessage.content += (currentMessage.content ? '\n' : '') + line;
         }
-        
+
         finalizeCurrentMessage();
 
         if (allParsingErrors.length > 0) {
@@ -769,7 +770,7 @@ export default class Upload extends BotInteraction {
                 correctedJson = correctedJson.slice(0, errorOffset) + ',' + correctedJson.slice(errorOffset);
                 offsetCorrection++;
             }
-            
+
             const summary = `Summary: Fixed ${fixableCommaErrors.length} missing comma(s) in your file.`;
             let formattedCorrectedJson;
             try {
@@ -784,7 +785,7 @@ export default class Upload extends BotInteraction {
                 summary: summary,
                 correctedCode: formattedCorrectedJson,
             });
-            
+
             const finalRoot = parseTree(formattedCorrectedJson);
             if(finalRoot) {
                 let embedData = getNodeValue(finalRoot);
@@ -818,7 +819,7 @@ export default class Upload extends BotInteraction {
                     embedData = embedData.embed;
                 }
                 const { correctedData, corrections: structuralCorrections } = this.validateAndCorrectEmbedStructure(embedData);
-                
+
                 if (structuralCorrections.length > 0) {
                     const summary = `The following errors were fixed:\n- ${structuralCorrections.join('\n- ')}`;
                     allParsingErrors.push({
@@ -830,7 +831,7 @@ export default class Upload extends BotInteraction {
 
                 finalCorrectedData = correctedData;
                 finalRawData = embedJson;
-            }                    
+            }
         }
 
         return { errors: allParsingErrors, correctedData: finalCorrectedData, rawData: finalRawData };
@@ -842,24 +843,24 @@ export default class Upload extends BotInteraction {
 
     private resolvePlaceholders(text: string, tagMap: Map<string, string>, dynamicData: { channelId: string }): string {
         if (!text) return text;
-    
+
         let resolvedText = text.replace(/\{\{channel:id\}\}/g, dynamicData.channelId);
 
         const linkPlaceholderRegex = /\$linkmsg_([^$]+)\$/g;
         resolvedText = resolvedText.replace(linkPlaceholderRegex, (match, tagName) => {
             return tagMap.get(tagName) || match;
         });
-    
+
         return resolvedText;
     }
 
     private convertEmbedEmojis(embed: any, interaction: ChatInputCommandInteraction): any {
         if (!embed || typeof embed !== 'object') return embed;
-        
+
         const newEmbed = JSON.parse(JSON.stringify(embed));
-    
+
         const convert = (text: string) => text ? this.convertEmojis(text, interaction) : text;
-    
+
         if (newEmbed.title) newEmbed.title = convert(newEmbed.title);
         if (newEmbed.description) newEmbed.description = convert(newEmbed.description);
         if (newEmbed.author?.name) newEmbed.author.name = convert(newEmbed.author.name);
@@ -870,11 +871,11 @@ export default class Upload extends BotInteraction {
                 if (field.value) field.value = convert(field.value);
             });
         }
-    
+
         return newEmbed;
     }
 
-    private convertComponentsV2Emojis(container: any, interaction: ChatInputCommandInteraction): any {        
+    private convertComponentsV2Emojis(container: any, interaction: ChatInputCommandInteraction): any {
         if (!container || typeof container !== 'object') return container;
 
         const newContainer = JSON.parse(JSON.stringify(container));
@@ -929,7 +930,7 @@ export default class Upload extends BotInteraction {
         if (correctedData.thumbnail) validateUrlField(correctedData.thumbnail, 'thumbnail');
         if (correctedData.image) validateUrlField(correctedData.image, 'image');
         if (correctedData.author) validateUrlField(correctedData.author, 'author');
-        
+
         return { correctedData, corrections };
     }
-} 
+}

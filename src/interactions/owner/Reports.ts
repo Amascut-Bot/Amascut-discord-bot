@@ -18,16 +18,16 @@ export default class Pass extends BotInteraction {
     get permissions() {
         return 'ELEVATED_ROLE';
     }
-    
+
 
     public getReportsForUser = async (user: User) => {
         const { dataSource } = this.client;
         const repository = dataSource.getRepository(Report);
         const reports = await repository.find({
-            where: { 
+            where: {
                 reportedUser: `<@${user.id}>`,
                 expired: false
-            } 
+            }
         });
         const structuredReports: StructuredReports = {};
         reports.forEach((report: Report) => {

@@ -1,5 +1,6 @@
 import { GuildChannel, Message } from 'discord.js';
 import Bot from '../Bot';
+import { getRoles, getChannels } from '../GuildSpecifics';
 
 export default class AutoTriggerHandler {
     private client: Bot;
@@ -15,6 +16,11 @@ export default class AutoTriggerHandler {
         'Your soul is WEAK.',
         'I will not be denied.',
         'It is NOT over!'
+    ];
+
+    private static readonly meowMessages = [
+        'Do you believe yourself to be amusing, pest? Or do you long for annihilation so dearly?',
+        'Again with this insolence?'
     ];
 
     constructor(client: Bot) {
@@ -51,7 +57,7 @@ export default class AutoTriggerHandler {
         if (/\bmeow/i.test(message.content)) triggered = true;
 
         if (triggered && Math.floor(Math.random() * AutoTriggerHandler.TAUNT_CHANCE) === 0) {
-            await message.reply('Do you believe yourself to be amusing, pest? Or do you long for annihilation so dearly?');
+            await message.reply(AutoTriggerHandler.meowMessages[Math.floor(Math.random() * AutoTriggerHandler.meowMessages.length)]);
             return true;
         }
 
@@ -66,7 +72,7 @@ export default class AutoTriggerHandler {
 
         if (Math.floor(Math.random() * AutoTriggerHandler.MEOW_REPLY_CHANCE) === 0) {
             const emoji = this.client.emojiCache.get('meow');
-            const roleId = process.env.MEOW_ROLE_ID || '1390696959630774302';
+            const roleId = this.client.util.stripRole(getRoles(message.guild?.id).MEOW_ROLE);
             const role = await message.guild!.roles.fetch(roleId);
 
             if (emoji && role && message.member && !message.member.roles.cache.has(roleId)) {

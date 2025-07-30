@@ -5,8 +5,9 @@ import TranscriptGenerator from './TranscriptGenerator';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { Ticket } from '../entity/Ticket';
+import { getRoles, getChannels } from '../GuildSpecifics';
 
-const ticketTranscriptChannelId = process.env.ENVIRONMENT === 'DEVELOPMENT' ? `${process.env.DEV_TICKET_TRANSCRIPT_CHANNEL}` : `${process.env.PROD_TICKET_TRANSCRIPT_CHANNEL}`;
+const ticketTranscriptChannelId = getChannels(process.env.GUILD_ID).TICKET_TRANSCRIPT_CHANNEL;
 
 export default interface TicketHandler { client: Bot; id: string; interaction: Interaction }
 
@@ -322,8 +323,8 @@ export default class TicketHandler {
             if (!ticketUserId) {
                 for (const [id, overwrite] of channel.permissionOverwrites.cache) {
                     if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
-                        const adminRoleId = this.client.util.stripRole(this.client.util.roles.admin);
-                        const ownerRoleId = this.client.util.stripRole(this.client.util.roles.owner);
+                        const adminRoleId = this.client.util.stripRole(getRoles(interaction.guild?.id).admin);
+                        const ownerRoleId = this.client.util.stripRole(getRoles(interaction.guild?.id).owner);
 
                         if (id !== adminRoleId && id !== ownerRoleId && id !== this.client.user?.id) {
                             ticketUserId = id;
@@ -858,8 +859,8 @@ export default class TicketHandler {
 
         for (const [id, overwrite] of channel.permissionOverwrites.cache) {
             if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
-                const isAdmin = id === this.client.util.stripRole(this.client.util.roles.admin);
-                const isOwner = id === this.client.util.stripRole(this.client.util.roles.owner);
+                const isAdmin = id === this.client.util.stripRole(getRoles(channel.guild?.id).admin);
+                const isOwner = id === this.client.util.stripRole(getRoles(channel.guild?.id).owner);
                 const isBot = id === this.client.user?.id;
 
                 if (!isAdmin && !isOwner && !isBot) {
@@ -1086,11 +1087,11 @@ export default class TicketHandler {
     public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number): Promise<TextChannel | null> {
         try {
             const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
-            const { roles, stripRole } = this.client.util
+            const { stripRole } = this.client.util
 
             // Get admin and owner role IDs
-            const adminRoleId = stripRole(roles.admin);
-            const ownerRoleId = stripRole(roles.owner);
+            const adminRoleId = stripRole(getRoles(guild?.id).admin);
+            const ownerRoleId = stripRole(getRoles(guild?.id).owner);
 
             // Create the channel with proper permissions
             const channel = await guild.channels.create({
@@ -1157,9 +1158,9 @@ export default class TicketHandler {
 
     public async sendTicketWelcomeMessage(channel: TextChannel, userId: string, ticketType: string, formData: any): Promise<void> {
         try {
-            const { roles, colours, capitalizeFirstLetter } = this.client.util
-            const adminRole = roles.admin;
-            const ownerRole = roles.owner;
+            const { colours, capitalizeFirstLetter } = this.client.util
+            const adminRole = getRoles(channel.guild?.id).admin;
+            const ownerRole = getRoles(channel.guild?.id).owner;
 
             // Create welcome message
             const welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;

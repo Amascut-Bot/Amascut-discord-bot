@@ -1,3 +1,4 @@
+import { getChannels, getRoles } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, SlashCommandBuilder, User, Role, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
@@ -83,9 +84,9 @@ export default class Pass extends BotInteraction {
         const userResponse: User = interaction.options.getUser('user', true);
         const role: string = interaction.options.getString('role', true);
 
-        const { roles, colours, channels, stripRole, categorizeChannel, categorize } = this.client.util;
+        const { colours, stripRole, categorizeChannel, categorize } = this.client.util;
 
-        const outputChannelId = categorizeChannel(role) ? channels[categorizeChannel(role)] : '';
+        const outputChannelId = categorizeChannel(role) ? getChannels(interaction.guild?.id)[categorizeChannel(role)] : '';
         let channel;
         if (outputChannelId) {
             channel = await this.client.channels.fetch(outputChannelId) as TextChannel;
@@ -96,7 +97,7 @@ export default class Pass extends BotInteraction {
 
         let sendMessage = false;
         let anyAdditionalRole;
-        const roleObject = await interaction.guild?.roles.fetch(stripRole(roles[role])) as Role;
+        const roleObject = await interaction.guild?.roles.fetch(stripRole(getRoles(interaction.guild?.id)[role])) as Role;
         let embedColour = colours.discord.green;
 
         const hasHigherRole = (role: string) => {
@@ -106,7 +107,7 @@ export default class Pass extends BotInteraction {
                 if (!categorizedHierarchy) return false;
                 const sliceFromIndex: number = categorizedHierarchy.indexOf(role) + 1;
                 const hierarchyList = categorizedHierarchy.slice(sliceFromIndex);
-                const hierarchyIdList = hierarchyList.map((item: string) => stripRole(roles[item]));
+                const hierarchyIdList = hierarchyList.map((item: string) => stripRole(getRoles(interaction.guild?.id)[item]));
                 const intersection = hierarchyIdList.filter((roleId: string) => userRoles.includes(roleId));
                 if (intersection.length === 0) {
                     return false
@@ -117,7 +118,7 @@ export default class Pass extends BotInteraction {
             catch (err) { return false }
         }
 
-        const roleId = stripRole(roles[role]);
+        const roleId = stripRole(getRoles(interaction.guild?.id)[role]);
         if (!hasHigherRole(role)) await user?.roles.add(roleId);
         embedColour = roleObject.color;
         if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
@@ -125,7 +126,7 @@ export default class Pass extends BotInteraction {
         }
         if (role in this.removeHierarchy) {
             for await (const roleToRemove of this.removeHierarchy[role]) {
-                const removeRoleId = stripRole(roles[roleToRemove]);
+                const removeRoleId = stripRole(getRoles(interaction.guild?.id)[roleToRemove]);
                 if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
             };
         }
@@ -140,15 +141,15 @@ export default class Pass extends BotInteraction {
             .setTimestamp()
             .setColor(embedColour)
             .setDescription(`
-            Congratulations to <@${userResponse.id}> on achieving ${roles[role]}!
-            ${anyAdditionalRole ? `By achieving this role, they are also awarded ${roles[anyAdditionalRole]}!` : ''}
+            Congratulations to <@${userResponse.id}> on achieving ${getRoles(interaction.guild?.id)[role]}!
+            ${anyAdditionalRole ? `By achieving this role, they are also awarded ${getRoles(interaction.guild?.id)[anyAdditionalRole]}!` : ''}
             `);
         if (sendMessage && channel) await channel.send({ embeds: [embed] }).then(message => {
             returnedMessage.id = message.id;
             returnedMessage.url = message.url;
         });
 
-        const logChannel = await this.client.channels.fetch(channels.botRoleLog) as TextChannel;
+        const logChannel = await this.client.channels.fetch(getChannels(interaction.guild?.id).botRoleLog) as TextChannel;
         const buttonRow = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
                 new ButtonBuilder()
@@ -160,8 +161,8 @@ export default class Pass extends BotInteraction {
             .setTimestamp()
             .setColor(embedColour)
             .setDescription(`
-            ${roles[role]} was assigned to <@${userResponse.id}> by <@${interaction.user.id}>.
-            ${anyAdditionalRole ? `${roles[anyAdditionalRole]} was also assigned.\n` : ''}
+            ${getRoles(interaction.guild?.id)[role]} was assigned to <@${userResponse.id}> by <@${interaction.user.id}>.
+            ${anyAdditionalRole ? `${getRoles(interaction.guild?.id)[anyAdditionalRole]} was also assigned.\n` : ''}
             **Message**: [${returnedMessage.id}](${returnedMessage.url})
             `);
         if (sendMessage) await logChannel.send({ embeds: [logEmbed], components: [buttonRow] });
@@ -171,8 +172,8 @@ export default class Pass extends BotInteraction {
             .setColor(sendMessage ? colours.discord.green : colours.discord.red)
             .setDescription(sendMessage ? `
             **Member:** <@${userResponse.id}>
-            **Role:** ${roles[role]}
-            ${anyAdditionalRole ? `**Additional Roles:** ${roles[anyAdditionalRole]}` : ''}
+            **Role:** ${getRoles(interaction.guild?.id)[role]}
+            ${anyAdditionalRole ? `**Additional Roles:** ${getRoles(interaction.guild?.id)[anyAdditionalRole]}` : ''}
             ` : `This user either has this role, or a higher level role.`);
         await interaction.editReply({ embeds: [replyEmbed] });
     }

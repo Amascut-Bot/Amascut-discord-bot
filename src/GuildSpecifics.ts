@@ -1,0 +1,244 @@
+interface Channels {
+    [channelName: string]: string;
+}
+
+interface Roles {
+    [roleName: string]: string;
+}
+
+export function getChannels(guildId: string | undefined) : Channels {
+    let result = {}
+
+    //AGOD Bot Testing (Alex)
+    if (guildId === '856557117832691752') {
+        result =  {
+            TWITCH_NOTIFICATION_CHANNEL: '000000000000000000',
+            roleConfirmations: '000000000000000000',
+            achievementsAndLogs: '000000000000000000',
+            botRoleLog: '000000000000000000',
+            reportLog: '000000000000000000',
+            tempVCCategory: '000000000000000000',
+            tempVCCreate: '000000000000000000',
+            dpmCalc: '000000000000000000',
+            trialScheduling: '000000000000000000',
+            reaperScheduling: '000000000000000000',
+            reaperSquad: '000000000000000000',
+            uploadLogChannel: '000000000000000000',
+            botAssetChannel: '000000000000000000',
+            TICKET_TRANSCRIPT_CHANNEL: '1397705706358050948',
+            MUSIC_CHANNEL: '000000000000000000',
+            CUTE_PETS_CHANNEL: '000000000000000000',
+            LOG_CHANNEL_ID: '000000000000000000',
+            ADMIN_CHANNEL: '000000000000000000',
+        }
+    }
+
+    //AGOD Bot Testing (Patze)
+    if (guildId === '1391860635347849367') {
+        result = {
+            TWITCH_NOTIFICATION_CHANNEL: '1391860639063871581',
+            roleConfirmations: '1391860638577594521',
+            achievementsAndLogs: '1391860638577594528',
+            botRoleLog: '1391860640674484227',
+            reportLog: '1391860641316343983',
+            tempVCCategory: '1391860639584096317',
+            tempVCCreate: '1391860639584096318',
+            dpmCalc: '1391860639063871582',
+            trialScheduling: '000000000000000000',
+            reaperScheduling: '000000000000000000',
+            reaperSquad: '000000000000000000',
+            uploadLogChannel: '1391860641916260488',
+            botAssetChannel: '1391860641916260488',
+            TICKET_TRANSCRIPT_CHANNEL: '1397705706358050948',
+            MUSIC_CHANNEL: '1399769752246816841',
+            CUTE_PETS_CHANNEL: '1391860639063871579',
+            LOG_CHANNEL_ID: '1391860640674484228',
+            ADMIN_CHANNEL: '1391860637369372764',
+        }
+    }
+
+    //Amascut, Goddess of Destruction
+    if (guildId === '885457551397912596') {
+        result = {
+            TWITCH_NOTIFICATION_CHANNEL: '1390391961172836494',
+            roleConfirmations: '1389392006891045116',
+            achievementsAndLogs: '1389393398829682739',
+            botRoleLog: '1389412380626255872',
+            reportLog: '1389416667393556640',
+            tempVCCategory: '885457551397912598',
+            tempVCCreate: '1389392880518566138',
+            dpmCalc: '1389379617915408448',
+            trialScheduling: '000000000000000000',
+            reaperScheduling: '000000000000000000',
+            reaperSquad: '000000000000000000',
+            uploadLogChannel: '1389412380626255872',
+            botAssetChannel: '1389417236367933470',
+            TICKET_TRANSCRIPT_CHANNEL: '1390801555724308591',
+            MUSIC_CHANNEL: '1393623447212527769',
+            CUTE_PETS_CHANNEL: '1389643125408010290',
+            LOG_CHANNEL_ID: '1389413228794216648',
+            ADMIN_CHANNEL: '1389379617915408448',
+        }
+    }
+
+    return result;
+}
+
+export function getRoles(guildId: string | undefined) : Roles {
+    let result = {};
+
+    //AGOD Bot Testing (Alex)
+    if (guildId === '856557117832691752') {
+        result = {
+            owner: '885457712710828043',
+            admin: '00000000000000000',
+            duoMaster: '00000000000000000',
+            threeSevenMaster: '00000000000000000',
+            master: '00000000000000000',
+            solakAddict: '00000000000000000',
+            trialTeam: '00000000000000000',
+            duoRootskips: '000000000000000000',
+            threeSevenRootskips: '000000000000000000',
+            rootskips: '0000000000000000000',
+            noRealm: '000000000000000000',
+            duoExperienced: '000000000000000000',
+            threeSevenExperienced: '000000000000000000',
+            experienced: '000000000000000000',
+            teacher: '000000000000000000',
+            learner: '000000000000000000',
+            community: '000000000000000000',
+            booster: '000000000000000000',
+            nitroBooster: '000000000000000000',
+            cosmetic: '000000000000000000',
+            participant: '000000000000000000',
+            reaper: '00000000000000000',
+            tank: '000000000000000000',
+            dps: '000000000000000000',
+            support: '000000000000000000',
+            learnerOfTheWeek: '000000000000000000',
+            staff: '000000000000000000',
+            moderator: '000000000000000000',
+            solak: '000000000000000000',
+            tempRole: '000000000000000000',
+            tankNotNeeded: '000000000000000000',
+            dpsNotNeeded: '000000000000000000',
+            supportNotNeeded: '000000000000000000',
+            learners: '000000000000000000',
+            learnersNotNeeded: '000000000000000000',
+            adept: '000000000000000000',
+            mastery: '000000000000000000',
+            extreme: '000000000000000000',
+            CONTENT_CREATOR_ROLE: '00000000000000000',
+            LIVE_ROLE: '00000000000000000',
+            TWITCH_NOTIFICATION_ROLE: '00000000000000000',
+            MEOW_ROLE: '00000000000000000',
+            serverAnnouncements: '000000000000000000',
+            goodMorning: '000000000000000000',
+            member: '000000000000000000',
+        }
+    }
+
+    //AGOD Bot Testing (Patze)
+    if (guildId === '1391860635347849367') {
+        result = {
+            owner: '1391860635507363886',
+            admin: '1391860635507363883',
+            duoMaster: '00000000000000000',
+            threeSevenMaster: '00000000000000000',
+            master: '00000000000000000',
+            solakAddict: '00000000000000000',
+            trialTeam: '1391860635347849375',
+            duoRootskips: '000000000000000000',
+            threeSevenRootskips: '000000000000000000',
+            rootskips: '0000000000000000000',
+            noRealm: '000000000000000000',
+            duoExperienced: '000000000000000000',
+            threeSevenExperienced: '000000000000000000',
+            experienced: '000000000000000000',
+            teacher: '000000000000000000',
+            learner: '000000000000000000',
+            community: '000000000000000000',
+            booster: '000000000000000000',
+            nitroBooster: '000000000000000000',
+            cosmetic: '000000000000000000',
+            participant: '000000000000000000',
+            reaper: '1391860635347849374',
+            tank: '000000000000000000',
+            dps: '000000000000000000',
+            support: '000000000000000000',
+            learnerOfTheWeek: '000000000000000000',
+            staff: '000000000000000000',
+            moderator: '000000000000000000',
+            solak: '000000000000000000',
+            tempRole: '000000000000000000',
+            tankNotNeeded: '000000000000000000',
+            dpsNotNeeded: '000000000000000000',
+            supportNotNeeded: '000000000000000000',
+            learners: '000000000000000000',
+            learnersNotNeeded: '000000000000000000',
+            adept: '000000000000000000',
+            mastery: '000000000000000000',
+            extreme: '000000000000000000',
+            CONTENT_CREATOR_ROLE: '1391860635456901393',
+            LIVE_ROLE: '1391860635456901398',
+            TWITCH_NOTIFICATION_ROLE: '1391860635347849376',
+            MEOW_ROLE: '1391860635456901395',
+            serverAnnouncements: '000000000000000000',
+            goodMorning: '000000000000000000',
+            member: '1391860635406700566',
+        }
+    }
+
+    //Amascut, Goddess of Destruction
+    if (guildId === '885457551397912596') {
+        result = {
+            owner: '1389387255386341386',
+            admin: '1389526658167603230',
+            duoMaster: '000000000000000000',
+            threeSevenMaster: '000000000000000000',
+            master: '000000000000000000',
+            solakAddict: '000000000000000000',
+            trialTeam: '1390444778738684065',
+            duoRootskips: '000000000000000000',
+            threeSevenRootskips: '000000000000000000',
+            rootskips: '000000000000000000',
+            noRealm: '000000000000000000',
+            duoExperienced: '000000000000000000',
+            threeSevenExperienced: '000000000000000000',
+            experienced: '000000000000000000',
+            teacher: '000000000000000000',
+            learner: '000000000000000000',
+            community: '000000000000000000',
+            booster: '000000000000000000',
+            nitroBooster: '000000000000000000',
+            cosmetic: '000000000000000000',
+            participant: '000000000000000000',
+            reaper: '1390444833537130568',
+            tank: '000000000000000000',
+            dps: '000000000000000000',
+            support: '000000000000000000',
+            learnerOfTheWeek: '000000000000000000',
+            staff: '000000000000000000',
+            moderator: '000000000000000000',
+            solak: '000000000000000000',
+            tempRole: '000000000000000000',
+            tankNotNeeded: '000000000000000000',
+            dpsNotNeeded: '000000000000000000',
+            supportNotNeeded: '000000000000000000',
+            learners: '000000000000000000',
+            learnersNotNeeded: '000000000000000000',
+            adept: '000000000000000000',
+            mastery: '000000000000000000',
+            extreme: '000000000000000000',
+            CONTENT_CREATOR_ROLE: '1390007451482587216',
+            LIVE_ROLE: '1390396115148476426',
+            TWITCH_NOTIFICATION_ROLE: '1390408053114933381',
+            MEOW_ROLE: '1390696959630774302',
+            serverAnnouncements: '000000000000000000',
+            goodMorning: '000000000000000000',
+            member: '1389655724946100345',
+        }
+    }
+
+    return Object.fromEntries(Object.entries(result).map(([key, value]) => [key, `<@&${value}>`]));
+}
