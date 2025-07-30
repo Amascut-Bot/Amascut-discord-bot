@@ -54,13 +54,13 @@ export default class GuildMemberAdd extends BotEvent {
                     .setThumbnail(member.user.displayAvatarURL())
                     .setTimestamp();
 
-                const rolesToPing = [getRoles(adminChannel.guild.id).owner, getRoles(adminChannel.guild.id).admin];
+                const rolesToPing = [this.client.util.stripRole(getRoles(adminChannel.guild.id).owner), this.client.util.stripRole(getRoles(adminChannel.guild.id).admin)];
                 const pingContent = rolesToPing.map(id => `<@&${id}>`).join(' ');
                 await adminChannel.send({ content: pingContent, embeds: [embed] });
             }
         }
 
-        const roleId = getRoles(member.guild.id).member;
+        const roleId = this.client.util.stripRole(getRoles(member.guild.id).member);
         let role: Role | null | undefined;
 
         try {
