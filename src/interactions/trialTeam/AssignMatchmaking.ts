@@ -266,6 +266,16 @@ export default class Pass extends BotInteraction {
         if (sendMessage && channel) await channel.send({ embeds: [embed] }).then(message => {
             returnedMessage.id = message.id;
             returnedMessage.url = message.url;
+
+            const emojis = ['Pog', 'gz'];
+
+            for (let index = 0; index < emojis.length; index++) {
+                const emoji = this.client.emojiCache.get(emojis[index]);
+
+                if (emoji) {
+                    message.react(emoji);
+                }
+            }
         });
 
         const logChannel = await this.client.channels.fetch('1045192967754883172') as TextChannel;

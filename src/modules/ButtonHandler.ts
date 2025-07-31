@@ -466,6 +466,16 @@ export default class ButtonHandler {
         if (sendMessage && channel) await channel.send({ embeds: [embed] }).then(message => {
             returnedMessage.id = message.id;
             returnedMessage.url = message.url;
+
+            const emojis = ['Pog', 'gz'];
+
+            for (let index = 0; index < emojis.length; index++) {
+                const emoji = this.client.emojiCache.get(emojis[index]);
+
+                if (emoji) {
+                    message.react(emoji);
+                }
+            }
         });
 
         const logChannel = await this.client.channels.fetch(getChannels(interaction.guild?.id).botRoleLog) as TextChannel;
@@ -1162,7 +1172,17 @@ export default class ButtonHandler {
                         .setColor(this.client.color)
                         .setDescription(`Congratulations to <@${submission.userId}> on achieving <@&${submission.roleId}>!`);
 
-                    await announcementChannel.send({ embeds: [roleEmbed] });
+                    const message = await announcementChannel.send({ embeds: [roleEmbed] });
+
+                    const emojis = ['Pog', 'gz'];
+
+                    for (let index = 0; index < emojis.length; index++) {
+                        const emoji = await this.client.emojiCache.get(emojis[index]);
+
+                        if (emoji) {
+                            await message.react(emoji);
+                        }
+                    }
                 }
 
                 if (positionInfo && positionInfo.position <= 3) {
@@ -1179,7 +1199,17 @@ export default class ButtonHandler {
                         .setTimestamp()
                         .setColor(this.client.color);
 
-                    await announcementChannel.send({ embeds: [positionEmbed] });
+                    const message = await announcementChannel.send({ embeds: [positionEmbed] });
+
+                    const emojis = ['Pog', 'gz'];
+
+                    for (let index = 0; index < emojis.length; index++) {
+                        const emoji = await this.client.emojiCache.get(emojis[index]);
+
+                        if (emoji) {
+                            await message.react(emoji);
+                        }
+                    }
                 }
             }
 
