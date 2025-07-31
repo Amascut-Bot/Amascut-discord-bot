@@ -120,7 +120,7 @@ export default class Pass extends BotInteraction {
 
         const roleId = stripRole(getRoles(interaction.guild?.id)[role]);
         if (!hasHigherRole(role)) await user?.roles.add(roleId);
-        embedColour = roleObject.color;
+        embedColour = roleObject.color ?? this.client.color;
         if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
             sendMessage = true;
         }

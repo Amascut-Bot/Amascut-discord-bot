@@ -131,7 +131,7 @@ export default class ReaperLeaderboard extends BotInteraction {
         const embed = new EmbedBuilder()
             .setTimestamp()
             .setTitle(`Amascut Reaper Team Leaderboard - ${timespan}`)
-            .setColor(colours.tan)
+            .setColor(this.client.color)
             .setDescription(`> There has been **${totalReapers}** reaper${totalReapers !== 1 ? 's' : ''} recorded and **${reapersParticipated.length}** unique ${getRoles(interaction.guild?.id).reaper} members!`)
             .addFields(
                 { name: 'Reapers Hosted', value: this.createFieldFromArray(reapersHosted.slice(0, 10)), inline: true },

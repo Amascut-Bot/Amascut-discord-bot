@@ -4,6 +4,7 @@ import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import TempChannelManager from '../modules/TempVCHandler';
 import { getChannels } from '../GuildSpecifics';
+import BossRevenue from '../interactions/info/BossRevenue';
 export default class Ready extends BotEvent {
     get name(): string {
         return 'ready';
@@ -69,5 +70,9 @@ export default class Ready extends BotEvent {
 
         // Start Twitch Monitoring
         this.client.twitchHandler.startMonitoring();
+
+        // Start Boss Revenue Auto-Updater
+        BossRevenue.startAutoUpdater(this.client);
+        this.client.logger.log({ message: 'Boss Revenue auto-updater started (10-minute intervals)' }, true);
     }
 }
