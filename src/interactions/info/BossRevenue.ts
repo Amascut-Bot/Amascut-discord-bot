@@ -121,17 +121,20 @@ export default class BossRevenue extends BotInteraction {
 
     private async calculateRakshaRevenue(): Promise<BossRevenueData> {
         const dropTable = await this.fetchRakshaDropTable();
+        if (dropTable.length === 0) {
+            throw new Error('Unable to fetch drop table data');
+        }
+
         const config = this.loadBossConfig();
         const killsPerHour = config.kph;
         const itemPrices = await this.getItemPrices(dropTable.map(item => item.name));
-
         const regularDrops = dropTable.filter(drop => !drop.isUnique);
         const uniqueDrops = dropTable.filter(drop => drop.isUnique);
 
         let regularValue = 0;
         for (const drop of regularDrops) {
             const price = itemPrices[drop.name];
-            if (price !== undefined) {
+            if (price !== undefined && price > 0) {
                 const dropValue = (price * drop.quantity) / drop.rarity;
                 regularValue += dropValue;
             }
@@ -140,7 +143,7 @@ export default class BossRevenue extends BotInteraction {
         let overallValue = regularValue;
         for (const drop of uniqueDrops) {
             const price = itemPrices[drop.name];
-            if (price !== undefined) {
+            if (price !== undefined && price > 0) {
                 const dropValue = (price * drop.quantity) / drop.rarity;
                 overallValue += dropValue;
             }
@@ -161,77 +164,175 @@ export default class BossRevenue extends BotInteraction {
 
     private async fetchRakshaDropTable(): Promise<DropTableItem[]> {
         try {
-            const moneyMakingUrl = 'https://runescape.wiki/w/Money_making_guide/Killing_Raksha';
-            const response = await axios.get(moneyMakingUrl, {
+            // Use the main Raksha page which has the actual drop table, not the money making guide
+            const rakshaUrl = 'https://runescape.wiki/w/Raksha,_the_Shadow_Colossus';
+            const response = await axios.get(rakshaUrl, {
                 headers: {
                     'User-Agent': 'Amascut Discord Bot - Boss Revenue Calculator'
                 },
                 timeout: 15000
             });
 
-            const dropTable = this.parseMoneyMakingGuide(response.data);
-            return dropTable.length > 0 ? dropTable : this.getFallbackDropTable();
+            return this.parseRakshaDropTable(response.data);
 
         } catch (error) {
-            return this.getFallbackDropTable();
+            return [];
         }
     }
 
-    private parseMoneyMakingGuide(html: string): DropTableItem[] {
-        return [
-            { name: 'Arbuck seed', quantity: 3, rarity: 16.67, isUnique: false },
-            { name: 'Ciku seed', quantity: 2.5, rarity: 25, isUnique: false },
-            { name: 'Dark animica stone spirit', quantity: 65, rarity: 12.5, isUnique: false },
-            { name: 'Light animica stone spirit', quantity: 65, rarity: 12.5, isUnique: false },
-            { name: 'Primal stone spirit', quantity: 18.5, rarity: 16.67, isUnique: false },
-            { name: 'Small blunt rune salvage', quantity: 18.5, rarity: 10, isUnique: false },
-            { name: 'Medium spiky orikalkum salvage', quantity: 5, rarity: 12.5, isUnique: false },
-            { name: 'Huge plated orikalkum salvage', quantity: 7, rarity: 16.67, isUnique: false },
-            { name: 'Black dragonhide', quantity: 250, rarity: 10, isUnique: false },
-            { name: 'Onyx dust', quantity: 29, rarity: 25, isUnique: false },
-            { name: 'Dinosaur bones', quantity: 80, rarity: 10, isUnique: false },
-            { name: 'Crystal key', quantity: 12, rarity: 10, isUnique: false },
-            { name: 'Catalytic anima stone', quantity: 50, rarity: 8.33, isUnique: false },
-            { name: 'Soul rune', quantity: 150, rarity: 16.67, isUnique: false },
-            { name: 'Fleeting boots', quantity: 1, rarity: 130, isUnique: true },
-            { name: 'Shadow spike', quantity: 1, rarity: 325, isUnique: true },
-            { name: 'Greater Ricochet ability codex', quantity: 1, rarity: 325, isUnique: true },
-            { name: 'Greater Chain ability codex', quantity: 1, rarity: 325, isUnique: true },
-            { name: 'Divert ability codex', quantity: 1, rarity: 325, isUnique: true }
+    private parseRakshaDropTable(html: string): DropTableItem[] {
+        const dropTable: DropTableItem[] = [];
+        
+        try {
+            const allTablesRegex = /<table[^>]*class="[^"]*wikitable[^"]*"[^>]*>(.*?)<\/table>/gis;
+            let tableMatch;
+            
+            while ((tableMatch = allTablesRegex.exec(html)) !== null) {
+                const tableContent = tableMatch[1];
+                
+                if (this.isDropTable(tableContent)) {
+                    const items = this.parseDropTableRows(tableContent);
+                    dropTable.push(...items);
+                }
+            }
+            
+            return dropTable;
+            
+        } catch (error) {
+            return [];
+        }
+    }
+
+    private isDropTable(tableContent: string): boolean {
+        const dropIndicators = [
+            // Generic drop table terms
+            'quantity', 'rarity', 'drop rate', 'chance', 'always', 'common', 'uncommon', 'rare', 'very rare',
+            // Fraction patterns
+            '1/1', '1/', '/1', 
+            // Percentage patterns  
+            '%', 'percent',
+            // Common drop items (seeds, spirits, salvage, etc.)
+            'seed', 'spirit', 'salvage', 'bone', 'hide', 'dust', 'rune', 'stone',
+            // Unique items
+            'fleeting boots', 'shadow spike', 'ricochet', 'chain', 'divert', 'codex'
         ];
+        
+        const lowerContent = tableContent.toLowerCase();
+        const matchCount = dropIndicators.filter(indicator => lowerContent.includes(indicator)).length;
+        
+        return matchCount >= 2;
     }
 
-    private extractItemName(dropKey: string, dropData: any): string {
-        if (dropData.printouts?.['Dropped item']?.[0]?.fulltext) {
-            return dropData.printouts['Dropped item'][0].fulltext;
+    private parseDropTableRows(tableContent: string): DropTableItem[] {
+        const items: DropTableItem[] = [];
+        
+        const rowRegex = /<tr[^>]*>(.*?)<\/tr>/gis;
+        let rowMatch;
+        
+        while ((rowMatch = rowRegex.exec(tableContent)) !== null) {
+            const rowHtml = rowMatch[1];
+            
+            // Skip header rows
+            if (rowHtml.includes('<th') || !rowHtml.includes('<td')) {
+                continue;
+            }
+            
+            const cells = this.extractTableCells(rowHtml);
+            
+            if (cells.length >= 4) {
+                const itemName = this.extractItemNameFromCell(cells[1]);
+                const quantity = this.extractQuantityFromCell(cells[2]);
+                const rarity = this.extractRarityFromCell(cells[3]);
+                
+                if (itemName && quantity > 0 && rarity > 0) {
+                    items.push({
+                        name: itemName,
+                        quantity: quantity,
+                        rarity: rarity,
+                        isUnique: this.isUniqueItem(itemName)
+                    });
+                }
+            }
         }
-        const match = dropKey.match(/DROP \\d+ (.+?) \\d+/);
-        return match ? match[1] : '';
+        
+        return items;
     }
 
-    private parseQuantity(quantityData: any): number {
-        if (!quantityData) return 0;
-        if (typeof quantityData === 'string' && quantityData.includes('-')) {
-            const [min, max] = quantityData.split('-').map(Number);
-            return (min + max) / 2;
+    private extractTableCells(rowHtml: string): string[] {
+        const cells: string[] = [];
+        const cellRegex = /<td[^>]*>(.*?)<\/td>/gis;
+        let cellMatch;
+        
+        while ((cellMatch = cellRegex.exec(rowHtml)) !== null) {
+            const cellContent = cellMatch[1]
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&#160;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/\s+/g, ' ')
+                .trim();
+            cells.push(cellContent);
         }
-        return parseFloat(quantityData) || 0;
+        
+        return cells;
     }
 
-    private parseRarity(rarityData: any): number {
-        if (!rarityData) return 0;
-        const rarityStr = rarityData.toString();
+    private extractItemNameFromCell(cell: string): string {
+        let name = cell.replace(/^\d+(?:-\d+)?\s*×?\s*/i, '').trim();
+        name = name.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+        
+        if (name.includes('|')) {
+            name = name.split('|').pop()?.trim() || name;
+        }
+        
+        return name;
+    }
 
-        if (rarityStr.includes('/')) {
-            const [numerator, denominator] = rarityStr.split('/').map(Number);
+    private extractQuantityFromCell(cell: string): number {
+        const quantityMatch = cell.match(/(\d+(?:\.\d+)?)\s*(?:[-–]\s*(\d+(?:\.\d+)?))?/);
+        
+        if (!quantityMatch) return 0;
+        
+        const min = parseFloat(quantityMatch[1]);
+        const max = quantityMatch[2] ? parseFloat(quantityMatch[2]) : min;
+        
+        return (min + max) / 2;
+    }
+
+    private extractRarityFromCell(cell: string): number {
+        const complexFractionMatch = cell.match(/1\s*\/\s*(\d+(?:\.\d+)?)\s*(?:;|$)/);
+        if (complexFractionMatch) {
+            return parseFloat(complexFractionMatch[1]);
+        }
+        
+        const percentMatch = cell.match(/(\d+(?:\.\d+)?)\s*%/);
+        if (percentMatch) {
+            return 100 / parseFloat(percentMatch[1]);
+        }
+        
+        const fractionMatch = cell.match(/1\s*\/\s*(\d+(?:\.\d+)?)/);
+        if (fractionMatch) {
+            return parseFloat(fractionMatch[1]);
+        }
+        
+        const ratioMatch = cell.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
+        if (ratioMatch) {
+            const numerator = parseFloat(ratioMatch[1]);
+            const denominator = parseFloat(ratioMatch[2]);
             return denominator / numerator;
         }
-        if (rarityStr.includes('%')) {
-            const percentage = parseFloat(rarityStr.replace('%', ''));
-            return 100 / percentage;
-        }
-        return parseFloat(rarityStr) || 0;
+        
+        const lowerCell = cell.toLowerCase();
+        if (lowerCell.includes('always')) return 1;
+        if (lowerCell.includes('common')) return 4;
+        if (lowerCell.includes('uncommon')) return 8;
+        if (lowerCell.includes('rare')) return 16;
+        if (lowerCell.includes('very rare')) return 64;
+        
+        return 0;
     }
+
+
 
     private isUniqueItem(itemName: string): boolean {
         const uniqueItems = [
@@ -241,29 +342,7 @@ export default class BossRevenue extends BotInteraction {
         return uniqueItems.some(unique => itemName.toLowerCase().includes(unique.toLowerCase()));
     }
 
-    private getFallbackDropTable(): DropTableItem[] {
-        return [
-            { name: 'Arbuck seed', quantity: 3.6, rarity: 16.67, isUnique: false },
-            { name: 'Ciku seed', quantity: 2, rarity: 25, isUnique: false },
-            { name: 'Dark animica stone spirit', quantity: 104, rarity: 12.5, isUnique: false },
-            { name: 'Light animica stone spirit', quantity: 104, rarity: 12.5, isUnique: false },
-            { name: 'Primal stone spirit', quantity: 22.2, rarity: 16.67, isUnique: false },
-            { name: 'Small blunt rune salvage', quantity: 37, rarity: 10, isUnique: false },
-            { name: 'Medium spiky orikalkum salvage', quantity: 8, rarity: 12.5, isUnique: false },
-            { name: 'Huge plated orikalkum salvage', quantity: 8.4, rarity: 16.67, isUnique: false },
-            { name: 'Black dragonhide', quantity: 500, rarity: 10, isUnique: false },
-            { name: 'Onyx dust', quantity: 22.8, rarity: 25, isUnique: false },
-            { name: 'Dinosaur bones', quantity: 160, rarity: 10, isUnique: false },
-            { name: 'Crystal key', quantity: 24, rarity: 10, isUnique: false },
-            { name: 'Catalytic anima stone', quantity: 120, rarity: 8.33, isUnique: false },
-            { name: 'Soul rune', quantity: 180, rarity: 16.67, isUnique: false },
-            { name: 'Fleeting boots', quantity: 1, rarity: 6500, isUnique: true },
-            { name: 'Shadow spike', quantity: 1, rarity: 16250, isUnique: true },
-            { name: 'Greater Ricochet ability codex', quantity: 1, rarity: 16250, isUnique: true },
-            { name: 'Greater Chain ability codex', quantity: 1, rarity: 16250, isUnique: true },
-            { name: 'Divert ability codex', quantity: 1, rarity: 16250, isUnique: true }
-        ];
-    }
+
 
     private async getItemPrices(itemNames: string[]): Promise<Record<string, number>> {
         const priceMap: Record<string, number> = {};
@@ -292,42 +371,13 @@ export default class BossRevenue extends BotInteraction {
                 }
             } catch (error) {
                 this.client.logger.error({ message: `Failed to fetch prices for batch: ${itemQuery}`, error });
-                batch.forEach(itemName => {
-                    if (!priceMap[itemName]) {
-                        priceMap[itemName] = this.getFallbackPrice(itemName);
-                    }
-                });
             }
         }
 
         return priceMap;
     }
 
-    private getFallbackPrice(itemName: string): number {
-        const fallbackPrices: Record<string, number> = {
-            'Arbuck seed': 100000,
-            'Ciku seed': 14000,
-            'Dark animica stone spirit': 514,
-            'Light animica stone spirit': 559,
-            'Primal stone spirit': 11700,
-            'Small blunt rune salvage': 13750,
-            'Medium spiky orikalkum salvage': 72500,
-            'Huge plated orikalkum salvage': 123000,
-            'Black dragonhide': 1684,
-            'Onyx dust': 9580,
-            'Dinosaur bones': 16066,
-            'Crystal key': 16929,
-            'Catalytic anima stone': 836,
-            'Soul rune': 780,
-            'Fleeting boots': 2588451,
-            'Shadow spike': 163754814,
-            'Greater Ricochet ability codex': 586654089,
-            'Greater Chain ability codex': 523501404,
-            'Divert ability codex': 142144394
-        };
 
-        return fallbackPrices[itemName] || 1000;
-    }
 
     private async trackEmbed(messageId: string, channelId: string, guildId: string | null): Promise<void> {
         if (!guildId) return;
