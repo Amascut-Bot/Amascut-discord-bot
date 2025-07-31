@@ -1,4 +1,4 @@
-import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
+import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction } from 'discord.js';
 import axios from 'axios';
@@ -56,6 +56,7 @@ export default class BossRevenue extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral});
         const { colours } = this.client.util;
 
         try {
@@ -78,7 +79,7 @@ export default class BossRevenue extends BotInteraction {
                     }
                 ])
 
-            await interaction.reply({ content: 'Embed sent!', ephemeral: true });
+            await interaction.editReply({ content: 'Embed sent!'});
 
             if (interaction.channel && 'send' in interaction.channel) {
                 const message = await interaction.channel.send({ embeds: [embed] });
@@ -92,7 +93,7 @@ export default class BossRevenue extends BotInteraction {
                 .setColor(colours.discord.red)
                 .setDescription('Failed to calculate boss revenue. Please try again later.');
 
-            await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+            await interaction.editReply({ embeds: [errorEmbed] });
         }
     }
 
@@ -180,24 +181,61 @@ export default class BossRevenue extends BotInteraction {
         }
     }
 
+    private async fetchRakshaDropTableV2(): Promise<DropTableItem[]> {
+        try {
+            // Use the main Raksha page which has the actual drop table, not the money making guide
+            const rakshaUrl = 'https://runescape.wiki/w/Raksha,_the_Shadow_Colossus?action=edit';
+            const response = await axios.get(rakshaUrl, {
+                headers: {
+                    'User-Agent': 'Amascut Discord Bot - Boss Revenue Calculator'
+                },
+                timeout: 15000
+            });
+
+            return this.parseRakshaDropTableV2(response.data);
+
+        } catch (error) {
+            return [];
+        }
+    }
+
     private parseRakshaDropTable(html: string): DropTableItem[] {
         const dropTable: DropTableItem[] = [];
-        
+
         try {
             const allTablesRegex = /<table[^>]*class="[^"]*wikitable[^"]*"[^>]*>(.*?)<\/table>/gis;
             let tableMatch;
-            
+
             while ((tableMatch = allTablesRegex.exec(html)) !== null) {
                 const tableContent = tableMatch[1];
-                
+
                 if (this.isDropTable(tableContent)) {
                     const items = this.parseDropTableRows(tableContent);
                     dropTable.push(...items);
                 }
             }
-            
+
             return dropTable;
-            
+
+        } catch (error) {
+            return [];
+        }
+    }
+
+    private parseRakshaDropTableV2(html: string): DropTableItem[] {
+        const dropTable: DropTableItem[] = [];
+
+        try {
+            const allTablesRegex = /{{DropsTableHead}}(.*?){{DropsTableBottom}}/gis;
+            const match = html.matchAll(allTablesRegex);
+
+            if (match) {
+                match.forEach(signleDropTable => {
+                    dropTable.push(...this.parseDropTableV2(signleDropTable[0]));
+                });
+            }
+
+            return dropTable;
         } catch (error) {
             return [];
         }
@@ -208,42 +246,42 @@ export default class BossRevenue extends BotInteraction {
             // Generic drop table terms
             'quantity', 'rarity', 'drop rate', 'chance', 'always', 'common', 'uncommon', 'rare', 'very rare',
             // Fraction patterns
-            '1/1', '1/', '/1', 
-            // Percentage patterns  
+            '1/1', '1/', '/1',
+            // Percentage patterns
             '%', 'percent',
             // Common drop items (seeds, spirits, salvage, etc.)
             'seed', 'spirit', 'salvage', 'bone', 'hide', 'dust', 'rune', 'stone',
             // Unique items
             'fleeting boots', 'shadow spike', 'ricochet', 'chain', 'divert', 'codex'
         ];
-        
+
         const lowerContent = tableContent.toLowerCase();
         const matchCount = dropIndicators.filter(indicator => lowerContent.includes(indicator)).length;
-        
+
         return matchCount >= 2;
     }
 
     private parseDropTableRows(tableContent: string): DropTableItem[] {
         const items: DropTableItem[] = [];
-        
+
         const rowRegex = /<tr[^>]*>(.*?)<\/tr>/gis;
         let rowMatch;
-        
+
         while ((rowMatch = rowRegex.exec(tableContent)) !== null) {
             const rowHtml = rowMatch[1];
-            
+
             // Skip header rows
             if (rowHtml.includes('<th') || !rowHtml.includes('<td')) {
                 continue;
             }
-            
+
             const cells = this.extractTableCells(rowHtml);
-            
+
             if (cells.length >= 4) {
                 const itemName = this.extractItemNameFromCell(cells[1]);
                 const quantity = this.extractQuantityFromCell(cells[2]);
                 const rarity = this.extractRarityFromCell(cells[3]);
-                
+
                 if (itemName && quantity > 0 && rarity > 0) {
                     items.push({
                         name: itemName,
@@ -254,15 +292,61 @@ export default class BossRevenue extends BotInteraction {
                 }
             }
         }
-        
+
         return items;
+    }
+
+    private parseDropTableV2(tableContent: string): DropTableItem[] {
+        const dropTable: DropTableItem[] = [];
+
+        try {
+            const allLinesRegex = /\{\{DropsLine\|((?:[^{}]|\{\{[^{}]*\}\})*)\}\}/gis;
+            const match = tableContent.matchAll(allLinesRegex);
+
+            if (match) {
+                match.forEach(line => {
+                    //clean up the line
+                    const cleanUpRegex = /\{\{DropNote[^{}]*\}\}/g;
+                    const value = line[0].replace(cleanUpRegex, '');
+
+                    // line example {{DropsLine|name=Catalytic anima stone|quantity=40-60|rarity=12/100}}
+                    const splittedLine: string[] = value.split('|');
+
+                    let item: DropTableItem = {
+                        name: '',
+                        quantity: 0,
+                        rarity: 0,
+                        isUnique: false
+                    };
+
+                    splittedLine.forEach(entry => {
+                        if (entry.startsWith('name=')) {
+                            item.name = entry.slice(5);
+                            item.isUnique = this.isUniqueItem(item.name);
+                        } else if (entry.startsWith('quantity=')) {
+                            item.quantity = this.extractQuantityFromCell(entry.slice(9));
+                        } else if (entry.startsWith('rarity=')) {
+                            item.rarity = this.extractRarityFromCell(entry.slice(7));
+                        }
+                    });
+
+                    if (item.name && item.quantity > 0) {
+                        dropTable.push(item);
+                    }
+                });
+            }
+
+            return dropTable;
+        } catch (error) {
+            return [];
+        }
     }
 
     private extractTableCells(rowHtml: string): string[] {
         const cells: string[] = [];
         const cellRegex = /<td[^>]*>(.*?)<\/td>/gis;
         let cellMatch;
-        
+
         while ((cellMatch = cellRegex.exec(rowHtml)) !== null) {
             const cellContent = cellMatch[1]
                 .replace(/<[^>]*>/g, ' ')
@@ -273,62 +357,67 @@ export default class BossRevenue extends BotInteraction {
                 .trim();
             cells.push(cellContent);
         }
-        
+
         return cells;
     }
 
     private extractItemNameFromCell(cell: string): string {
         let name = cell.replace(/^\d+(?:-\d+)?\s*×?\s*/i, '').trim();
         name = name.replace(/\s*\([^)]*\)\s*$/g, '').trim();
-        
+
         if (name.includes('|')) {
             name = name.split('|').pop()?.trim() || name;
         }
-        
+
         return name;
     }
 
     private extractQuantityFromCell(cell: string): number {
         const quantityMatch = cell.match(/(\d+(?:\.\d+)?)\s*(?:[-–]\s*(\d+(?:\.\d+)?))?/);
-        
+
         if (!quantityMatch) return 0;
-        
+
         const min = parseFloat(quantityMatch[1]);
         const max = quantityMatch[2] ? parseFloat(quantityMatch[2]) : min;
-        
+
         return (min + max) / 2;
     }
 
     private extractRarityFromCell(cell: string): number {
+        const expressionMatch = cell.match(/\{\{#expr:(.*?)\}\}/);
+        if (expressionMatch) {
+            return eval(expressionMatch[1]);
+        }
+
         const complexFractionMatch = cell.match(/1\s*\/\s*(\d+(?:\.\d+)?)\s*(?:;|$)/);
         if (complexFractionMatch) {
             return parseFloat(complexFractionMatch[1]);
         }
-        
+
         const percentMatch = cell.match(/(\d+(?:\.\d+)?)\s*%/);
         if (percentMatch) {
             return 100 / parseFloat(percentMatch[1]);
         }
-        
+
         const fractionMatch = cell.match(/1\s*\/\s*(\d+(?:\.\d+)?)/);
         if (fractionMatch) {
             return parseFloat(fractionMatch[1]);
         }
-        
+
         const ratioMatch = cell.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
         if (ratioMatch) {
             const numerator = parseFloat(ratioMatch[1]);
             const denominator = parseFloat(ratioMatch[2]);
             return denominator / numerator;
         }
-        
+
         const lowerCell = cell.toLowerCase();
         if (lowerCell.includes('always')) return 1;
         if (lowerCell.includes('common')) return 4;
         if (lowerCell.includes('uncommon')) return 8;
         if (lowerCell.includes('rare')) return 16;
         if (lowerCell.includes('very rare')) return 64;
-        
+
         return 0;
     }
 
