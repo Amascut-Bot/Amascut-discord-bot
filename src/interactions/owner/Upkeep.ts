@@ -104,7 +104,7 @@ export default class Upkeep extends BotInteraction {
         const embed = new EmbedBuilder()
             .setTimestamp()
             .setTitle('Trial Team Upkeep')
-            .setColor(colours.gold)
+            .setColor(this.client.color)
             .setFooter({ text: `Page 1 of ${Math.ceil(numberOfMembers / 10)}` })
             .setDescription(`
             > There has been **${totalTrials}** trial${totalTrials !== 1 ? 's' : ''} since <t:${date}:D>.\n

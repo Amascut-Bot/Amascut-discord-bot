@@ -29,7 +29,7 @@ export default class Stats extends BotInteraction {
         await interaction.deferReply();
 
         const embed = new EmbedBuilder()
-            .setColor(this.client.color ?? 0x00000)
+            .setColor(this.client.color ?? 10454367)
             .setTitle('Bot Status')
             .setDescription(
                 `\`\`\`ml\n

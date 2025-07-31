@@ -61,7 +61,7 @@ export default class DPM extends BotInteraction {
         const role = await this.getRole(interaction, dpm);
 
         const DPMEmbed = new EmbedBuilder()
-            .setColor(role ? role.color : colours.lightblue)
+            .setColor(role ? role.color : this.client.color)
             .setDescription(`
             **Submitter:** <@${interaction.user.id}>
             **Damage:** \`${(+damage).toLocaleString()}\`

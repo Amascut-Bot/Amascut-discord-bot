@@ -69,7 +69,7 @@ export default class Bot extends Client {
     constructor(options: ClientOptions) {
         super(options);
 
-        this.color = 0x7e686c; // solak color scheme
+        this.color = 10454367; // solak color scheme
         this.dataSource = AppDataSource;
         this.commandsRun = 0;
         this.util = new UtilityHandler(this);
