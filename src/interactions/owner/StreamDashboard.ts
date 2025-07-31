@@ -26,8 +26,8 @@ export default class StreamDashboard extends BotInteraction {
     public async run(interaction: any): Promise<void> {
         if (!interaction.inCachedGuild()) return;
 
-        const ownerRoleId = getRoles(interaction.guild.id).OWNER_ROLE;
-        const adminRoleId = getRoles(interaction.guild.id).ADMIN_ROLE;
+        const ownerRoleId = this.client.util.stripRole(getRoles(interaction.guild.id).OWNER_ROLE);
+        const adminRoleId = this.client.util.stripRole(getRoles(interaction.guild.id).ADMIN_ROLE);
 
         const hasPermission = interaction.member.roles.cache.has(ownerRoleId) || interaction.member.roles.cache.has(adminRoleId);
 
