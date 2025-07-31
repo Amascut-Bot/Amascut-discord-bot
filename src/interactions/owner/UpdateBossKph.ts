@@ -65,11 +65,11 @@ export default class UpdateBossKph extends BotInteraction {
             }
 
             const oldKph = configData[boss]?.kph || 'unknown';
-            
+
             if (!configData[boss]) {
                 configData[boss] = {};
             }
-            
+
             configData[boss].kph = newKph;
             configData[boss].lastUpdated = new Date().toISOString().split('T')[0];
 
@@ -79,11 +79,11 @@ export default class UpdateBossKph extends BotInteraction {
 
         } catch (error) {
             this.client.logger.error({ message: 'Error updating boss KPH', error });
-            
+
             const errorEmbed = new EmbedBuilder()
                 .setColor(colours.discord.red)
                 .setDescription('Failed to update boss KPH. Please try again later.');
-            
+
             await interaction.editReply({ embeds: [errorEmbed] });
         }
     }

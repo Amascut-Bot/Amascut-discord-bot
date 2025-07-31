@@ -60,9 +60,9 @@ export default class BossRevenue extends BotInteraction {
 
         try {
             const revenueData = await this.getCachedOrFreshData();
-            
+
             const embed = new EmbedBuilder()
-                .setColor(colours.gold)
+                .setColor(this.client.color)
                 .setTitle('Raksha - Wiki')
                 .setURL('https://runescape.wiki/w/Raksha,_the_Shadow_Colossus')
                 .setThumbnail('https://runescape.wiki/images/0/0a/Raksha%2C_the_Shadow_Colossus.png')
@@ -71,10 +71,10 @@ export default class BossRevenue extends BotInteraction {
                     `**Total GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(revenueData.overallGpPerKill).toLocaleString()}\` gp *(with uniques)*`
                 )
                 .addFields([
-                    { 
-                        name: `GP/Hour (${revenueData.killsPerHour} kph)`, 
-                        value: `<:Coins:1400432187924287579> ${Math.round(revenueData.overallGpPerHour).toLocaleString()} gp`, 
-                        inline: false 
+                    {
+                        name: `GP/Hour (${revenueData.killsPerHour} kph)`,
+                        value: `<:Coins:1400432187924287579> ${Math.round(revenueData.overallGpPerHour).toLocaleString()} gp`,
+                        inline: false
                     }
                 ])
 
@@ -87,11 +87,11 @@ export default class BossRevenue extends BotInteraction {
 
         } catch (error) {
             this.client.logger.error({ message: 'Error calculating boss revenue', error });
-            
+
             const errorEmbed = new EmbedBuilder()
                 .setColor(colours.discord.red)
                 .setDescription('Failed to calculate boss revenue. Please try again later.');
-            
+
             await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         }
     }
@@ -221,7 +221,7 @@ export default class BossRevenue extends BotInteraction {
     private parseRarity(rarityData: any): number {
         if (!rarityData) return 0;
         const rarityStr = rarityData.toString();
-        
+
         if (rarityStr.includes('/')) {
             const [numerator, denominator] = rarityStr.split('/').map(Number);
             return denominator / numerator;
@@ -268,11 +268,11 @@ export default class BossRevenue extends BotInteraction {
     private async getItemPrices(itemNames: string[]): Promise<Record<string, number>> {
         const priceMap: Record<string, number> = {};
         const batchSize = 10;
-        
+
         for (let i = 0; i < itemNames.length; i += batchSize) {
             const batch = itemNames.slice(i, i + batchSize);
             const itemQuery = batch.join('|');
-            
+
             try {
                 const response = await axios.get(
                     `https://api.weirdgloop.org/exchange/history/rs/latest?name=${encodeURIComponent(itemQuery)}`,
@@ -331,7 +331,7 @@ export default class BossRevenue extends BotInteraction {
 
     private async trackEmbed(messageId: string, channelId: string, guildId: string | null): Promise<void> {
         if (!guildId) return;
-        
+
         try {
             const configPath = path.join(process.cwd(), 'boss-configs.json');
             let configData: any = {};
@@ -369,7 +369,7 @@ export default class BossRevenue extends BotInteraction {
 
     private createEmbedFromData(revenueData: BossRevenueData): EmbedBuilder {
         return new EmbedBuilder()
-            .setColor(0xFFD700)
+            .setColor(this.client.color)
             .setTitle('Raksha - Wiki')
             .setURL('https://runescape.wiki/w/Raksha,_the_Shadow_Colossus')
             .setThumbnail('https://runescape.wiki/images/0/0a/Raksha%2C_the_Shadow_Colossus.png')
@@ -378,10 +378,10 @@ export default class BossRevenue extends BotInteraction {
                 `**Total GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(revenueData.overallGpPerKill).toLocaleString()}\` gp *(with uniques)*`
             )
             .addFields([
-                { 
-                    name: `GP/Hour (${revenueData.killsPerHour} kph)`, 
-                    value: `<:Coins:1400432187924287579> ${Math.round(revenueData.overallGpPerHour).toLocaleString()} gp`, 
-                    inline: false 
+                {
+                    name: `GP/Hour (${revenueData.killsPerHour} kph)`,
+                    value: `<:Coins:1400432187924287579> ${Math.round(revenueData.overallGpPerHour).toLocaleString()} gp`,
+                    inline: false
                 }
             ]);
     }
@@ -390,7 +390,7 @@ export default class BossRevenue extends BotInteraction {
         try {
             const configPath = path.join(process.cwd(), 'boss-configs.json');
             const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-            
+
             if (!configData.raksha?.trackedEmbeds) return;
 
             const revenueData = await this.getCachedOrFreshData();
