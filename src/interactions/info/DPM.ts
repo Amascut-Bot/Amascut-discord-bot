@@ -1,6 +1,6 @@
 import { getChannels, getRoles } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, EmbedBuilder, Role, SlashCommandBuilder, TextChannel } from 'discord.js';
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags, Role, SlashCommandBuilder, TextChannel } from 'discord.js';
 
 export default class DPM extends BotInteraction {
     get name() {
@@ -41,7 +41,7 @@ export default class DPM extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const time: string = interaction.options.getString('time', true);
         const damage: string = interaction.options.getString('damage', true);
 
@@ -58,17 +58,17 @@ export default class DPM extends BotInteraction {
 
         const dpm = calcDPMInThousands(damage, time);
 
-        const role = await this.getRole(interaction, dpm);
-
+        //const role = await this.getRole(interaction, dpm);
+        //role ? role.color :
         const DPMEmbed = new EmbedBuilder()
-            .setColor(role ? role.color : this.client.color)
+            .setColor(this.client.color)
             .setDescription(`
             **Submitter:** <@${interaction.user.id}>
             **Damage:** \`${(+damage).toLocaleString()}\`
             **Time:** \`${time}\`
             **DPM:** \`${dpm}k\`
-            ${role ? `\n> This DPM qualifies for the <@&${role.id}> role!` : ''}
             `);
+        //${role ? `\n> This DPM qualifies for the <@&${role.id}> role!` : ''}
 
         const channel = await this.client.channels.fetch(getChannels(interaction.guild?.id).dpmCalc) as TextChannel;
         await channel.send({ embeds: [DPMEmbed] });
@@ -77,8 +77,9 @@ export default class DPM extends BotInteraction {
             .setColor(colours.discord.green)
             .setDescription(`
             DPM successfully calculated!
-            ${role ? `\n> To apply for <@&${role.id}> use \`/dpm-submit\`` : ''}
             `);
+        //${role ? `\n> To apply for <@&${role.id}> use \`/dpm-submit\`` : ''}
+
         return await interaction.editReply({ embeds: [successEmbed] });
     }
 }
