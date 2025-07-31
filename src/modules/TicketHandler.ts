@@ -351,7 +351,7 @@ export default class TicketHandler {
 
             const controlsEmbed = new EmbedBuilder()
                 .setTitle('Support team ticket controls')
-                .setColor(0x99ccff);
+                .setColor(this.client.color);
 
             const controlButtons = new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
@@ -764,7 +764,7 @@ export default class TicketHandler {
                     const dmEmbed = new EmbedBuilder()
                         .setTitle('Ticket Closed')
                         .setDescription(`Your ticket **#${channel.name}** has been closed and archived. You can download a copy of the transcript at any time.`)
-                        .setColor(0x99ccff)
+                        .setColor(this.client.color)
                         .setTimestamp();
 
                     const buttonId = `ticket:download_transcript_${forumPostId}`;
@@ -1168,7 +1168,7 @@ export default class TicketHandler {
             // Create embed with form data using fields for better organization
             const embed = new EmbedBuilder()
                 .setTitle(`${capitalizeFirstLetter(ticketType)} Ticket`)
-                .setColor(colours.lightblue)
+                .setColor(this.client.color)
                 .setTimestamp()
                 .setAuthor({
                     name: `User: ${channel.guild.members.cache.get(userId)?.user.username || 'Unknown User'}`,

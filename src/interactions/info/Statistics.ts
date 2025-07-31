@@ -86,7 +86,7 @@ export default class Stats extends BotInteraction {
         }
 
         const embed = new EmbedBuilder()
-            .setColor(colours.gold)
+            .setColor(this.client.color)
             .setTitle(`Statistics for ${user.nickname ? user.nickname : interaction.user.tag}`)
             .setDescription(
                 `${description}`

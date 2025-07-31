@@ -418,7 +418,7 @@ export default class UtilityHandler {
 
             const embed = new EmbedBuilder()
                 .setTitle(`\`DPM Leaderboard - ${teamSize}\``)
-                .setColor(this.client.util.colours.lightblue);
+                .setColor(this.client.color);
 
             let description = '';
 
@@ -461,7 +461,7 @@ export default class UtilityHandler {
 
         const embed = new EmbedBuilder()
             .setTitle('`Kill Time Leaderboard`')
-            .setColor(this.client.util.colours.lightblue)
+            .setColor(this.client.color)
             .setTimestamp()
             .setFooter({
                 text: "To submit your kill time to the leaderboard use '/killtime-submit'"

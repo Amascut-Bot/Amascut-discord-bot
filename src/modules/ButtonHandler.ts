@@ -403,7 +403,7 @@ export default class ButtonHandler {
                         sendMessage = true;
                     }
                     if (!hasHigherRole(role) && !userRoles?.includes(assignedRoleId)) await user?.roles.add(assignedRoleId);
-                    embedColour = roleObject.color;
+                    embedColour = roleObject.color ?? this.client.color;
                     prerequisites[role][key].forEach((prereqRole: string) => {
                         const roleId = stripRole(getRoles(interaction.guild?.id)[prereqRole]);
                         if (userRoles?.includes(roleId)) user?.roles.remove(roleId);
@@ -424,7 +424,7 @@ export default class ButtonHandler {
                 } else {
                     const roleId = stripRole(getRoles(interaction.guild?.id)[role]);
                     if (!hasHigherRole(role) && !userRoles?.includes(roleId)) user?.roles.add(roleId);
-                    embedColour = roleObject.color;
+                    embedColour = roleObject.color ?? this.client.color;
                     if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
                         sendMessage = true;
                     }
@@ -439,7 +439,7 @@ export default class ButtonHandler {
         } else {
             const roleId = stripRole(getRoles(interaction.guild?.id)[role]);
             if (!hasHigherRole(role) && !userRoles?.includes(roleId)) await user?.roles.add(roleId);
-            embedColour = roleObject.color;
+            embedColour = roleObject.color ?? this.client.color;
             if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
                 sendMessage = true;
             }
@@ -502,7 +502,7 @@ export default class ButtonHandler {
         const embed = new EmbedBuilder()
             .setAuthor({ name: interaction.user.username, iconURL: interaction.user.avatarURL() || this.client.user?.avatarURL() || 'https://media.discordapp.net/attachments/1027186342620299315/1047598720834875422/618px-Solly_pet_1.png' })
             .setTimestamp()
-            .setColor(colours.tan)
+            .setColor(this.client.color)
             .setDescription(`
             Congratulations to <@${reaperId}> on achieving their first solak kill!\n
             ${getRoles(interaction.guild?.id).reaper} ${userString}
@@ -1159,7 +1159,7 @@ export default class ButtonHandler {
                     const roleEmbed = new EmbedBuilder()
                         .setAuthor({ name: interaction.user.username, iconURL: interaction.user.avatarURL() || this.client.user?.avatarURL() || 'https://media.discordapp.net/attachments/1027186342620299315/1047598720834875422/618px-Solly_pet_1.png' })
                         .setTimestamp()
-                        .setColor(colours.lightblue)
+                        .setColor(this.client.color)
                         .setDescription(`Congratulations to <@${submission.userId}> on achieving <@&${submission.roleId}>!`);
 
                     await announcementChannel.send({ embeds: [roleEmbed] });
@@ -1177,7 +1177,7 @@ export default class ButtonHandler {
                         })
                         .setDescription(`Congratulations to <@${submission.userId}> on achieving **Rank** ${positionEmojis[positionInfo.position - 1]} on the ${leaderboardName} with a DPM of **${submission.dpm.toFixed(2)}k**`)
                         .setTimestamp()
-                        .setColor(0xFFD700);
+                        .setColor(this.client.color);
 
                     await announcementChannel.send({ embeds: [positionEmbed] });
                 }

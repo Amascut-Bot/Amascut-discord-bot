@@ -188,7 +188,7 @@ export default class DPMSubmit extends BotInteraction {
         const { colours } = this.client.util;
         const submissionEmbed = new EmbedBuilder()
             .setTitle('DPM Submission')
-            .setColor(colours.lightblue)
+            .setColor(this.client.color)
             .setDescription(`
             **Submitter:** <@${interaction.user.id}>
             **RSN:** \`${rsn}\`

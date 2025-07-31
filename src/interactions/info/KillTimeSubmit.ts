@@ -138,7 +138,7 @@ export default class KillTimeSubmit extends BotInteraction {
 
         const { colours } = this.client.util;
         const submissionEmbed = new EmbedBuilder()
-            .setColor(colours.lightblue)
+            .setColor(this.client.color)
             .setDescription(`
             **Submitter:** <@${interaction.user.id}>
             **Team Size:** ${teamSize}

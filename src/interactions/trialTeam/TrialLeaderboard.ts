@@ -133,7 +133,7 @@ export default class TrialLeaderboard extends BotInteraction {
         const embed = new EmbedBuilder()
             .setTimestamp()
             .setTitle(`Amascut Trial Team Leaderboard - ${timespan}`)
-            .setColor(colours.darkPurple)
+            .setColor(this.client.color)
             .setDescription(`> There has been **${totalTrials}** trial${totalTrials !== 1 ? 's' : ''} recorded and **${trialsParticipated.length}** unique ${getRoles(interaction.guild?.id).trialTeam} members!`)
             .addFields(
                 { name: 'Trials Hosted', value: this.createFieldFromArray(trialsHosted.slice(0, 10)), inline: true },
