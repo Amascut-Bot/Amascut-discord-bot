@@ -86,8 +86,8 @@ export default class AddStreamer extends BotInteraction {
             return interaction.editReply({ content: `**${streamerInfo.display_name}** is already on the notification list.` });
         }
 
-        if (!userRoles.includes(contentCreatorRoleId)) {
-            user?.roles.add(contentCreatorRoleId);
+        if (!userRoles.includes(this.client.util.stripRole(contentCreatorRoleId))) {
+            user?.roles.add(this.client.util.stripRole(contentCreatorRoleId));
         }
 
         const newStreamer: MonitoredStreamer = {
