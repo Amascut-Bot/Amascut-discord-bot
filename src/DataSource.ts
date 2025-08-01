@@ -9,6 +9,7 @@ import { ReaperParticipation } from "./entity/ReaperParticipation"
 import { DpmSubmission } from "./entity/DpmSubmission"
 import { KillTimeSubmission } from './entity/KillTimeSubmission'
 import { Ticket } from "./entity/Ticket"
+import { MessageShortcut } from "./entity/MessageShortcut"
 
 export const AppDataSource = new DataSource({
     type: "sqlite",
@@ -24,7 +25,8 @@ export const AppDataSource = new DataSource({
         Override,
         DpmSubmission,
         KillTimeSubmission,
-        Ticket
+        Ticket,
+        MessageShortcut
     ],
     migrations: [],
     subscribers: [],

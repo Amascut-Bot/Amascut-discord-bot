@@ -1,6 +1,7 @@
-import { GuildChannel, Message } from 'discord.js';
+import { GuildChannel, Message, MessageFlags, TextChannel } from 'discord.js';
 import Bot from '../Bot';
 import { getRoles, getChannels } from '../GuildSpecifics';
+import { MessageShortcut } from '../entity/MessageShortcut';
 
 export default class AutoTriggerHandler {
     private client: Bot;
@@ -28,6 +29,8 @@ export default class AutoTriggerHandler {
     }
 
     async handleAutoTriggers(message: Message): Promise<boolean> {
+        if (await this.handleShortcuts(message)) return true;
+
         if (message.guild?.id !== process.env.GUILD_ID) return false;
 
         if (!await this.handleYoink(message)) return true;
@@ -167,5 +170,57 @@ export default class AutoTriggerHandler {
         }
 
         return true;
+    }
+
+    private async handleShortcuts(message: Message): Promise<boolean> {
+        const { dataSource } = this.client;
+        const repository = dataSource.getRepository(MessageShortcut);
+        //TODO: make global caching
+
+        const match = message.content.match(/^[^\s\r\n]+/gm);
+
+        if (match) {
+            const existingEntry = await repository.findOne({
+                where: {
+                    guildId: message.guild!.id,
+                    shortcut: match[0]
+                }
+            });
+
+            if (existingEntry) {
+                try {
+                    const guild = await this.client.guilds.fetch(existingEntry.message_guildId);
+
+                    if (guild) {
+                        const channel = await guild.channels.fetch(existingEntry.message_channelId) as TextChannel;
+
+                        if (channel) {
+                            const messageToSend = await channel.messages.fetch(existingEntry.message_messageId);
+
+                            if (messageToSend) {
+                                await (message.channel as TextChannel).send({
+                                    content: messageToSend.content,
+                                    embeds: messageToSend.embeds,
+                                    components: messageToSend.components,
+                                    flags: messageToSend.flags.has(MessageFlags.IsComponentsV2) ? MessageFlags.IsComponentsV2 : undefined,
+                                    allowedMentions: { "parse" : [] }
+                                });
+                                return true;
+                            } else {
+                                this.client.logger.log({ message: `Could not find message with id: ${existingEntry.message_messageId} in channel with id: ${existingEntry.message_channelId} in guild with id: ${existingEntry.message_guildId}.`, handler: 'AutoTriggerHandler'}, true);
+                            }
+                        } else {
+                            this.client.logger.log({ message: `Could not find channel with id: ${existingEntry.message_channelId} in guild with id: ${existingEntry.message_guildId}.`, handler: 'AutoTriggerHandler'}, true);
+                        }
+                    } else {
+                        this.client.logger.log({ message: `Could not find guild with id: ${existingEntry.message_guildId}.`, handler: 'AutoTriggerHandler'}, true);
+                    }
+                } catch (error) {
+                    this.client.logger.log({ message: 'Error retrieving shortcut data', error: error, handler: 'AutoTriggerHandler' }, true);
+                }
+            }
+        }
+
+        return false;
     }
 }
