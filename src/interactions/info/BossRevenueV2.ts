@@ -43,6 +43,11 @@ interface BossConfig {
     trackedEmbeds?: TrackedEmbed[];
 }
 
+interface Bosses {
+    url: string;
+    versions: string[];
+}
+
 export default class BossRevenueV2 extends BotInteraction {
     private static cache: CachedRevenueData | null = null;
     private static readonly CACHE_TTL = 7 * 60 * 1000;
@@ -64,49 +69,60 @@ export default class BossRevenueV2 extends BotInteraction {
         const { colours } = this.client.util;
 
         try {
-            const dropTablePerVersion: DropTablePerVersion = {};
 
-            const telosVersions: string[] = ['2449 Enrage Claims', '999 Enrage Claims', '100 Enrage Claims'];
-            const url = 'https://runescape.wiki/w/Money_making_guide/Killing_Telos,_the_Warden?action=edit';
+            const bosses: Bosses[] = [
+                {
+                    url: 'https://runescape.wiki/w/Money_making_guide/Killing_Telos,_the_Warden?action=edit',
+                    versions: ['2449 Enrage Claims', '999 Enrage Claims', '100 Enrage Claims']
+                },
+                {
+                    url: 'https://runescape.wiki/w/Money_making_guide/Killing_the_Arch-Glacor?action=edit',
+                    versions: ['Normal Mode', 'Hard Mode 1000 percent enrage claims']
+                }
+            ];
 
-            for (const version of telosVersions) {
-                dropTablePerVersion[version] = await this.getCachedOrFreshData(version, url);
+            for (const boss of bosses) {
+                const dropTablePerVersion: DropTablePerVersion = {};
+                let description = '';
+
+                for (const version of boss.versions) {
+                    dropTablePerVersion[version] = await this.getCachedOrFreshData(version, boss.url);
+                }
+
+
+                const fields: any[] = [];
+
+                boss.versions.forEach(version => {
+                    description += `## ${version}:\n`;
+                    description += `**Commons GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(dropTablePerVersion[version].regularGpPerKill).toLocaleString()}\` gp *(no uniques)*\n`;
+                    description += `**Total GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(dropTablePerVersion[version].overallGpPerKill).toLocaleString()}\` gp *(with uniques)*\n`;
+
+                    fields.push(
+                        {
+                            name: `## ${version}:\nGP/Hour (${dropTablePerVersion[version].killsPerHour} kph)`,
+                            value: `<:Coins:1400432187924287579> ${Math.round(dropTablePerVersion[version].overallGpPerHour).toLocaleString()} gp`,
+                            inline: false
+                        }
+                    );
+                });
+
+                description = description.trim();
+
+                const embed = new EmbedBuilder()
+                    .setColor(this.client.color)
+                    .setTitle('Telos - Wiki')
+                    .setURL('https://runescape.wiki/w/Telos,_the_Warden')
+                    .setThumbnail('https://runescape.wiki/images/thumb/Telos%2C_the_Warden.png/201px-Telos%2C_the_Warden.png?99e18')
+                    .setDescription(description)
+                    .addFields(fields);
+
+                if (interaction.channel && 'send' in interaction.channel) {
+                    const message = await interaction.channel.send({ embeds: [embed] });
+                    await this.trackEmbed(message.id, interaction.channelId, interaction.guildId);
+                }
             }
-
-            let description = '';
-            const fields: any[] = [];
-
-            telosVersions.forEach(version => {
-                description += `## ${version}:\n`;
-                description += `**Commons GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(dropTablePerVersion[version].regularGpPerKill).toLocaleString()}\` gp *(no uniques)*\n`;
-                description += `**Total GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(dropTablePerVersion[version].overallGpPerKill).toLocaleString()}\` gp *(with uniques)*\n`;
-
-                fields.push(
-                    {
-                        name: `## ${version}:\nGP/Hour (${dropTablePerVersion[version].killsPerHour} kph)`,
-                        value: `<:Coins:1400432187924287579> ${Math.round(dropTablePerVersion[version].overallGpPerHour).toLocaleString()} gp`,
-                        inline: false
-                    }
-                );
-            });
-
-            description = description.trim();
-
-            const embed = new EmbedBuilder()
-                .setColor(this.client.color)
-                .setTitle('Telos - Wiki')
-                .setURL('https://runescape.wiki/w/Telos,_the_Warden')
-                .setThumbnail('https://runescape.wiki/images/thumb/Telos%2C_the_Warden.png/201px-Telos%2C_the_Warden.png?99e18')
-                .setDescription(description)
-                .addFields(fields);
 
             await interaction.editReply({ content: 'Embed sent!'});
-
-            if (interaction.channel && 'send' in interaction.channel) {
-                const message = await interaction.channel.send({ embeds: [embed] });
-                await this.trackEmbed(message.id, interaction.channelId, interaction.guildId);
-            }
-
         } catch (error) {
             this.client.logger.error({ message: 'Error calculating boss revenue', error });
 
@@ -258,7 +274,7 @@ export default class BossRevenueV2 extends BotInteraction {
 
             for (let index = 0; index < splittedLine.length; index++) {
                 const entry = splittedLine[index];
-                
+
                 // check what type of output it is
                 const itemNameMatch = outputItemNameRegex.exec(entry);
                 const itemQuantityMatch = outputItemQuantityRegex.exec(entry);
@@ -318,13 +334,13 @@ export default class BossRevenueV2 extends BotInteraction {
                 .replace(/¦/g, '+')
                 .replace(/\}/g, ')');
             console.log('After transformations:', processed);
-            
+
             const itemMatches = [...processed.match(/[A-Z][A-Za-z0-9\s,''-]+?(?=\s*[\+\-\*\/\(\)]|$)/g) || []];
             if (itemMatches.length > 0) {
                 console.log('Extracted items:', itemMatches);
                 const prices = await this.getItemPrices(itemMatches);
                 console.log('Item prices:', prices);
-                
+
                 const sortedItems = itemMatches.sort((a, b) => b.length - a.length);
                 for (const item of sortedItems) {
                     const price = prices[item] || 0;
@@ -332,7 +348,7 @@ export default class BossRevenueV2 extends BotInteraction {
                 }
             }
             console.log('After price substitution:', processed);
-            
+
             const sanitized = processed.replace(/[^\d+\-*/.() ]/g, '');
             const result = new Function(`return ${sanitized}`)();
             return typeof result === 'number' && !isNaN(result) ? result : 0;
