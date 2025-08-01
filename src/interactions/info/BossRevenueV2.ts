@@ -248,22 +248,18 @@ export default class BossRevenueV2 extends BotInteraction {
             const outputItemPriceRegex = /Output\d+value\s*=\s*(.+)$/gm;
             const defineLootPointsRegex = /Define variables = {{#vardefine:loot points\|(\d+)}}/gm;
 
-            let value = tableContent;
-
-            // line example {{DropsLine|name=Catalytic anima stone|quantity=40-60|rarity=12/100}}
-            let splittedLine: string[] = value.split('|');
-            const lootPointsArr: string[] = splittedLine.filter(val => val.startsWith('Define variables = {{#vardefine:loot points')) ?? [];
+            const segments = this.parseWikiMarkup(tableContent);
+            const lootPointsArr = segments.filter(val => val.startsWith('Define variables = {{#vardefine:loot points'));
             let lootPoints = '0';
 
             if (lootPointsArr.length === 1) {
                 const lootPointsMatch = defineLootPointsRegex.exec(lootPointsArr[0]);
-
                 if (lootPointsMatch) {
                     lootPoints = lootPointsMatch[1];
                 }
             }
 
-            splittedLine = splittedLine.filter(val => val.startsWith('Output'));
+            const splittedLine = segments.filter(val => val.startsWith('Output'));
 
             let item: DropTableItem = {
                 name: '',
@@ -315,6 +311,42 @@ export default class BossRevenueV2 extends BotInteraction {
         }
     }
 
+    private parseWikiMarkup(content: string): string[] {
+        const rawSegments = content.split('|').map(s => s.trim()).filter(s => s.length > 0);
+        const segments: string[] = [];
+        let i = 0;
+
+        while (i < rawSegments.length) {
+            let segment = rawSegments[i];
+            
+            if (this.hasUnbalancedTemplates(segment)) {
+                let merged = segment;
+                let j = i + 1;
+                let loopCount = 0;
+                
+                while (j < rawSegments.length && this.hasUnbalancedTemplates(merged) && loopCount < 50) {
+                    merged += '|' + rawSegments[j];
+                    j++;
+                    loopCount++;
+                }
+                
+                segments.push(merged);
+                i = j;
+            } else {
+                segments.push(segment);
+                i++;
+            }
+        }
+
+        return segments;
+    }
+
+    private hasUnbalancedTemplates(text: string): boolean {
+        const openBraces = (text.match(/\{\{/g) || []).length;
+        const closeBraces = (text.match(/\}\}/g) || []).length;
+        return openBraces !== closeBraces;
+    }
+
     private extractQuantityFromCell(cell: string): number {
         let val = cell.replace('{{#expr:', '');
         val = val.replace('}}', '');
@@ -324,7 +356,10 @@ export default class BossRevenueV2 extends BotInteraction {
 
     private async extractPriceFromCell(cell: string): Promise<number> {
         try {
-            console.log('Original cell:', cell);
+            if (cell.includes('average drop value') || cell.includes('Average drop value')) {
+                return 0;
+            }
+
             let processed = cell
                 .replace(/\{GETotal¦/g, '(')
                 .replace(/¦([+\-*/])¦/g, ' $1 ')
@@ -333,21 +368,16 @@ export default class BossRevenueV2 extends BotInteraction {
                 .replace(/\{\{GEP\|([^}]+)\}\}/g, '$1')
                 .replace(/¦/g, '+')
                 .replace(/\}/g, ')');
-            console.log('After transformations:', processed);
-
+            
             const itemMatches = [...processed.match(/[A-Z][A-Za-z0-9\s,''-]+?(?=\s*[\+\-\*\/\(\)]|$)/g) || []];
             if (itemMatches.length > 0) {
-                console.log('Extracted items:', itemMatches);
                 const prices = await this.getItemPrices(itemMatches);
-                console.log('Item prices:', prices);
-
                 const sortedItems = itemMatches.sort((a, b) => b.length - a.length);
                 for (const item of sortedItems) {
                     const price = prices[item] || 0;
                     processed = processed.replace(new RegExp(item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), price.toString());
                 }
             }
-            console.log('After price substitution:', processed);
 
             const sanitized = processed.replace(/[^\d+\-*/.() ]/g, '');
             const result = new Function(`return ${sanitized}`)();
