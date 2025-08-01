@@ -44,7 +44,10 @@ interface BossConfig {
 }
 
 interface Bosses {
+    name: string;
     url: string;
+    wikiUrl: string;
+    thumbnail: string;
     versions: string[];
 }
 
@@ -72,58 +75,136 @@ export default class BossRevenueV2 extends BotInteraction {
 
             const bosses: Bosses[] = [
                 {
+                    name: 'Telos',
                     url: 'https://runescape.wiki/w/Money_making_guide/Killing_Telos,_the_Warden?action=edit',
+                    wikiUrl: 'https://runescape.wiki/w/Telos,_the_Warden',
+                    thumbnail: 'https://runescape.wiki/images/thumb/Telos%2C_the_Warden.png/201px-Telos%2C_the_Warden.png?99e18',
                     versions: ['2449 Enrage Claims', '999 Enrage Claims', '100 Enrage Claims']
                 },
                 {
+                    name: 'Arch-Glacor',
                     url: 'https://runescape.wiki/w/Money_making_guide/Killing_the_Arch-Glacor?action=edit',
+                    wikiUrl: 'https://runescape.wiki/w/Arch-Glacor',
+                    thumbnail: 'https://runescape.wiki/images/thumb/Arch-Glacor.png/280px-Arch-Glacor.png',
                     versions: ['Normal Mode', 'Hard Mode 1000 percent enrage claims']
+                },
+                {
+                    name: 'Sanctum of Rebirth',
+                    url: 'https://runescape.wiki/w/Money_making_guide/Sanctum_of_Rebirth?action=edit',
+                    wikiUrl: 'https://runescape.wiki/w/Sanctum_of_Rebirth',
+                    thumbnail: 'https://runescape.wiki/images/thumb/Nakatra%2C_Devourer_Eternal.png/280px-Nakatra%2C_Devourer_Eternal.png',
+                    versions: ['Normal Mode', 'Hard Mode']
+                },
+                {
+                    name: 'Zamorak, Lord of Chaos',
+                    url: 'https://runescape.wiki/w/Money_making_guide/Killing_Zamorak,_Lord_of_Chaos?action=edit',
+                    wikiUrl: 'https://runescape.wiki/w/Zamorak,_Lord_of_Chaos',
+                    thumbnail: 'https://runescape.wiki/images/thumb/Zamorak%2C_Lord_of_Chaos.png/280px-Zamorak%2C_Lord_of_Chaos.png',
+                    versions: ['50 enrage', '100 enrage', '300 enrage', '500 enrage', '2000 enrage']
+                },
+                {
+                    name: 'Nex: Angel of Death',
+                    url: 'https://runescape.wiki/w/Money_making_guide/Killing_Nex:_Angel_of_Death?action=edit',
+                    wikiUrl: 'https://runescape.wiki/w/Nex:_Angel_of_Death',
+                    thumbnail: 'https://runescape.wiki/images/thumb/Nex%2C_Angel_of_Death.png/280px-Nex%2C_Angel_of_Death.png',
+                    versions: ['7-player', '4-player', 'Duo', 'Solo']
                 }
             ];
 
-            for (const boss of bosses) {
-                const dropTablePerVersion: DropTablePerVersion = {};
-                let description = '';
+            for (let i = 0; i < bosses.length; i++) {
+                const boss = bosses[i];
+                console.log(`Starting to process boss ${i + 1}/${bosses.length}: ${boss.name}`);
+                
+                try {
+                    await interaction.editReply({ content: `Processing ${boss.name}... (${i + 1}/${bosses.length})` });
+                    
+                    const dropTablePerVersion: DropTablePerVersion = {};
+                    let description = '';
 
-                for (const version of boss.versions) {
-                    dropTablePerVersion[version] = await this.getCachedOrFreshData(version, boss.url);
-                }
-
-
-                const fields: any[] = [];
-
-                boss.versions.forEach(version => {
-                    description += `## ${version}:\n`;
-                    description += `**Commons GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(dropTablePerVersion[version].regularGpPerKill).toLocaleString()}\` gp *(no uniques)*\n`;
-                    description += `**Total GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(dropTablePerVersion[version].overallGpPerKill).toLocaleString()}\` gp *(with uniques)*\n`;
-
-                    fields.push(
-                        {
-                            name: `## ${version}:\nGP/Hour (${dropTablePerVersion[version].killsPerHour} kph)`,
-                            value: `<:Coins:1400432187924287579> ${Math.round(dropTablePerVersion[version].overallGpPerHour).toLocaleString()} gp`,
-                            inline: false
+                    console.log(`Processing ${boss.versions.length} versions for ${boss.name}`);
+                    for (let j = 0; j < boss.versions.length; j++) {
+                        const version = boss.versions[j];
+                        console.log(`Processing version ${j + 1}/${boss.versions.length}: ${version} for ${boss.name}`);
+                        try {
+                            dropTablePerVersion[version] = await this.getCachedOrFreshData(version, boss.url);
+                            console.log(`Successfully processed version: ${version} for ${boss.name}`);
+                        } catch (versionError) {
+                            const error = versionError as Error;
+                            console.log(`Failed to process version ${version} for ${boss.name}:`, {
+                                message: error.message,
+                                stack: error.stack,
+                                name: error.name,
+                                cause: error.cause
+                            });
+                            // Skip this version but continue with others
+                            continue;
                         }
-                    );
-                });
+                    }
 
-                description = description.trim();
+                    console.log(`Building embed for ${boss.name}`);
+                    const fields: any[] = [];
 
-                const embed = new EmbedBuilder()
-                    .setColor(this.client.color)
-                    .setTitle('Telos - Wiki')
-                    .setURL('https://runescape.wiki/w/Telos,_the_Warden')
-                    .setThumbnail('https://runescape.wiki/images/thumb/Telos%2C_the_Warden.png/201px-Telos%2C_the_Warden.png?99e18')
-                    .setDescription(description)
-                    .addFields(fields);
+                    boss.versions.forEach(version => {
+                        if (dropTablePerVersion[version]) {
+                            description += `## ${version}:\n`;
+                            description += `**Commons GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(dropTablePerVersion[version].regularGpPerKill).toLocaleString()}\` gp *(no uniques)*\n`;
+                            description += `**Total GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(dropTablePerVersion[version].overallGpPerKill).toLocaleString()}\` gp *(with uniques)*\n`;
 
-                if (interaction.channel && 'send' in interaction.channel) {
-                    const message = await interaction.channel.send({ embeds: [embed] });
-                    await this.trackEmbed(message.id, interaction.channelId, interaction.guildId);
+                            fields.push(
+                                {
+                                    name: `## ${version}:\nGP/Hour (${dropTablePerVersion[version].killsPerHour} kph)`,
+                                    value: `<:Coins:1400432187924287579> ${Math.round(dropTablePerVersion[version].overallGpPerHour).toLocaleString()} gp`,
+                                    inline: false
+                                }
+                            );
+                        } else {
+                            console.log(`Skipping version ${version} for ${boss.name} - no data available`);
+                        }
+                    });
+
+                    description = description.trim();
+
+                    if (description && fields.length > 0) {
+                        console.log(`Creating embed for ${boss.name}`);
+                        const embed = new EmbedBuilder()
+                            .setColor(this.client.color)
+                            .setTitle(`${boss.name} - Wiki`)
+                            .setURL(boss.wikiUrl)
+                            .setThumbnail(boss.thumbnail)
+                            .setDescription(description)
+                            .addFields(fields);
+
+                        if (interaction.channel && 'send' in interaction.channel) {
+                            const message = await interaction.channel.send({ embeds: [embed] });
+                            await this.trackEmbed(message.id, interaction.channelId, interaction.guildId);
+                            console.log(`Successfully sent embed for ${boss.name}`);
+                        }
+                    } else {
+                        console.log(`Skipping embed creation for ${boss.name} - no valid data`);
+                    }
+                } catch (bossError) {
+                    const error = bossError as Error;
+                    console.log(`Failed to process boss ${boss.name}:`, {
+                        message: error.message,
+                        stack: error.stack,
+                        name: error.name,
+                        cause: error.cause
+                    });
+                    // Continue with next boss instead of breaking entire command
+                    continue;
                 }
             }
 
             await interaction.editReply({ content: 'Embed sent!'});
         } catch (error) {
+            const err = error as Error;
+            console.log('Main command error - Full error details:', {
+                message: err.message,
+                stack: err.stack,
+                name: err.name,
+                cause: err.cause,
+                toString: err.toString()
+            });
             this.client.logger.error({ message: 'Error calculating boss revenue', error });
 
             const errorEmbed = new EmbedBuilder()
@@ -135,16 +216,30 @@ export default class BossRevenueV2 extends BotInteraction {
     }
 
     private async getCachedOrFreshData(version: string, url: string): Promise<BossRevenueData> {
+        console.log(`getCachedOrFreshData called for version: ${version}, url: ${url}`);
         const now = Date.now();
         const cache = BossRevenueV2.cache;
 
         if (cache && (now - cache.cachedAt) < BossRevenueV2.CACHE_TTL) {
+            console.log(`Using cached data for ${version}`);
             //return cache;
         }
 
-        const freshData = await this.calculateRevenue(version, url);
-        BossRevenueV2.cache = { ...freshData, cachedAt: now };
-        return freshData;
+        try {
+            console.log(`Calculating fresh revenue data for ${version}`);
+            const freshData = await this.calculateRevenue(version, url);
+            BossRevenueV2.cache = { ...freshData, cachedAt: now };
+            console.log(`Successfully calculated revenue data for ${version}`);
+            return freshData;
+        } catch (error) {
+            const err = error as Error;
+            console.log(`Error in getCachedOrFreshData for version ${version}:`, {
+                message: err.message,
+                stack: err.stack,
+                name: err.name
+            });
+            throw error;
+        }
     }
 
     private loadBossConfig(): BossConfig {
@@ -158,66 +253,103 @@ export default class BossRevenueV2 extends BotInteraction {
     }
 
     private async calculateRevenue(version: string, url: string): Promise<BossRevenueData> {
-        const dropTable = await this.fetchDropTable(version, url);
-        if (dropTable.length === 0) {
-            throw new Error('Unable to fetch drop table data');
-        }
-
-        const config = this.loadBossConfig();
-        const killsPerHour = config.kph;
-        const itemPrices = await this.getItemPrices(dropTable.map(item => item.name));
-        const regularDrops = dropTable.filter(drop => !drop.isUnique);
-        const uniqueDrops = dropTable.filter(drop => drop.isUnique);
-
-        let regularValue = 0;
-        for (const drop of regularDrops) {
-            const price = itemPrices[drop.name];
-            if (price !== undefined && price > 0) {
-                const dropValue = (price * drop.quantity);
-                regularValue += dropValue;
-            } else if (drop.price > 0) {
-                const dropValue = (drop.price * drop.quantity);
-                regularValue += dropValue;
+        console.log(`calculateRevenue: Starting for version ${version}`);
+        
+        try {
+            console.log(`calculateRevenue: Fetching drop table for ${version}`);
+            const dropTable = await this.fetchDropTable(version, url);
+            console.log(`calculateRevenue: Fetched ${dropTable.length} items for ${version}`);
+            
+            if (dropTable.length === 0) {
+                console.log(`calculateRevenue: No drop table data found for ${version}`);
+                throw new Error('Unable to fetch drop table data');
             }
-        }
 
-        let overallValue = regularValue;
-        for (const drop of uniqueDrops) {
-            const price = itemPrices[drop.name];
-            if (price !== undefined && price > 0) {
-                const dropValue = (price * drop.quantity);
-                overallValue += dropValue;
-            } else if (drop.price > 0) {
-                const dropValue = (drop.price * drop.quantity);
-                overallValue += dropValue;
+            console.log(`calculateRevenue: Loading boss config for ${version}`);
+            const config = this.loadBossConfig();
+            const killsPerHour = config.kph;
+            
+            console.log(`calculateRevenue: Getting item prices for ${dropTable.length} items for ${version}`);
+            const itemPrices = await this.getItemPrices(dropTable.map(item => item.name));
+            console.log(`calculateRevenue: Got prices for ${Object.keys(itemPrices).length} items for ${version}`);
+            
+            const regularDrops = dropTable.filter(drop => !drop.isUnique);
+            const uniqueDrops = dropTable.filter(drop => drop.isUnique);
+            console.log(`calculateRevenue: ${regularDrops.length} regular drops, ${uniqueDrops.length} unique drops for ${version}`);
+
+            let regularValue = 0;
+            for (const drop of regularDrops) {
+                const price = itemPrices[drop.name];
+                if (price !== undefined && price > 0) {
+                    const dropValue = (price * drop.quantity);
+                    regularValue += dropValue;
+                } else if (drop.price > 0) {
+                    const dropValue = (drop.price * drop.quantity);
+                    regularValue += dropValue;
+                }
             }
+
+            let overallValue = regularValue;
+            for (const drop of uniqueDrops) {
+                const price = itemPrices[drop.name];
+                if (price !== undefined && price > 0) {
+                    const dropValue = (price * drop.quantity);
+                    overallValue += dropValue;
+                } else if (drop.price > 0) {
+                    const dropValue = (drop.price * drop.quantity);
+                    overallValue += dropValue;
+                }
+            }
+
+            const regularGpPerKill = Math.round(regularValue);
+            const overallGpPerKill = Math.round(overallValue);
+
+            console.log(`calculateRevenue: Successfully calculated revenue for ${version}: ${regularGpPerKill}/${overallGpPerKill} gp/kill`);
+
+            return {
+                regularGpPerKill,
+                overallGpPerKill,
+                killsPerHour,
+                regularGpPerHour: regularGpPerKill * killsPerHour,
+                overallGpPerHour: overallGpPerKill * killsPerHour,
+                calculationTime: new Date().toLocaleString()
+            };
+        } catch (error) {
+            const err = error as Error;
+            console.log(`calculateRevenue: Error for version ${version}:`, {
+                message: err.message,
+                stack: err.stack,
+                name: err.name
+            });
+            throw error;
         }
-
-        const regularGpPerKill = Math.round(regularValue);
-        const overallGpPerKill = Math.round(overallValue);
-
-        return {
-            regularGpPerKill,
-            overallGpPerKill,
-            killsPerHour,
-            regularGpPerHour: regularGpPerKill * killsPerHour,
-            overallGpPerHour: overallGpPerKill * killsPerHour,
-            calculationTime: new Date().toLocaleString()
-        };
     }
 
     private async fetchDropTable(version: string, url: string): Promise<DropTableItem[]> {
+        console.log(`fetchDropTable: Starting for version ${version}, url: ${url}`);
         try {
+            console.log(`fetchDropTable: Making HTTP request for ${version}`);
             const response = await axios.get(url, {
                 headers: {
                     'User-Agent': 'Amascut Discord Bot - Boss Revenue Calculator'
                 },
                 timeout: 15000
             });
+            console.log(`fetchDropTable: Got HTTP response for ${version}, status: ${response.status}`);
 
-            return await this.parseBossDropTable(version, response.data);
+            console.log(`fetchDropTable: Parsing drop table data for ${version}`);
+            const result = await this.parseBossDropTable(version, response.data);
+            console.log(`fetchDropTable: Successfully parsed ${result.length} items for ${version}`);
+            return result;
 
         } catch (error) {
+            const err = error as Error & { code?: string };
+            console.log(`fetchDropTable: Error for version ${version}:`, {
+                message: err.message,
+                stack: err.stack,
+                name: err.name,
+                code: err.code
+            });
             return [];
         }
     }
@@ -226,8 +358,15 @@ export default class BossRevenueV2 extends BotInteraction {
         const dropTable: DropTableItem[] = [];
 
         try {
-            const allTablesRegex = new RegExp(`${version !== '' ? version + '=' : ''}\\s*(\\{\\{Mmgtable[\\s\\S]*?\\}\\}\n(?:\n|\\|\\-\\|))`, 'gis'); // /\{\{Mmgtable\|((?:[^{}]|\{\{[^{}]*\}\})*)\}\}/gis
-            const match = html.match(allTablesRegex);
+            const allTablesRegex = new RegExp(`${version !== '' ? version + '=' : ''}\\s*(\\{\\{Mmgtable[\\s\\S]*?\\}\\}\n(?:\n|\\|\\-\\|))`, 'gis');
+            let match = html.match(allTablesRegex);
+
+            if (!match && html.includes(`${version}=`)) {
+                const extracted = this.extractTemplateByVersion(version, html);
+                if (extracted) {
+                    match = [extracted];
+                }
+            }
 
             if (match) {
                 dropTable.push(...await this.parseDropTable(match[0]));
@@ -345,6 +484,38 @@ export default class BossRevenueV2 extends BotInteraction {
         const openBraces = (text.match(/\{\{/g) || []).length;
         const closeBraces = (text.match(/\}\}/g) || []).length;
         return openBraces !== closeBraces;
+    }
+
+    private extractTemplateByVersion(version: string, html: string): string | null {
+        const startIndex = html.indexOf(`${version}=`);
+        if (startIndex === -1) return null;
+
+        const nextSectionIndex = html.indexOf('=', startIndex + version.length + 1);
+        const sectionEnd = nextSectionIndex !== -1 ? nextSectionIndex : html.length;
+        const sectionContent = html.substring(startIndex, sectionEnd);
+        const mmgtableStart = sectionContent.indexOf('{{Mmgtable');
+        
+        if (mmgtableStart === -1) return null;
+
+        const absoluteStart = startIndex + mmgtableStart;
+        let braceCount = 0;
+        let endIndex = absoluteStart + 2;
+        
+        for (let i = absoluteStart; i < html.length - 1; i++) {
+            if (html.substring(i, i + 2) === '{{') {
+                braceCount++;
+                i++;
+            } else if (html.substring(i, i + 2) === '}}') {
+                braceCount--;
+                if (braceCount === 0) {
+                    endIndex = i + 2;
+                    break;
+                }
+                i++;
+            }
+        }
+        
+        return html.substring(startIndex, endIndex);
     }
 
     private extractQuantityFromCell(cell: string): number {
