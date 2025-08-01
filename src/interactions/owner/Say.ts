@@ -25,8 +25,8 @@ export default class Say extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction) {
         if (!interaction.inCachedGuild()) return;
 
-        const ownerRoleId = getRoles(interaction.guild.id).OWNER_ROLE;
-        const adminRoleId = getRoles(interaction.guild.id).ADMIN_ROLE;
+        const ownerRoleId = this.client.util.stripRole(getRoles(interaction.guild.id).owner);
+        const adminRoleId = this.client.util.stripRole(getRoles(interaction.guild.id).admin);
 
         // Debug logging
         console.log('DEBUG Say Command:');
