@@ -199,14 +199,14 @@ export default class BossRevenueV2 extends BotInteraction {
                 timeout: 15000
             });
 
-            return this.parseBossDropTable(version, response.data);
+            return await this.parseBossDropTable(version, response.data);
 
         } catch (error) {
             return [];
         }
     }
 
-    private parseBossDropTable(version: string, html: string): DropTableItem[] {
+    private async parseBossDropTable(version: string, html: string): Promise<DropTableItem[]> {
         const dropTable: DropTableItem[] = [];
 
         try {
@@ -214,7 +214,7 @@ export default class BossRevenueV2 extends BotInteraction {
             const match = html.match(allTablesRegex);
 
             if (match) {
-                dropTable.push(...this.parseDropTable(match[0]));
+                dropTable.push(...await this.parseDropTable(match[0]));
             }
 
             return dropTable;
@@ -223,7 +223,7 @@ export default class BossRevenueV2 extends BotInteraction {
         }
     }
 
-    private parseDropTable(tableContent: string): DropTableItem[] {
+    private async parseDropTable(tableContent: string): Promise<DropTableItem[]> {
         const dropTable: DropTableItem[] = [];
 
         try {
@@ -256,7 +256,9 @@ export default class BossRevenueV2 extends BotInteraction {
                 price: 0
             };
 
-            splittedLine.forEach((entry, index) => {
+            for (let index = 0; index < splittedLine.length; index++) {
+                const entry = splittedLine[index];
+                
                 // check what type of output it is
                 const itemNameMatch = outputItemNameRegex.exec(entry);
                 const itemQuantityMatch = outputItemQuantityRegex.exec(entry);
@@ -282,20 +284,14 @@ export default class BossRevenueV2 extends BotInteraction {
                 }
 
                 if (itemPriceMatch) {
-                    try {
-                        // be naive first
-                        item.price = eval(itemPriceMatch[1]);
-                    } catch (error) {
-                        // parse weird shit...
-                        item.price = parseFloat(itemPriceMatch[1]);
-                    }
+                    item.price = await this.extractPriceFromCell(itemPriceMatch[1]);
                 }
 
                 // if it is the last entry, push also
-                if (index === splittedLine.length -1) {
+                if (index === splittedLine.length - 1) {
                     dropTable.push(item);
                 }
-            });
+            }
 
             return dropTable;
         } catch (error) {
@@ -310,10 +306,40 @@ export default class BossRevenueV2 extends BotInteraction {
         return eval(val);
     }
 
-    extractPriceFromCell(cell: string): number {
-        //TODO
-
-        return 0;
+    private async extractPriceFromCell(cell: string): Promise<number> {
+        try {
+            console.log('Original cell:', cell);
+            let processed = cell
+                .replace(/\{GETotal¦/g, '(')
+                .replace(/¦([+\-*/])¦/g, ' $1 ')
+                .replace(/¦\}/g, ')')
+                .replace(/\{cvexpr¦/g, '(')
+                .replace(/\{\{GEP\|([^}]+)\}\}/g, '$1')
+                .replace(/¦/g, '+')
+                .replace(/\}/g, ')');
+            console.log('After transformations:', processed);
+            
+            const itemMatches = [...processed.match(/[A-Z][A-Za-z0-9\s,''-]+?(?=\s*[\+\-\*\/\(\)]|$)/g) || []];
+            if (itemMatches.length > 0) {
+                console.log('Extracted items:', itemMatches);
+                const prices = await this.getItemPrices(itemMatches);
+                console.log('Item prices:', prices);
+                
+                const sortedItems = itemMatches.sort((a, b) => b.length - a.length);
+                for (const item of sortedItems) {
+                    const price = prices[item] || 0;
+                    processed = processed.replace(new RegExp(item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), price.toString());
+                }
+            }
+            console.log('After price substitution:', processed);
+            
+            const sanitized = processed.replace(/[^\d+\-*/.() ]/g, '');
+            const result = new Function(`return ${sanitized}`)();
+            return typeof result === 'number' && !isNaN(result) ? result : 0;
+        } catch (error) {
+            console.log('Error parsing price cell:', cell, error);
+            return 0;
+        }
     }
 
     private isUniqueItem(itemName: string): boolean {
