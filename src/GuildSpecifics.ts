@@ -186,6 +186,20 @@ export function getRoles(guildId: string | undefined) : Roles {
             serverAnnouncements: '000000000000000000',
             goodMorning: '000000000000000000',
             member: '1391860635406700566',
+            worldsFirst: '1391860635435798731',
+            dayOfRelease: '1391860635435798730',
+            weekOfRelease: '1391860635435798729',
+            devourerFirstWeek: '1401274911594647626',
+            devourerDayOne: '1401274865113370685',
+            silverSpoon: '1401274832284553226',
+            goldenSpoon: '1401274807085039791',
+            firstDevourer: '1401274550821453906',
+            sunforged: '1401274490910146682',
+            lightbearer: '1401274458852950140',
+            releaseDay4k: '1401274424220450838',
+            releaseDay2k: '1401274406369755187',
+            releaseDay1k: '1401274388187447429',
+            releaseDay500: '1401274362987810907',
         }
     }
 
@@ -237,6 +251,20 @@ export function getRoles(guildId: string | undefined) : Roles {
             serverAnnouncements: '000000000000000000',
             goodMorning: '000000000000000000',
             member: '1389655724946100345',
+            worldsFirst: '1389647217849270442',
+            dayOfRelease: '1389647282739216545',
+            weekOfRelease: '1389647368131186880',
+            devourerFirstWeek: '1400869529608917113',
+            devourerDayOne: '1400869087223218176',
+            silverSpoon: '1400869056445415594',
+            goldenSpoon: '1400869015940759662',
+            firstDevourer: '1400868959833690152',
+            sunforged: '1400868744045002963',
+            lightbearer: '1400868680522534933',
+            releaseDay4k: '1400868619449139412',
+            releaseDay2k: '1400868598376960130',
+            releaseDay1k: '1400868543653744670',
+            releaseDay500: '1400868489048359086',
         }
     }
 

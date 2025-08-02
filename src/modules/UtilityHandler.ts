@@ -30,6 +30,7 @@ interface Categories {
     duo: string[]
     combined: string[]
     serverPings: string[]
+    vanity: string[]
 }
 
 interface Hierarchy {
@@ -195,24 +196,25 @@ export default class UtilityHandler {
     }
 
     get categories(): Categories {
-            return {
-                killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend'],
-                collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
-                    threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
-                    duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
+        return {
+            killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend'],
+            collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
+            threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
+            duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
             combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
             serverPings: ['serverAnnouncements', 'goodMorning'],
-                }
-            }
+            vanity: ['worldsFirst', 'dayOfRelease', 'weekOfRelease', 'devourerFirstWeek', 'devourerDayOne', 'silverSpoon', 'goldenSpoon', 'firstDevourer', 'sunforged', 'lightbearer', 'releaseDay4k', 'releaseDay2k', 'releaseDay1k', 'releaseDay500']
+        }
+    }
 
     get hierarchy(): Hierarchy {
         return {
             killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend'],
             collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
-                threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
-                duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
+            threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
+            duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
             combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
-            serverPings: ['serverAnnouncements', 'goodMorning'],
+            serverPings: ['serverAnnouncements', 'goodMorning']
         }
     }
 
@@ -242,6 +244,8 @@ export default class UtilityHandler {
             category = 'combined';
         } else if (this.categories.serverPings.includes(role)) {
             category = 'serverPings';
+        } else if (this.categories.vanity.includes(role)) {
+            category = 'vanity';
         } else {
             category = ''
         }
@@ -252,7 +256,7 @@ export default class UtilityHandler {
         const overrides = {
             roleConfirmations: ['erethdorsBane', 'solakWRHolder', 'fours'],
         }
-        if (this.categories.killCount.includes(role) || this.categories.collectionLog.includes(role)) {
+        if (this.categories.killCount.includes(role) || this.categories.collectionLog.includes(role) || this.categories.vanity.includes(role)) {
             return 'achievementsAndLogs'
         } else if (overrides.roleConfirmations.includes(role) || this.categories.combined.includes(role) || this.categories.duo.includes(role) || this.categories.threeSeven.includes(role)) {
             return 'roleConfirmations'

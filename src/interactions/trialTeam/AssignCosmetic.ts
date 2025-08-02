@@ -19,48 +19,37 @@ export default class Pass extends BotInteraction {
     }
 
     get permissions() {
-        return 'TRIAL_TEAM';
+        return 'ELEVATED_ROLE';
     }
 
     get hierarchy(): Hierarchy {
         return {
-            killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend']
+            killCount: ['']
         }
     }
 
     get removeHierarchy(): RemoveHierarchy {
         return {
-            'solakCasual': ['solakRookie'],
-            'solakEnthusiast': ['solakRookie', 'solakCasual'],
-            'solakAddict': ['solakRookie', 'solakCasual', 'solakEnthusiast'],
-            'unlockedPerdita': ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict'],
-            'solakFanatic': ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita'],
-            'solakSlave': ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic'],
-            'solakSimp': ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave'],
-            'solakLegend': ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp'],
+            //'role': ['lower roles']
         }
     }
 
     get options() {
         const assignOptions: any = {
-            'Solak WR holder': 'solakWRHolder',
-            "Erethdor's Bane": 'erethdorsBane',
-            'Guardian of the Grove': 'guardianOfTheGrove',
-            'Solak Rookie (100KC)': 'solakRookie',
-            'Solak Casual (300KC)': 'solakCasual',
-            'Solak Enthusiast (500KC)': 'solakEnthusiast',
-            'Solak Addict (800KC)': 'solakAddict',
-            'Unlocked Perdita (1000KC)': 'unlockedPerdita',
-            'Solak Fanatic (1500KC)': 'solakFanatic',
-            'Solak Slave (3000KC)': 'solakSlave',
-            'Solak Simp (6000KC)': 'solakSimp',
-            'Solak Legend (10000KC)': 'solakLegend',
-            'Night Out With My Right Hand (10 BBC)': 'nightOutWithMyRightHand',
-            'Probably Uses Special Scissors (10 OH BBC)': 'probablyUsesSpecialScissors',
-            'One for the Books (15 Grimoire)': 'oneForTheBooks',
-            'Broken Printer (1500 Grimoire Pages)': 'brokenPrinter',
-            "Merethiel's Simp (10 Staves)": 'merethielsSimp',
-            'Shroom Dealer (10 Mushrooms)': 'shroomDealer'
+            'World\'s First': 'worldsFirst',
+            'Day of Release': 'dayOfRelease',
+            'Week of Release': 'weekOfRelease',
+            'Devourer of the First Week': 'devourerFirstWeek',
+            'Day One Devourer': 'devourerDayOne',
+            'Silver spoon': 'silverSpoon',
+            'Golden spoon': 'goldenSpoon',
+            'the First Devourer': 'firstDevourer',
+            'the Sunforged': 'sunforged',
+            'the Lightbearer': 'lightbearer',
+            'Release day 4k': 'releaseDay4k',
+            'Release day 2k': 'releaseDay2k',
+            'Release day 1k': 'releaseDay1k',
+            'Release day 500': 'releaseDay500',
         }
         const options: any = [];
         Object.keys(assignOptions).forEach((key: string) => {
