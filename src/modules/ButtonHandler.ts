@@ -11,6 +11,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import TicketHandler from './TicketHandler';
 import { getChannels, getRoles } from '../GuildSpecifics';
+import LeaderboardHandler from './LeaderboardHandler';
 
 // ===============================
 // CONSTANTS
@@ -67,6 +68,11 @@ export default class ButtonHandler {
 
         if (id.startsWith('host_')) {
             this.handleHost(interaction, id.slice(11));
+            return;
+        }
+
+        if (id.startsWith('leaderboard_')) {
+            new LeaderboardHandler(this.client, interaction.customId, interaction);
             return;
         }
 

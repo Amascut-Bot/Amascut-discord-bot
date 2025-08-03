@@ -10,6 +10,7 @@ import { DpmSubmission } from "./entity/DpmSubmission"
 import { KillTimeSubmission } from './entity/KillTimeSubmission'
 import { Ticket } from "./entity/Ticket"
 import { MessageShortcut } from "./entity/MessageShortcut"
+import { EnrageLeaderboard } from "./entity/EnrageLeaderboard"
 
 export const AppDataSource = new DataSource({
     type: "sqlite",
@@ -26,7 +27,8 @@ export const AppDataSource = new DataSource({
         DpmSubmission,
         KillTimeSubmission,
         Ticket,
-        MessageShortcut
+        MessageShortcut,
+        EnrageLeaderboard
     ],
     migrations: [],
     subscribers: [],

@@ -54,6 +54,8 @@ export function getChannels(guildId: string | undefined) : Channels {
             CUTE_PETS_CHANNEL: '1391860639063871579',
             LOG_CHANNEL_ID: '1391860640674484228',
             ADMIN_CHANNEL: '1391860637369372764',
+            leaderboardSubmission: '1401295942027841686',
+            leaderboards: '1401296432916467847',
         }
     }
 
@@ -78,6 +80,8 @@ export function getChannels(guildId: string | undefined) : Channels {
             CUTE_PETS_CHANNEL: '1389643125408010290',
             LOG_CHANNEL_ID: '1389413228794216648',
             ADMIN_CHANNEL: '1389379617915408448',
+            leaderboardSubmission: '1401295523020935218',
+            leaderboards: '1401296202116501544',
         }
     }
 
