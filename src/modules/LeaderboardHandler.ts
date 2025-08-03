@@ -192,6 +192,24 @@ export default class LeaderboardHandler {
             await message.delete();
         }
 
+        const lb1Urls = [
+            'https://cdn.discordapp.com/attachments/1399948539894956164/1401380120974987324/lightning1strc.png?ex=68901071&is=688ebef1&hm=2a46f6978cc29f5e79fcb0af05bba5271b6f235cd610110f3d397a1dac387a2e&',
+            'https://cdn.discordapp.com/attachments/1399948539894956164/1401379126991913134/rc1stgreen.png?ex=68900f84&is=688ebe04&hm=45bf04530217a9c6231742627333d4762167e640b60b7243f674b8894b906669&',
+            'https://cdn.discordapp.com/attachments/1399948539894956164/1401378192287334550/1strc.png?ex=68900ea5&is=688ebd25&hm=be3433533e56424216251a9470b73718bada2ce8f1e88e3b81af955bf8c27849&'
+        ];
+
+        const lb2Urls = [
+            'https://cdn.discordapp.com/attachments/1399948539894956164/1401380121226641541/lightning2ndrc.png?ex=68901071&is=688ebef1&hm=c65e395a730429e6c7ad6bd0d6a8680b763df194db31b0948a9c5394bfb141a1&',
+            'https://cdn.discordapp.com/attachments/1399948539894956164/1401379126744453251/rc2ndghost.png?ex=68900f84&is=688ebe04&hm=576771276a4207a3cf0e5222453951785e9c0c611fac2c2094d3991f2070dfa8&',
+            'https://cdn.discordapp.com/attachments/1399948539894956164/1401378192547254334/2ndrc.png?ex=68900ea5&is=688ebd25&hm=1ed43bf85e81c486e266a26b3beb8ad20cc876cdf100d13f18033deb7b9d67dd&'
+        ];
+
+        const lb3Urls = [
+            'https://cdn.discordapp.com/attachments/1399948539894956164/1401380121474109582/lightning3rdrc.png?ex=68901071&is=688ebef1&hm=14efa72ce79163cbcadd6e8acf407588ac533a1986322362ac27d990220a7331&',
+            'https://cdn.discordapp.com/attachments/1399948539894956164/1401379126501445703/rc3rdghost.png?ex=68900f84&is=688ebe04&hm=e385d886c024f0c3c3999c33bd9a206c7b2ffb461648ee728f5e27a46c3c03ff&',
+            'https://cdn.discordapp.com/attachments/1399948539894956164/1401378192828141668/3rcrc.png?ex=68900ea5&is=688ebd25&hm=defc56f7abd23b645a5f52c5d2acd548b307f24c7da359e42c821455c69c5b3e&'
+        ];
+
         for (let index = 0; index < 3; index++) {
             const container = new ContainerBuilder().setAccentColor(client.color);
 
@@ -261,19 +279,19 @@ export default class LeaderboardHandler {
             // LB 1:
             if (entries.length > 0) {
                 container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
-                container.addSectionComponents(await this.getLeaderboardSection(entries[0], 'https://runescape.wiki/images/Challenge_gem_rank_1.png?48e0c'));
+                container.addSectionComponents(await this.getLeaderboardSection(entries[0], lb1Urls[index]));
             }
 
             // LB 2:
             if (entries.length > 1) {
                 container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
-                container.addSectionComponents(await this.getLeaderboardSection(entries[1], 'https://runescape.wiki/images/Challenge_gem_rank_2.png?76103'));
+                container.addSectionComponents(await this.getLeaderboardSection(entries[1], lb2Urls[index]));
             }
 
             // LB 3:
             if (entries.length > 2) {
                 container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
-                container.addSectionComponents(await this.getLeaderboardSection(entries[2], 'https://runescape.wiki/images/Challenge_gem_rank_3.png?4479c'));
+                container.addSectionComponents(await this.getLeaderboardSection(entries[2], lb3Urls[index]));
             }
 
             if (entries.length === 0) {
