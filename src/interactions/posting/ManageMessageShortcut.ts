@@ -99,7 +99,7 @@ export default class ManageMessageShortcut extends BotInteraction {
                 });
 
                 if (existingEntry) {
-                    await repository.delete(existingEntry);
+                    await repository.remove(existingEntry);
                     return await interaction.editReply(`Successfully deleted shortcut '${shortcut}'.`);
                 }
             }
@@ -115,7 +115,7 @@ export default class ManageMessageShortcut extends BotInteraction {
                 });
 
                 if (existingEntries) {
-                    await repository.delete(existingEntries);
+                    await repository.remove(existingEntries);
                     return await interaction.editReply(`Successfully deleted all shortcuts referencing ${messageLink}.`);
                 }
             }
