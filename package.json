@@ -26,6 +26,7 @@
         "pg": "^8.16.2",
         "reflect-metadata": "^0.1.13",
         "sqlite3": "^5.1.4",
+        "svg2img": "^1.0.0-beta.2",
         "typeorm": "^0.3.11",
         "utf-8-validate": "^5.0.5",
         "uuid": "^8.3.2"
