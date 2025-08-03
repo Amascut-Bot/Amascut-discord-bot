@@ -174,7 +174,7 @@ export default class LeaderboardHandler {
 
         if (userIds.length < 2) {
             return await interaction.reply({
-                content: 'You need to first select your Group-Members before submitting! Your group must contain of at least 2 people!',
+                content: 'You need to first select your Group-Members before submitting! Your group must contain at least 2 people!',
                 flags: MessageFlags.Ephemeral
             });
         }
