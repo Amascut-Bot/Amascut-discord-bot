@@ -203,7 +203,7 @@ export default class UtilityHandler {
             duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
             combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
             serverPings: ['serverAnnouncements', 'goodMorning'],
-            vanity: ['worldsFirst', 'dayOfRelease', 'weekOfRelease', 'devourerFirstWeek', 'devourerDayOne', 'silverSpoon', 'goldenSpoon', 'firstDevourer', 'sunforged', 'lightbearer', 'releaseDay4k', 'releaseDay2k', 'releaseDay1k', 'releaseDay500']
+            vanity: ['devourerFirstWeek', 'devourerDayOne', 'silverSpoon', 'goldenSpoon', 'firstDevourer', 'sunforged', 'lightbearer', 'releaseDay4k', 'releaseDay2k', 'releaseDay1k', 'releaseDay500']
         }
     }
 

@@ -36,9 +36,6 @@ export default class Pass extends BotInteraction {
 
     get options() {
         const assignOptions: any = {
-            'World\'s First': 'worldsFirst',
-            'Day of Release': 'dayOfRelease',
-            'Week of Release': 'weekOfRelease',
             'Devourer of the First Week': 'devourerFirstWeek',
             'Day One Devourer': 'devourerDayOne',
             'Silver spoon': 'silverSpoon',
