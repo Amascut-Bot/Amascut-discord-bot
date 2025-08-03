@@ -421,9 +421,6 @@ export default class LeaderboardHandler {
                 container.addTextDisplayComponents(builder => builder.setContent('# No Leaderboard entries available!'));
             }
 
-            container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
-            container.addTextDisplayComponents(builder => builder.setContent('-# Go to <#1401296202116501544> to submit your team for the leaderboard!'));
-
             // Post New Leaderboard
             await channel.send({
                 components: [container],
