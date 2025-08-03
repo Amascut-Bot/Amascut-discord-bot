@@ -631,6 +631,8 @@ export default class UtilityHandler {
             };
 
             if (node.placeholder) result.placeholder = node.placeholder;
+            if (node.minValues) result.min_values = node.minValues;
+            if (node.maxValues) result.max_values = node.maxValues;
 
             result.options = node.options.map((option: any) => {
                 let optionResult: any = {};
@@ -651,6 +653,18 @@ export default class UtilityHandler {
 
                 return optionResult;
             });
+        }
+
+        //User Select
+        if (node.type == 5) {
+            result = {
+                type: node.type,
+                custom_id: node.customId
+            };
+
+            if (node.placeholder) result.placeholder = node.placeholder;
+            if (node.minValues) result.min_values = node.minValues;
+            if (node.maxValues) result.max_values = node.maxValues;
         }
 
         //Section

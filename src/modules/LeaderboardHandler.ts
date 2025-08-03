@@ -1,31 +1,27 @@
-import { ActionRowBuilder, ActionRowComponent, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ContainerBuilder, ContainerComponent, EmbedBuilder, Interaction, MediaGalleryComponent, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, SectionBuilder, SeparatorSpacingSize, TextChannel, TextDisplayBuilder, TextDisplayComponent, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ContainerBuilder, ContainerComponent, Interaction, MediaGalleryBuilder, MediaGalleryComponent, MessageFlags, ModalBuilder, ModalSubmitInteraction, SectionBuilder, SeparatorSpacingSize, TextChannel, TextDisplayBuilder, TextDisplayComponent, TextInputBuilder, TextInputStyle, User, UserSelectMenuInteraction } from 'discord.js';
 import Bot from '../Bot';
-import axios from 'axios';
-import TranscriptGenerator from './TranscriptGenerator';
-import * as path from 'path';
-import * as fs from 'fs/promises';
-import { Ticket } from '../entity/Ticket';
 import { getRoles, getChannels } from '../GuildSpecifics';
 import { EnrageLeaderboard } from '../entity/EnrageLeaderboard';
-import { secureHeapUsed } from 'crypto';
 import { LessThanOrEqual } from 'typeorm';
-import { release } from 'os';
-
-const ticketTranscriptChannelId = getChannels(process.env.GUILD_ID).TICKET_TRANSCRIPT_CHANNEL;
 
 export default interface LeaderboardHandler { client: Bot; id: string; interaction: Interaction }
 
 export default class LeaderboardHandler {
-    constructor(client: Bot, id: string, interaction: ButtonInteraction<'cached'>) {
+    constructor(client: Bot, id: string, interaction: Interaction) {
         this.client = client;
         this.id = id;
         this.interaction = interaction;
 
         switch (id) {
-            case 'leaderboard_approveEnrage': this.handleLeaderboardApprove(interaction); break;
-            case 'leaderboard_rejectEnrage': this.handleLeaderboardReject(interaction); break;
+            case 'leaderboard_approveEnrage': this.handleLeaderboardApprove(interaction as ButtonInteraction<'cached'>); break;
+            case 'leaderboard_rejectEnrage': this.handleLeaderboardReject(interaction as ButtonInteraction<'cached'>); break;
+            case 'leaderboard_userselect': this.handleLeaderboardUserselect(interaction as UserSelectMenuInteraction); break;
+            case 'leaderboard_createSubmit': this.handleLeaderboardCreateSubmit(interaction as ButtonInteraction<'cached'>); break;
+            case 'leaderboard_submit': this.handleLeaderboardSubmit(interaction as ModalSubmitInteraction); break;
         }
     }
+
+    //#region Moderation
 
     private async handleLeaderboardReject(interaction: ButtonInteraction<'cached'>) {
         await interaction.deferReply( { flags: MessageFlags.Ephemeral });
@@ -48,8 +44,8 @@ export default class LeaderboardHandler {
             .setStyle(ButtonStyle.Danger)
             .setDisabled(true);
 
-        (container.components[5] as ActionRowBuilder<ButtonBuilder>) = new ActionRowBuilder<ButtonBuilder>().addComponents(approveButton, rejectButton);
-        (container.components[8] as TextDisplayBuilder) = new TextDisplayBuilder().setContent(`*Rejected* by <@${interaction.user.id}>`);
+        (container.components[container.components.length - 4] as ActionRowBuilder<ButtonBuilder>) = new ActionRowBuilder<ButtonBuilder>().addComponents(approveButton, rejectButton);
+        (container.components[container.components.length - 1] as TextDisplayBuilder) = new TextDisplayBuilder().setContent(`*Rejected* by <@${interaction.user.id}>`);
 
         // Update Panel
         await interaction.message.edit({
@@ -73,10 +69,17 @@ export default class LeaderboardHandler {
         // Extract Data
         const rawData: string = (messageComponents[0] as TextDisplayComponent).content;
         const enrageRegex = /Submitted Enrage:\s*`(\d+)%`/gim;
-        const teamMemberRegex = /RSN:\s*`([^`]+)`\s*\|\s*Disc:\s*<@(\d+)>/gim;
+        const teamMemberRegex = /RSN:\s*`([^`]+)`\s*\|\s*Discord:\s*<@(\d+)>/gim;
+        const unfinishedRsnRegex = /`empty`/gim;
 
         const enrageMatch = enrageRegex.exec(rawData);
         const teamMemberMatch = rawData.matchAll(teamMemberRegex);
+        const unfinishedRsnMatch = unfinishedRsnRegex.exec(rawData);
+
+        if (unfinishedRsnMatch) {
+            await interaction.editReply('You need to set all RSN\'s first, use /enrage-edit!');
+            return;
+        }
 
         let enrage: number | null = null;
         if (enrageMatch) {
@@ -104,7 +107,7 @@ export default class LeaderboardHandler {
 
         const createdAt: Date = new Date(interaction.message.createdTimestamp);
 
-        // Save To Db
+        // Save To DB
         await this.saveLeaderboardApproval(team, screenshot, enrage, createdAt, interaction.user.id);
 
         // Repost Leaderboard
@@ -125,8 +128,8 @@ export default class LeaderboardHandler {
             .setStyle(ButtonStyle.Danger)
             .setDisabled(true);
 
-        (container.components[5] as ActionRowBuilder<ButtonBuilder>) = new ActionRowBuilder<ButtonBuilder>().addComponents(approveButton, rejectButton);
-        (container.components[8] as TextDisplayBuilder) = new TextDisplayBuilder().setContent(`*Approved* by <@${interaction.user.id}>`);
+        (container.components[container.components.length - 4] as ActionRowBuilder<ButtonBuilder>) = new ActionRowBuilder<ButtonBuilder>().addComponents(approveButton, rejectButton);
+        (container.components[container.components.length - 1] as TextDisplayBuilder) = new TextDisplayBuilder().setContent(`*Approved* by <@${interaction.user.id}>`);
 
         // Update Panel
         await interaction.message.edit({
@@ -137,6 +140,121 @@ export default class LeaderboardHandler {
 
         await interaction.editReply('Enrage-Leaderboard Submission successfully approved');
     }
+
+    //#endregion
+
+    //#region Create / Submit
+
+    private async handleLeaderboardUserselect(interaction: UserSelectMenuInteraction) {
+        await interaction.deferUpdate();
+
+        const userIds: string[] = interaction.values;
+        const userIdSubmit: string = interaction.user.id;
+
+        if (!userIds.includes(userIdSubmit)) {
+            // Add submitting user as well
+            userIds.push(userIdSubmit);
+        }
+
+        this.client.tempSubmissionData?.set(`leaderboardsubmission_${userIdSubmit}`, userIds);
+    }
+
+    private async handleLeaderboardCreateSubmit(interaction: ButtonInteraction<'cached'>) {
+        //await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const { cleanContainer } = this.client.util;
+        const cleanUp = cleanContainer.bind(this.client.util)
+
+        const messageComponents = (interaction.message.components[0] as ContainerComponent).components;
+        const container = cleanUp(interaction.message.components[0]);
+
+        // Read Message-Information
+        const userIdSubmit: string = interaction.user.id;
+        const userIds: string[] = this.client.tempSubmissionData?.get(`leaderboardsubmission_${userIdSubmit}`) ?? [];
+
+        if (userIds.length < 2) {
+            return await interaction.reply({
+                content: 'You need to first select your Group-Members before submitting! Your group must contain of at least 2 people!',
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        // Build Modal
+        const modal = new ModalBuilder()
+            .setCustomId(`leaderboard_submit`)
+            .setTitle('Create a Enrage-Leaderboard submission');
+
+        const enrageInput = new TextInputBuilder()
+            .setCustomId('enrage')
+            .setLabel('Which enrage did you achieve?')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(6);
+
+        const screenshotInput = new TextInputBuilder()
+            .setCustomId('screenshot')
+            .setLabel('Please provide a Screenshot showing proof.')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const informationInput = new TextInputBuilder()
+            .setCustomId('information')
+            .setLabel('Please provide any additional information.')
+            .setPlaceholder(`If the Discord-Names of you and your teammates don't align, match them here.`)
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(512);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(enrageInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(screenshotInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(informationInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow);
+
+        // Reset Panel
+        await interaction.message.edit({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2,
+            allowedMentions: { 'parse': [] }
+        });
+
+        // Open Modal
+        await interaction.showModal(modal);
+    }
+
+    private async handleLeaderboardSubmit(interaction: ModalSubmitInteraction) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const submissionChannelId = getChannels(interaction.guild!.id).leaderboardSubmission;
+        const submissionChannel = await interaction.guild!.channels.fetch(submissionChannelId) as TextChannel;
+
+        // Read Message-Information
+        const userIdSubmit: string = interaction.user.id;
+        const userIds: string[] = this.client.tempSubmissionData?.get(`leaderboardsubmission_${userIdSubmit}`) ?? [];
+
+        const enrage = parseFloat(interaction.fields.getTextInputValue('enrage').replace('%', ''));
+        const screenshot = interaction.fields.getTextInputValue('screenshot');
+        const information = interaction.fields.getTextInputValue('information');
+
+        // validate values
+        if (Number.isNaN(enrage)) {
+            return await interaction.editReply(`Your enrage '${interaction.fields.getTextInputValue('enrage')}' is not a valid number!`);
+        }
+
+        if (!LeaderboardHandler.isValidUrl(screenshot)) {
+            return await interaction.editReply(`Your Screenshot-URL '${screenshot}' is not a valid URL!`);
+        }
+
+        LeaderboardHandler.postLeaderboardSubmission(submissionChannel, this.client, interaction.guild!.id, interaction.user, [], userIds, enrage, screenshot, information);
+
+        // Reset Userids
+        this.client.tempSubmissionData?.set(`leaderboardsubmission_${userIdSubmit}`, []);
+
+        return await interaction.editReply('You Enrage Submission was successfully created. Please wait for an Admin or Owner to review and approve / reject it.')
+    }
+
+    //#endregion
 
     //#region Database
 
@@ -182,6 +300,8 @@ export default class LeaderboardHandler {
 
     //#endregion
 
+    //#region Static
+
     public static async postLeaderboard(channel: TextChannel, client: Bot, guild: string) {
         const { dataSource } = client;
         const repository = dataSource.getRepository(EnrageLeaderboard);
@@ -189,7 +309,9 @@ export default class LeaderboardHandler {
         // Clear Channel
         const messages = await channel.messages.fetch();
         for await (const [_id, message] of messages) {
-            await message.delete();
+            if (!message.pinned) {
+                await message.delete();
+            }
         }
 
         const lb1Urls = [
@@ -341,4 +463,70 @@ export default class LeaderboardHandler {
 
         return result;
     }
+
+    public static async postLeaderboardSubmission(channel: TextChannel, client: Bot, guild: string, user: User, teamRSN: string[], teamDisc: string[], enrage: number, screenshot: string, information: string) {
+
+        const adminMention = getRoles(guild).admin;
+        const ownerMention = getRoles(guild).owner;
+
+        const container = new ContainerBuilder().setAccentColor(client.color);
+
+        let text: string = `> New Enrage-Leaderboard submission from: <@${user.id}>\n`;
+        text += `Submitted Enrage: \`${enrage}%\`\n`;
+        text += `Team Members:\n`;
+
+        teamDisc.forEach((teamMember: string, index: number) => {
+            text += `${index + 1}: RSN: \`${teamRSN.length >= index + 1 ? teamRSN[index] : 'empty'}\` | Discord: <@${teamMember}>\n`;
+        });
+        container.addTextDisplayComponents(textBuilder => textBuilder.setContent(text));
+
+        container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
+        container.addMediaGalleryComponents(new MediaGalleryBuilder().addItems({
+            description: "Submitted Screenshot",
+            media: { url: screenshot }
+        }));
+
+        container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
+        container.addTextDisplayComponents(textBuilder => textBuilder.setContent('Additional Information:\n' + information));
+
+        container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
+        container.addTextDisplayComponents(textBuilder => textBuilder.setContent('Moderation Controls:'));
+
+        const approveButton = new ButtonBuilder()
+            .setCustomId('leaderboard_approveEnrage')
+            .setLabel('Approve')
+            .setStyle(ButtonStyle.Success);
+
+        const rejectButton = new ButtonBuilder()
+            .setCustomId('leaderboard_rejectEnrage')
+            .setLabel('Reject')
+            .setStyle(ButtonStyle.Danger);
+
+        container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(approveButton, rejectButton))
+
+        container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
+        container.addTextDisplayComponents(textBuilder => textBuilder.setContent('Moderation Status:'));
+        container.addTextDisplayComponents(textBuilder => textBuilder.setContent('*Open*'));
+
+        await channel.send( {
+            content: `${adminMention}, ${ownerMention}`
+        });
+
+        await channel.send({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2,
+            allowedMentions: { "parse": [] }
+        });
+    }
+
+    private static isValidUrl(string: string): boolean {
+        try {
+            new URL(string);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    //#endregion
 }

@@ -6,6 +6,7 @@ import ButtonHandler from './ButtonHandler';
 import StringSelectHandler from './StringSelectHandler';
 import EventEmitter = require('events');
 import TicketHandler from './TicketHandler';
+import LeaderboardHandler from './LeaderboardHandler';
 
 export default interface InteractionHandler {
     client: Bot;
@@ -112,6 +113,10 @@ export default class InteractionHandler extends EventEmitter {
 
             if (interaction.customId.startsWith('ticket:') || interaction.customId.startsWith('ticket_')) {
                 return new TicketHandler(this.client, interaction.customId, interaction);
+            }
+
+            if (interaction.customId.startsWith('leaderboard_')) {
+                return new LeaderboardHandler(this.client, interaction.customId, interaction);
             }
         }
 
@@ -223,6 +228,12 @@ export default class InteractionHandler extends EventEmitter {
 
         if (interaction.isStringSelectMenu() && interaction.inCachedGuild()) {
             return new StringSelectHandler(this.client, interaction.customId, interaction);
+        }
+
+        if (interaction.isUserSelectMenu() && interaction.inCachedGuild()) {
+            if (interaction.customId.startsWith('leaderboard_')) {
+                return new LeaderboardHandler(this.client, interaction.customId, interaction);
+            }
         }
     }
 }

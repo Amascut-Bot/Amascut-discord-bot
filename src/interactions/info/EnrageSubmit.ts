@@ -2,6 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, But
 import BotInteraction from '../../types/BotInteraction';
 import { DpmSubmission } from '../../entity/DpmSubmission';
 import { getChannels, getRoles } from '../../GuildSpecifics';
+import LeaderboardHandler from '../../modules/LeaderboardHandler';
 
 export default class EnrageSubmit extends BotInteraction {
     get name() {
@@ -67,49 +68,7 @@ export default class EnrageSubmit extends BotInteraction {
         if (rsn4 && disc4) team.push( { rsn: rsn4, disc: disc4.id });
         if (rsn5 && disc5) team.push( { rsn: rsn5, disc: disc5.id });
 
-        const container = new ContainerBuilder().setAccentColor(this.client.color);
-
-        let text: string = `> New Enrage-Leaderboard submission from: <@${disc.id}>\n`;
-        text += `Submitted Enrage: \`${enrage}%\`\n`;
-        text += `Team Members:\n`;
-
-        team.forEach((teamMember: { rsn: string, disc: string }, index: number) => {
-            text += `${index + 1}: RSN: \`${teamMember.rsn}\` | Disc: <@${teamMember.disc}>\n`;
-        });
-        container.addTextDisplayComponents(textBuilder => textBuilder.setContent(text));
-        container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
-        container.addMediaGalleryComponents(new MediaGalleryBuilder().addItems({
-            description: "Submitted Screenshot",
-            media: { url: attachment.url }
-        }));
-        container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
-        container.addTextDisplayComponents(textBuilder => textBuilder.setContent('Moderation Controls:'));
-
-        const approveButton = new ButtonBuilder()
-            .setCustomId('leaderboard_approveEnrage')
-            .setLabel('Approve')
-            .setStyle(ButtonStyle.Success);
-
-        const rejectButton = new ButtonBuilder()
-            .setCustomId('leaderboard_rejectEnrage')
-            .setLabel('Reject')
-            .setStyle(ButtonStyle.Danger);
-
-        container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(approveButton, rejectButton))
-
-        container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
-        container.addTextDisplayComponents(textBuilder => textBuilder.setContent('Moderation Status:'));
-        container.addTextDisplayComponents(textBuilder => textBuilder.setContent('*Open*'));
-
-        await submissionChannel.send( {
-            content: `${adminMention}, ${ownerMention}`
-        });
-
-        await submissionChannel.send({
-            components: [container],
-            flags: MessageFlags.IsComponentsV2,
-            allowedMentions: { "parse": [] }
-        });
+        LeaderboardHandler.postLeaderboardSubmission(submissionChannel, this.client, interaction.guild.id, interaction.user, team.map(x => x.rsn), team.map(x => x.disc), enrage, attachment.url, '');
 
         await interaction.editReply('You Enrage Submission was successfully created. Please wait for an Admin or Owner to review and approve / reject it.');
     }
