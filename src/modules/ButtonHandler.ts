@@ -1874,27 +1874,28 @@ export default class ButtonHandler {
         const cleanUp = cleanContainer.bind(this.client.util)
 
         let roleName = id;
-        let componentIndex = -1;
+        let targetSlot = '';
 
         switch (id) {
             case 'Base':
-                componentIndex = 0;
+                roleName = 'Base';
+                targetSlot = '**Base:**';
                 break;
             case '11':
                 roleName = 'Role 1';
-                componentIndex = 2;
+                targetSlot = '**Role 1:**';
                 break;
             case '12':
                 roleName = 'Role 1';
-                componentIndex = 4;
+                targetSlot = '**Role 1:**';
                 break;
             case '21':
                 roleName = 'Role 2';
-                componentIndex = 6;
+                targetSlot = '**Role 2:**';
                 break;
             case '22':
                 roleName = 'Role 2';
-                componentIndex = 8;
+                targetSlot = '**Role 2:**';
                 break;
         }
 
@@ -1902,32 +1903,75 @@ export default class ButtonHandler {
         const container = cleanUp(interaction.message.components[0]);
         const replyEmbed = new EmbedBuilder();
 
-        let offset = 0;
-        if (messageComponents.length === 11) {
-            offset = 2;
-            componentIndex += 2;
-        }
+        // Find all section components that match our target role
+        const getSectionIndices = (rolePattern: string) => {
+            const indices: number[] = [];
+            for (let i = 0; i < messageComponents.length; i++) {
+                const component = messageComponents[i];
+                if (component.type === 9 && 
+                    (component as SectionComponent).components?.[0]?.type === 10) {
+                    const content = ((component as SectionComponent).components[0] as TextDisplayComponent).content;
+                    if (content.includes(rolePattern)) {
+                        indices.push(i);
+                    }
+                }
+            }
+            return indices;
+        };
 
         const getSignedUpIndex = (userid: string) => {
-            for (let index = 0; index <= 8; index+=2) {
-                const element = ((messageComponents[index + offset] as SectionComponent).components[0] as TextDisplayComponent).content;
-
-                if (element.includes(userid)) {
-                    return index + offset;
+            for (let i = 0; i < messageComponents.length; i++) {
+                const component = messageComponents[i];
+                if (component.type === 9 && 
+                    (component as SectionComponent).components?.[0]?.type === 10) {
+                    const content = ((component as SectionComponent).components[0] as TextDisplayComponent).content;
+                    if (content.includes(userid)) {
+                        return i;
+                    }
                 }
             }
             return -1;
         };
 
         const isSlotTaken = (index: number) => {
-            const element = ((messageComponents[index + offset] as SectionComponent).components[0] as TextDisplayComponent).content;
-
-            if (element.includes('`Empty`')) {
-                return false;
+            if (index < 0 || index >= messageComponents.length) return true;
+            
+            const component = messageComponents[index];
+            if (component.type !== 9 || 
+                !(component as SectionComponent).components?.[0] ||
+                (component as SectionComponent).components[0].type !== 10) {
+                return true;
             }
-
-            return true;
+            
+            const content = ((component as SectionComponent).components[0] as TextDisplayComponent).content;
+            return !content.includes('`Empty`');
         };
+
+        // Find the specific slot index for this button press
+        const sectionIndices = getSectionIndices(targetSlot);
+        let componentIndex = -1;
+
+        if (targetSlot === '**Base:**') {
+            componentIndex = sectionIndices[0] ?? -1;
+        } else if (targetSlot === '**Role 1:**') {
+            if (id === '11') {
+                componentIndex = sectionIndices[0] ?? -1;
+            } else if (id === '12') {
+                componentIndex = sectionIndices[1] ?? -1;
+            }
+        } else if (targetSlot === '**Role 2:**') {
+            if (id === '21') {
+                componentIndex = sectionIndices[0] ?? -1;
+            } else if (id === '22') {
+                componentIndex = sectionIndices[1] ?? -1;
+            }
+        }
+
+        // Check if we found a valid component index
+        if (componentIndex === -1) {
+            replyEmbed.setColor(colours.discord.red).setDescription('Unable to find the requested slot. The host card may be malformed.');
+            return await interaction.editReply({ embeds: [replyEmbed] });
+        }
 
         //check if user is already signed up somewhere
         const signedUpIndex = getSignedUpIndex(interaction.user.id);
