@@ -74,5 +74,8 @@ export default class Ready extends BotEvent {
         // Start Boss Revenue Auto-Updater
         BossRevenue.startAutoUpdater(this.client);
         this.client.logger.log({ message: 'Boss Revenue auto-updater started (10-minute intervals)' }, true);
+
+        // Start Voice Channel Reminders
+        this.client.reminderHandler.startReminders();
     }
 }

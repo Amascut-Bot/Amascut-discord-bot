@@ -57,6 +57,36 @@ export default class MessageCreate extends BotEvent {
             return;
         }
 
+        // Handle !myvc command
+        if (message.content.trim().toLowerCase() === '!myvc') {
+            try {
+                const member = message.member;
+                if (!member) return;
+
+                const voiceChannel = member.voice.channel;
+                if (!voiceChannel) {
+                    return message.reply('You need to be in a voice channel to use this command!');
+                }
+
+                // Create an invite to the voice channel
+                const invite = await voiceChannel.createInvite({
+                    maxAge: 0, // Never expires
+                    maxUses: 0, // Unlimited uses
+                    unique: false, // Don't create a unique invite every time
+                    reason: `!myvc command by ${message.author.tag}`
+                });
+
+                return message.reply(`Voice channel: ${invite.url}`);
+            } catch (error) {
+                this.client.logger.error({
+                    message: `Failed to create voice channel invite for !myvc command by ${message.author.tag} in channel ${message.channel.id}`,
+                    handler: this.constructor.name,
+                    error: error as Error
+                });
+                return message.reply('Sorry, I couldn\'t create an invite to your voice channel. Make sure I have the "Create Instant Invite" permission!');
+            }
+        }
+
         // slash command handler
         const isOwner = this.client.util.config.owners.includes(message.author.id);
         const buildMention = `<@${this.client.user?.id}> build`;

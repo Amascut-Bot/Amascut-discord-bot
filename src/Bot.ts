@@ -10,6 +10,7 @@ import TempChannelManager from './modules/TempVCHandler';
 import AutoTriggerHandler from './modules/AutoTriggerHandler';
 import URLReactionHandler from './modules/URLReactionHandler';
 import ForumTodoHandler from './modules/ForumTodoHandler';
+import ReminderHandler from './modules/ReminderHandler';
 import { DataSource } from "typeorm"
 import { AppDataSource } from './DataSource';
 import * as fs from 'fs/promises';
@@ -60,6 +61,7 @@ export default interface Bot extends Client {
     autoTrigger: AutoTriggerHandler;
     urlReactionHandler: URLReactionHandler;
     forumTodoHandler: ForumTodoHandler;
+    reminderHandler: ReminderHandler;
     tempManager?: TempChannelManager;
     emojiCache: Map<string, GuildEmoji>;
     tempSubmissionData?: Map<string, any>;
@@ -80,6 +82,7 @@ export default class Bot extends Client {
         this.autoTrigger = new AutoTriggerHandler(this);
         this.urlReactionHandler = new URLReactionHandler(this);
         this.forumTodoHandler = new ForumTodoHandler(this);
+        this.reminderHandler = new ReminderHandler(this);
         this.interactions = new InteractionHandler(this).build();
         this.events = new EventHandler(this);
         this.emojiCache = new Map<string, GuildEmoji>();
