@@ -791,7 +791,7 @@ export default class TicketHandler {
                         handler: this.constructor.name
                     }, true);
 
-                    await interaction.followUp({ content: `A DM has been sent to ${ticketOpener.username} with a download link.`, flags: MessageFlags.Ephemeral });
+
 
                 } catch (dmError: any) {
                     this.client.logger.error({
