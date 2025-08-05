@@ -36,17 +36,28 @@ export default class Pass extends BotInteraction {
 
     get options() {
         const assignOptions: any = {
-            'Devourer of the First Week': 'devourerFirstWeek',
-            'Day One Devourer': 'devourerDayOne',
             'Silver spoon': 'silverSpoon',
             'Golden spoon': 'goldenSpoon',
-            'the First Devourer': 'firstDevourer',
-            'the Sunforged': 'sunforged',
-            'the Lightbearer': 'lightbearer',
+            'the Sunforged (Release week 4000%)': 'sunforged',
+            'the Lightbearer (Release week 2000%)': 'lightbearer',
             'Release day 4k': 'releaseDay4k',
             'Release day 2k': 'releaseDay2k',
             'Release day 1k': 'releaseDay1k',
             'Release day 500': 'releaseDay500',
+            'Cat-Bound Initiate (100KC)': 'catBoundInitiate',
+            'Scarab-Marked Disciple (250KC)': 'scarabMarkedDisciple',
+            'Whisperer of the Wanderer (500KC)': 'whispererOfTheWanderer',
+            'Bearer of the Unholy Sigil (750KC)': 'bearerOfTheUnholySigil',
+            'Fang of the Devourer (1000KC)': 'fangOfTheDevourer',
+            'Visionmaker (Full Log)': 'visionmaker',
+            'Tumeken mask (5)': 'tumekenMask',
+            'Tumeken robe top (5)': 'tumekenRobeTop',
+            'Tumeken robe bottom (5)': 'tumekenRobeBottom',
+            'Tumeken gloves (5)': 'tumekenGloves',
+            'Tumeken boots (5)': 'tumekenBoots',
+            'Devourers guard (5)': 'devourersGuard',
+            'Tumekenslight (5)': 'tumekensLight',
+            'Amaskitty': 'amaskitty',
         }
         const options: any = [];
         Object.keys(assignOptions).forEach((key: string) => {
