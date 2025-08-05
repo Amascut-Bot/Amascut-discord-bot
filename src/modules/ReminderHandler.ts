@@ -21,9 +21,9 @@ export default class ReminderHandler {
     }
 
     public startReminders() {
-        cron.schedule('0 * * * *', () => this.sendHourlyReminders());
+        cron.schedule('*/30 * * * *', () => this.sendHourlyReminders());
         this.client.logger.log({ 
-            message: 'Voice channel reminder system started',
+            message: 'Voice channel reminder system started (30-minute intervals)',
             handler: this.constructor.name 
         }, true);
     }
