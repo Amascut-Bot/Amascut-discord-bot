@@ -203,7 +203,7 @@ export default class UtilityHandler {
             duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
             combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
             serverPings: ['serverAnnouncements', 'goodMorning'],
-            vanity: ['devourerFirstWeek', 'devourerDayOne', 'silverSpoon', 'goldenSpoon', 'firstDevourer', 'sunforged', 'lightbearer', 'releaseDay4k', 'releaseDay2k', 'releaseDay1k', 'releaseDay500']
+            vanity: ['silverSpoon', 'goldenSpoon', 'sunforged', 'lightbearer', 'releaseDay4k', 'releaseDay2k', 'releaseDay1k', 'releaseDay500', 'catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer', 'visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty']
         }
     }
 
