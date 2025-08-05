@@ -68,6 +68,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             botRoleLog: '1389412380626255872',
             reportLog: '1389416667393556640',
             tempVCCategory: '885457551397912598',
+            tempVCCategory2: '1402375561887748216',
             tempVCCreate: '1389392880518566138',
             dpmCalc: '1389379617915408448',
             trialScheduling: '000000000000000000',

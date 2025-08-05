@@ -1,6 +1,7 @@
 import { ParentChannelOptions, TempChannelsManager, TempChannelsManagerEvents } from '@hunteroi/discord-temp-channels';
 import Bot from '../Bot';
 import { getChannels } from '../GuildSpecifics';
+import { DiscordAPIError } from 'discord.js';
 
 export default interface TempChannelManager {
     client: Bot;
@@ -25,16 +26,61 @@ export default class TempChannelManager extends TempChannelsManager {
     }
 
     public __initParentListener(channelId: string, options?: ParentChannelOptions): void {
+        const channels = getChannels(process.env.GUILD_ID);
+        
         return this.registerChannel(channelId, options || {
-            childCategory: getChannels(process.env.GUILD_ID).tempVCCategory,
+            childCategory: channels.tempVCCategory,
             childAutoDeleteIfEmpty: true,
             childAutoDeleteIfParentGetsUnregistered: true,
-            childAutoDeleteIfOwnerLeaves: false,
+            childAutoDeleteIfOwnerLeaves: true,
             childVoiceFormat: (str, count): string => `Team #${count} | ${str}`,
             // childVoiceFormat: (str, count): string => `${str}'s Team`,
             childVoiceFormatRegex: /^Team #\d+ \|/,
             // childVoiceFormatRegex: /^.*\'s\s{1}Team$/,
-            childBitrate: 64000
+            childBitrate: 64000,
+            childShouldBeCreated: async (member, parent) => {
+                try {
+                    // Try primary category first
+                    const primaryCategory = await this.client.channels.fetch(channels.tempVCCategory);
+                    if (primaryCategory && primaryCategory.isThread() === false && 'children' in primaryCategory) {
+                        const channelCount = primaryCategory.children.cache.size;
+                        if (channelCount < 50) {
+                            return { shouldCreate: true, reason: 'Primary category available' };
+                        }
+                    }
+                    
+                    // If primary is full, try secondary category
+                    const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
+                    if (secondaryCategory && secondaryCategory.isThread() === false && 'children' in secondaryCategory) {
+                        const channelCount = secondaryCategory.children.cache.size;
+                        if (channelCount < 50) {
+                            // Override the category for this creation
+                            parent.options.childCategory = channels.tempVCCategory2;
+                            this.client.logger.log({
+                                handler: this.constructor.name,
+                                message: `Primary temp VC category full (50 channels), using secondary category for ${member.user.tag}`
+                            }, true);
+                            return { shouldCreate: true, reason: 'Using secondary category' };
+                        }
+                    }
+                    
+                    // Both categories are full
+                    this.client.logger.error({
+                        handler: this.constructor.name,
+                        message: `Both temp VC categories are full! Cannot create channel for ${member.user.tag}`,
+                        error: new Error('All temp VC categories at capacity')
+                    });
+                    return { shouldCreate: false, reason: 'All categories full' };
+                    
+                } catch (error) {
+                    this.client.logger.error({
+                        handler: this.constructor.name,
+                        message: 'Error checking temp VC category capacity',
+                        error: error as Error
+                    });
+                    return { shouldCreate: true, reason: 'Error checking capacity, allowing creation' };
+                }
+            }
         })
     }
 

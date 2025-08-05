@@ -47,6 +47,13 @@ export default class Ready extends BotEvent {
                     message: 'Caught a non-critical "Target user is not connected to voice" error. This is likely due to a user leaving the creation channel too quickly. The bot will not crash.'
                 }, true);
             }
+            if (error instanceof DiscordAPIError && error.code === 50035) {
+                return this.client.logger.error({
+                    handler: 'TempChannelManager',
+                    message: 'CRITICAL: Temp VC category is full (50 channels). Please clean up old channels or create a second category.',
+                    error: error
+                });
+            }
             this.client.logger.error({
                 handler: 'TempChannelManager',
                 message: 'An unhandled error occurred in the temp channel manager.',
