@@ -71,7 +71,7 @@ export default class ReminderHandler {
                 container.setAccentColor(0x5865F2);
 
                 const reminderText = new TextDisplayBuilder()
-                    .setContent('**Tip:** You can use the command `!myvc` to share a link to your voice channel!');
+                    .setContent('**Tip:** You can use the command **!myvc** to share a link to your voice channel!');
 
                 container.addTextDisplayComponents(reminderText);
 
