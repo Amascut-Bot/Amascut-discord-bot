@@ -41,8 +41,6 @@ export default class TicketHandler {
             case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_open': this.handleTicketOpen(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_delete': this.handleTicketDelete(interaction as ButtonInteraction<'cached'>); break;
-            case 'ticket_delete_confirm': this.handleTicketDeleteConfirm(interaction as ButtonInteraction<'cached'>); break;
-            case 'ticket_delete_cancel': this.handleTicketDeleteCancel(interaction as ButtonInteraction<'cached'>); break;
         }
     }
 
@@ -703,25 +701,107 @@ export default class TicketHandler {
             return;
         }
 
-        // Create final confirmation for deletion
-        const confirmEmbed = new EmbedBuilder()
-            .setTitle('Delete Ticket')
-            .setDescription('Are you sure you want to **permanently delete** this ticket channel?\n\n**This action cannot be undone!**')
-            .setColor(0xff0000);
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const confirmButtons = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('ticket_delete_confirm')
-                    .setLabel('Delete Forever')
-                    .setStyle(ButtonStyle.Danger),
-                new ButtonBuilder()
-                    .setCustomId('ticket_delete_cancel')
-                    .setLabel('Cancel')
-                    .setStyle(ButtonStyle.Secondary)
-            );
+        try {
+            const channel = interaction.channel as TextChannel;
 
-        await interaction.reply({ embeds: [confirmEmbed], components: [confirmButtons], flags: MessageFlags.Ephemeral });
+            // First, log the ticket to the forum, which now also attaches the transcript
+            await interaction.editReply({ content: 'Archiving ticket to forum...' });
+            const forumPostId = await this.logTicketToForum(channel, interaction.user, 'Automatically logged before deletion');
+
+            if (!forumPostId) {
+                await interaction.editReply({ content: 'Error: Failed to archive ticket to the forum. Aborting deletion.' });
+                return;
+            }
+
+            // New: Attempt to find the ticket opener and send them a DM with a download button
+            const ticketOpenerId = await this.findTicketOpener(channel);
+            this.client.logger.log({
+                message: `[Transcript] Found ticket opener ID: ${ticketOpenerId} for channel ${channel.name}`,
+                handler: this.constructor.name
+            }, true);
+
+            if (ticketOpenerId) {
+                try {
+                    const ticketOpener = await this.client.users.fetch(ticketOpenerId);
+                    this.client.logger.log({
+                        message: `[Transcript] Fetched user ${ticketOpener.username} (${ticketOpener.id})`,
+                        handler: this.constructor.name
+                    }, true);
+
+                    const dmEmbed = new EmbedBuilder()
+                        .setTitle('Ticket Closed')
+                        .setDescription(`Your ticket **#${channel.name}** has been closed and archived. You can download a copy of the transcript at any time.`)
+                        .setColor(this.client.color)
+                        .setTimestamp();
+
+                    const buttonId = `ticket:download_transcript_${forumPostId}`;
+                    const downloadButton = new ActionRowBuilder<ButtonBuilder>()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(buttonId)
+                                .setLabel('Download Transcript')
+                                .setStyle(ButtonStyle.Primary)
+                        );
+
+                    this.client.logger.log({
+                        message: `[Transcript] Sending DM to ${ticketOpener.username} with button ID: "${buttonId}"`,
+                        handler: this.constructor.name
+                    }, true);
+
+                    await ticketOpener.send({
+                        embeds: [dmEmbed],
+                        components: [downloadButton]
+                    });
+
+                    this.client.logger.log({
+                        message: `[Transcript] Successfully sent DM to ${ticketOpener.username}`,
+                        handler: this.constructor.name
+                    }, true);
+
+                } catch (dmError: any) {
+                    this.client.logger.error({
+                        message: `Failed to DM transcript button to user ${ticketOpenerId}`,
+                        error: { message: dmError.message, stack: dmError.stack, name: dmError.name },
+                        handler: this.constructor.name
+                    });
+                    await interaction.followUp({ content: 'Could not send DM to the user. They may have DMs disabled.', flags: MessageFlags.Ephemeral });
+                }
+            } else {
+                await interaction.followUp({ content: 'Warning: Could not identify the ticket opener to send a DM.', flags: MessageFlags.Ephemeral });
+            }
+
+            this.client.logger.log({
+                message: `Ticket ${channel.name} deleted by ${interaction.user.username} (${interaction.user.id})`,
+                handler: this.constructor.name
+            }, true);
+
+            await interaction.followUp({ content: 'Ticket archived. The channel will be deleted in 5 seconds...' });
+
+            // Delete the channel after a short delay
+            setTimeout(async () => {
+                try {
+                    await channel.delete('Ticket deleted by admin/owner');
+                    await this.saveTicketClose(channel.id, interaction.user.id, forumPostId);
+                } catch (error) {
+                    this.client.logger.error({
+                        message: 'Failed to delete ticket channel',
+                        error,
+                        handler: this.constructor.name
+                    });
+                }
+            }, 5000);
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to delete ticket',
+                error,
+                handler: this.constructor.name
+            });
+
+            await interaction.editReply({ content: 'An error occurred while deleting the ticket. Please try again.' });
+        }
     }
 
     private async handleTicketDeleteConfirm(interaction: ButtonInteraction<'cached'>): Promise<void> {
