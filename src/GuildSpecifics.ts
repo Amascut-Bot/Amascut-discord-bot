@@ -65,7 +65,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             TWITCH_NOTIFICATION_CHANNEL: '1390391961172836494',
             roleConfirmations: '1389392006891045116',
             achievementsAndLogs: '1389393398829682739',
-            botRoleLog: '1389412380626255872',
+            botRoleLog: '1402724855287255070',
             reportLog: '1389416667393556640',
             tempVCCategory: '885457551397912598',
             tempVCCategory2: '1402375561887748216',
