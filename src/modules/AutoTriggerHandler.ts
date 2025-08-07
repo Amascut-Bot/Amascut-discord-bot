@@ -50,7 +50,7 @@ export default class AutoTriggerHandler {
         if (!msg.includes('meow') && !msg.includes(':meow:') && !msg.includes(':hehe:')) {
             return false;
         }
-
+        //alex is cute
         const meowEmoji = this.client.emojiCache.get('meow');
         const heheEmoji = this.client.emojiCache.get('hehe');
         let triggered = false;
