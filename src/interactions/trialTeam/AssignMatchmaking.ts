@@ -267,6 +267,8 @@ export default class Pass extends BotInteraction {
             returnedMessage.id = message.id;
             returnedMessage.url = message.url;
 
+            // deactivate automatic reacts for now
+            /*
             const emojis = ['Pog', 'gz'];
 
             for (let index = 0; index < emojis.length; index++) {
@@ -276,6 +278,7 @@ export default class Pass extends BotInteraction {
                     message.react(emoji);
                 }
             }
+            */
         });
 
         const logChannel = await this.client.channels.fetch('1045192967754883172') as TextChannel;
