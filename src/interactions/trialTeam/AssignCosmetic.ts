@@ -65,6 +65,14 @@ export default class Pass extends BotInteraction {
         return options;
     }
 
+    private isVerifiedEligible(role: string) : Boolean {
+        const verifiedRoles: string[] = ['releaseWeek500', 'releaseWeek1k', 'sunforged', 'lightbearer', 'releaseDay4k'];
+
+        if (verifiedRoles.includes(role)) return true;
+
+        return false;
+    }
+
     get slashData() {
         return new SlashCommandBuilder()
             .setName(this.name)
@@ -115,7 +123,17 @@ export default class Pass extends BotInteraction {
         }
 
         const roleId = stripRole(getRoles(interaction.guild?.id)[role]);
-        if (!hasHigherRole(role)) await user?.roles.add(roleId);
+        if (!hasHigherRole(role)) {
+            await user?.roles.add(roleId);
+
+            // if role qualifies for verified automatically assign aswell
+            if (this.isVerifiedEligible(role)) {
+                const verifiedId = stripRole(getRoles(interaction.guild?.id).verified);
+                if (!userRoles.includes(verifiedId)) {
+                    await user?.roles.add(verifiedId);
+                }
+            }
+        }
         embedColour = roleObject.color ?? this.client.color;
         if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
             sendMessage = true;
