@@ -473,6 +473,8 @@ export default class ButtonHandler {
             returnedMessage.id = message.id;
             returnedMessage.url = message.url;
 
+            // deactivate automatic reacts for now
+            /*
             const emojis = ['Pog', 'gz'];
 
             for (let index = 0; index < emojis.length; index++) {
@@ -482,6 +484,7 @@ export default class ButtonHandler {
                     message.react(emoji);
                 }
             }
+            */
         });
 
         const logChannel = await this.client.channels.fetch(getChannels(interaction.guild?.id).botRoleLog) as TextChannel;
@@ -1180,6 +1183,8 @@ export default class ButtonHandler {
 
                     const message = await announcementChannel.send({ embeds: [roleEmbed] });
 
+                    // deactivate automatic reacts for now
+                    /*
                     const emojis = ['Pog', 'gz'];
 
                     for (let index = 0; index < emojis.length; index++) {
@@ -1189,6 +1194,7 @@ export default class ButtonHandler {
                             await message.react(emoji);
                         }
                     }
+                    */
                 }
 
                 if (positionInfo && positionInfo.position <= 3) {
@@ -1207,6 +1213,8 @@ export default class ButtonHandler {
 
                     const message = await announcementChannel.send({ embeds: [positionEmbed] });
 
+                    // deactivate automatic reacts for now
+                    /*
                     const emojis = ['Pog', 'gz'];
 
                     for (let index = 0; index < emojis.length; index++) {
@@ -1216,6 +1224,7 @@ export default class ButtonHandler {
                             await message.react(emoji);
                         }
                     }
+                    */
                 }
             }
 
@@ -1908,7 +1917,7 @@ export default class ButtonHandler {
             const indices: number[] = [];
             for (let i = 0; i < messageComponents.length; i++) {
                 const component = messageComponents[i];
-                if (component.type === 9 && 
+                if (component.type === 9 &&
                     (component as SectionComponent).components?.[0]?.type === 10) {
                     const content = ((component as SectionComponent).components[0] as TextDisplayComponent).content;
                     if (content.includes(rolePattern)) {
@@ -1922,7 +1931,7 @@ export default class ButtonHandler {
         const getSignedUpIndex = (userid: string) => {
             for (let i = 0; i < messageComponents.length; i++) {
                 const component = messageComponents[i];
-                if (component.type === 9 && 
+                if (component.type === 9 &&
                     (component as SectionComponent).components?.[0]?.type === 10) {
                     const content = ((component as SectionComponent).components[0] as TextDisplayComponent).content;
                     if (content.includes(userid)) {
@@ -1935,14 +1944,14 @@ export default class ButtonHandler {
 
         const isSlotTaken = (index: number) => {
             if (index < 0 || index >= messageComponents.length) return true;
-            
+
             const component = messageComponents[index];
-            if (component.type !== 9 || 
+            if (component.type !== 9 ||
                 !(component as SectionComponent).components?.[0] ||
                 (component as SectionComponent).components[0].type !== 10) {
                 return true;
             }
-            
+
             const content = ((component as SectionComponent).components[0] as TextDisplayComponent).content;
             return !content.includes('`Empty`');
         };
