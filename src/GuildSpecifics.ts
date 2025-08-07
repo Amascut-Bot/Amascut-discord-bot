@@ -204,6 +204,7 @@ export function getRoles(guildId: string | undefined) : Roles {
             releaseDay2k: '1401274406369755187',
             releaseDay1k: '1401274388187447429',
             releaseDay500: '1401274362987810907',
+            verified: '1391860635435798724',
         }
     }
 
@@ -276,6 +277,7 @@ export function getRoles(guildId: string | undefined) : Roles {
             devourersGuard: '1401431662327369780',
             tumekensLight: '1401431760704901193',
             amaskitty: '1401431834780241940',
+            verified: '1390353573216387072',
         }
     }
 
