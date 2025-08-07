@@ -87,6 +87,8 @@ export default class MessageCreate extends BotEvent {
             }
         }
 
+        // this is a test
+
         // slash command handler
         const isOwner = this.client.util.config.owners.includes(message.author.id);
         const buildMention = `<@${this.client.user?.id}> build`;
