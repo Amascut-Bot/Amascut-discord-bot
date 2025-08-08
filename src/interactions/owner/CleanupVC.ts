@@ -33,7 +33,7 @@ export default class CleanupVC extends BotInteraction {
         await interaction.deferReply({ ephemeral: true });
 
         const channels = getChannels(interaction.guild.id);
-        const tempVCCategories = [channels.tempVCCategory, channels.tempVCCategory2].filter(Boolean);
+        const tempVCCategories = [channels.tempVCCategory, channels.tempVCCategory2, channels.tempVCCategory3].filter(Boolean);
         const excludedChannels = ['1389392880518566138', '1389391295130374237'];
 
         let deletedCount = 0;

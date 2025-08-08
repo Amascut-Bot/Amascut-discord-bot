@@ -20,7 +20,7 @@ export default class TempChannelManager extends TempChannelsManager {
         this.client = client;
         this.built = false;
         this.tempChannelIds = new Set();
-        
+
         this.setupVoiceStateListener();
         this.loaded();
     }
@@ -56,7 +56,7 @@ export default class TempChannelManager extends TempChannelsManager {
                     return;
                 }
             }
-            
+
             // Create a new temp VC
             const newChannel = await this.createTempVCWithFallback(member);
             if (newChannel) {
@@ -76,7 +76,7 @@ export default class TempChannelManager extends TempChannelsManager {
     private async createTempVCWithFallback(member: GuildMember): Promise<any> {
         const channels = getChannels(process.env.GUILD_ID);
         const guild = member.guild;
-        
+
         const existingTempChannels = guild.channels.cache.filter(c => this.tempChannelIds.has(c.id));
         const channelCount = existingTempChannels.size + 1;
         const channelName = `Team #${channelCount} | ${member.displayName}`;
@@ -90,6 +90,11 @@ export default class TempChannelManager extends TempChannelsManager {
             const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
             if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory && secondaryCategory.children.cache.size < 50) {
                 return await this.createTempChannel(guild, channelName, channels.tempVCCategory2, member, 'secondary');
+            }
+
+            const tertiaryCategory = await this.client.channels.fetch(channels.tempVCCategory3);
+            if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory && tertiaryCategory.children.cache.size < 50) {
+                return await this.createTempChannel(guild, channelName, channels.tempVCCategory3, member, 'tertiary');
             }
 
             this.client.logger.error({
@@ -160,7 +165,7 @@ export default class TempChannelManager extends TempChannelsManager {
                 }, true);
             } catch (error) {
                 // Channel might have been deleted already
-                if (error instanceof DiscordAPIError && error.code === 10003) { 
+                if (error instanceof DiscordAPIError && error.code === 10003) {
                     this.tempChannelIds.delete(channel.id);
                 } else {
                     this.client.logger.error({

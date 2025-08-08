@@ -69,6 +69,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             reportLog: '1389416667393556640',
             tempVCCategory: '885457551397912598',
             tempVCCategory2: '1402375561887748216',
+            tempVCCategory3: '1403384312782389400',
             tempVCCreate: '1389392880518566138',
             dpmCalc: '1389379617915408448',
             trialScheduling: '000000000000000000',
