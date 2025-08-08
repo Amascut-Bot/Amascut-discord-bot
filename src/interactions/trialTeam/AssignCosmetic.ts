@@ -127,12 +127,12 @@ export default class Pass extends BotInteraction {
             await user?.roles.add(roleId);
 
             // if role qualifies for verified automatically assign aswell
-            // if (this.isVerifiedEligible(role)) {
-            //     const verifiedId = stripRole(getRoles(interaction.guild?.id).verified);
-            //     if (!userRoles.includes(verifiedId)) {
-            //         await user?.roles.add(verifiedId);
-            //     }
-            // }
+            if (this.isVerifiedEligible(role)) {
+                const verifiedId = stripRole(getRoles(interaction.guild?.id).verified);
+                if (!userRoles.includes(verifiedId)) {
+                    await user?.roles.add(verifiedId);
+                }
+            }
         }
         embedColour = roleObject.color ?? this.client.color;
         if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
