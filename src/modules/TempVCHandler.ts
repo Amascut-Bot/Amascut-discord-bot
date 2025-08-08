@@ -22,7 +22,50 @@ export default class TempChannelManager extends TempChannelsManager {
         this.tempChannelIds = new Set();
 
         this.setupVoiceStateListener();
+        this.loadTempChannelIds();
         this.loaded();
+    }
+
+    private async loadTempChannelIds(): Promise<void> {
+        const excludedChannels = ['1389392880518566138', '1389391295130374237']; // join to create and afk
+        const channels = getChannels(process.env.GUILD_ID);
+
+        try {
+            const primaryCategory = await this.client.channels.fetch(channels.tempVCCategory);
+            const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
+            const tertiaryCategory = await this.client.channels.fetch(channels.tempVCCategory3);
+
+            if (primaryCategory && primaryCategory.type === ChannelType.GuildCategory) {
+                const primaryVcs = await primaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
+
+                for (const [key, vc] of primaryVcs) {
+                    this.tempChannelIds.add(vc.id);
+                }
+            }
+
+            if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory) {
+                const primaryVcs = await secondaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
+
+                for (const [key, vc] of primaryVcs) {
+                    this.tempChannelIds.add(vc.id);
+                }
+            }
+
+            if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory) {
+                const primaryVcs = await tertiaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
+
+                for (const [key, vc] of primaryVcs) {
+                    this.tempChannelIds.add(vc.id);
+                }
+            }
+        } catch (error) {
+            this.client.logger.error({
+                handler: this.constructor.name,
+                message: `Failed to init temp vc channels`,
+                error: error as Error
+            });
+        }
+
     }
 
     private setupVoiceStateListener(): void {
