@@ -86,6 +86,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             leaderboards: '1401296202116501544',
             vcReminderChannel1: '1389393102258573475',
             vcReminderChannel2: '1389393146647154808',
+            vcReminderChannel3: '1403494299903066142',
         }
     }
 
