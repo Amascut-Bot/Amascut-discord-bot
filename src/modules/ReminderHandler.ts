@@ -22,80 +22,81 @@ export default class ReminderHandler {
 
     public startReminders() {
         cron.schedule('*/30 * * * *', () => this.sendHourlyReminders());
-        this.client.logger.log({ 
+        this.client.logger.log({
             message: 'Voice channel reminder system started (30-minute intervals)',
-            handler: this.constructor.name 
+            handler: this.constructor.name
         }, true);
     }
 
     private async sendHourlyReminders() {
         const guilds = this.client.guilds.cache;
-        
+
         for (const guild of guilds.values()) {
             const channels = getChannels(guild.id);
             const targetChannels = [
                 channels.vcReminderChannel1,
-                channels.vcReminderChannel2
+                channels.vcReminderChannel2,
+                channels.vcReminderChannel3
             ].filter(Boolean);
 
             for (const channelId of targetChannels) {
-            try {
-                const channel = await this.client.channels.fetch(channelId) as TextChannel;
-                if (!channel) {
-                    this.client.logger.error({
-                        message: `Could not find reminder channel ${channelId}`,
-                        handler: this.constructor.name,
-                        error: new Error('Channel not found')
-                    });
-                    continue;
-                }
-
-                const previousMessageId = this.reminderData.messageIds[channelId];
-                if (previousMessageId) {
-                    try {
-                        const previousMessage = await channel.messages.fetch(previousMessageId);
-                        await previousMessage.delete();
-                        this.client.logger.log({
-                            message: `Deleted previous reminder ${previousMessageId} in ${channelId}`,
-                            handler: this.constructor.name
-                        }, true);
-                    } catch (error) {
-                        this.client.logger.log({
-                            message: `Previous reminder ${previousMessageId} already deleted`,
-                            handler: this.constructor.name
-                        }, true);
+                try {
+                    const channel = await this.client.channels.fetch(channelId) as TextChannel;
+                    if (!channel) {
+                        this.client.logger.error({
+                            message: `Could not find reminder channel ${channelId}`,
+                            handler: this.constructor.name,
+                            error: new Error('Channel not found')
+                        });
+                        continue;
                     }
+
+                    const previousMessageId = this.reminderData.messageIds[channelId];
+                    if (previousMessageId) {
+                        try {
+                            const previousMessage = await channel.messages.fetch(previousMessageId);
+                            await previousMessage.delete();
+                            this.client.logger.log({
+                                message: `Deleted previous reminder ${previousMessageId} in ${channelId}`,
+                                handler: this.constructor.name
+                            }, true);
+                        } catch (error) {
+                            this.client.logger.log({
+                                message: `Previous reminder ${previousMessageId} already deleted`,
+                                handler: this.constructor.name
+                            }, true);
+                        }
+                    }
+
+                    const container = new ContainerBuilder();
+                    container.setAccentColor(0x5865F2);
+
+                    const reminderText = new TextDisplayBuilder()
+                        .setContent('**Tip:** You can use the command **!myvc** to share a link to your voice channel!');
+
+                    container.addTextDisplayComponents(reminderText);
+
+                    const newMessage = await channel.send({
+                        components: [container],
+                        flags: MessageFlags.IsComponentsV2,
+                        allowedMentions: { "parse": [] }
+                    });
+
+                    this.reminderData.messageIds[channelId] = newMessage.id;
+                    await this.saveReminderData();
+
+                    this.client.logger.log({
+                        message: `Posted reminder ${newMessage.id} in ${channelId}`,
+                        handler: this.constructor.name
+                    }, true);
+
+                } catch (error) {
+                    this.client.logger.error({
+                        message: `Failed to send reminder in channel ${channelId}`,
+                        handler: this.constructor.name,
+                        error: error as Error
+                    });
                 }
-
-                const container = new ContainerBuilder();
-                container.setAccentColor(0x5865F2);
-
-                const reminderText = new TextDisplayBuilder()
-                    .setContent('**Tip:** You can use the command **!myvc** to share a link to your voice channel!');
-
-                container.addTextDisplayComponents(reminderText);
-
-                const newMessage = await channel.send({
-                    components: [container],
-                    flags: MessageFlags.IsComponentsV2,
-                    allowedMentions: { "parse": [] }
-                });
-
-                this.reminderData.messageIds[channelId] = newMessage.id;
-                await this.saveReminderData();
-
-                this.client.logger.log({
-                    message: `Posted reminder ${newMessage.id} in ${channelId}`,
-                    handler: this.constructor.name
-                }, true);
-
-            } catch (error) {
-                this.client.logger.error({
-                    message: `Failed to send reminder in channel ${channelId}`,
-                    handler: this.constructor.name,
-                    error: error as Error
-                });
-            }
             }
         }
     }
