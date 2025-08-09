@@ -121,7 +121,7 @@ export default class TicketStatistics extends BotInteraction {
 
         const container = new ContainerBuilder();
 
-        container.setAccentColor(10454367);
+        container.setAccentColor(this.client.color);
 
         container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`# Ticket Statistics ${detailed ? ' - Detailed' : ''}`));
         container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));

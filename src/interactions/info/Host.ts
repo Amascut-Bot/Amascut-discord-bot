@@ -25,7 +25,7 @@ export default class Host extends BotInteraction {
         const { colours, emojis } = this.client.util;
 
         const container = new ContainerBuilder();
-        container.setAccentColor(10454367);
+        container.setAccentColor(this.client.color);
 
         if (message) {
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(message));
