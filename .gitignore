@@ -56,3 +56,6 @@ notifications.json
 monitored-streamers.json
 exported-users.json
 dashboard-data.json
+
+# Google Credentials
+google-credentials.json
