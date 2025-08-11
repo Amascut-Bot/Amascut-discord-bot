@@ -50,13 +50,13 @@ export default class ListStreamers extends BotInteraction {
         }
 
         const embed = new EmbedBuilder()
-            .setTitle('Monitored Twitch Streamers')
+            .setTitle(`${streamers.length} Monitored Twitch Streamers`)
             .setColor(this.client.color)
             .setTimestamp();
 
         const description = streamers
             .map(s => `• **${s.displayName}** (\`${s.userName}\`)`)
-            .join('\\n');
+            .join('\n');
 
         embed.setDescription(description);
 
