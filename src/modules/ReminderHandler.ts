@@ -24,7 +24,7 @@ export default class ReminderHandler {
     public startReminders() {
         cron.schedule('*/30 * * * *', () => {
             this.sendHourlyReminders();
-            // this.sendSurveyReminders(); // Uncomment when needed
+            this.sendSurveyReminders(); // Uncomment when needed
         });
         this.client.logger.log({
             message: 'Voice channel reminder system started (30-minute intervals)',
@@ -183,12 +183,12 @@ export default class ReminderHandler {
             await fs.access(this.reminderDataPath);
             const data = await fs.readFile(this.reminderDataPath, 'utf-8');
             this.reminderData = JSON.parse(data);
-            
+
             // Ensure surveyMessageIds exists for backward compatibility
             if (!this.reminderData.surveyMessageIds) {
                 this.reminderData.surveyMessageIds = {};
             }
-            
+
             this.client.logger.log({
                 message: 'Loaded reminder data',
                 handler: this.constructor.name
@@ -216,6 +216,6 @@ export default class ReminderHandler {
 
     public async triggerReminders() {
         await this.sendHourlyReminders();
-        // await this.sendSurveyReminders(); // Uncomment when needed
+        await this.sendSurveyReminders(); // Uncomment when needed
     }
 }
