@@ -1168,6 +1168,7 @@ export default class TicketHandler {
         try {
             const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
             const { stripRole } = this.client.util
+            const categoryId = getChannels(guild.id).ticketCategory;
 
             // Get admin and owner role IDs
             const adminRoleId = stripRole(getRoles(guild?.id).admin);
@@ -1177,7 +1178,7 @@ export default class TicketHandler {
             const channel = await guild.channels.create({
                 name: channelName,
                 type: ChannelType.GuildText,
-                parent: null, // No category as requested
+                parent: categoryId,
                 permissionOverwrites: [
                     {
                         id: guild.roles.everyone.id,

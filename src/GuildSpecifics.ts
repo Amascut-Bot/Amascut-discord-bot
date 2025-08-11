@@ -42,6 +42,8 @@ export function getChannels(guildId: string | undefined) : Channels {
             botRoleLog: '1391860640674484227',
             reportLog: '1391860641316343983',
             tempVCCategory: '1391860639584096317',
+            tempVCCategory2: '1391860639584096317',
+            tempVCCategory3: '1391860639584096317',
             tempVCCreate: '1391860639584096318',
             dpmCalc: '1391860639063871582',
             trialScheduling: '000000000000000000',
@@ -56,6 +58,10 @@ export function getChannels(guildId: string | undefined) : Channels {
             ADMIN_CHANNEL: '1391860637369372764',
             leaderboardSubmission: '1401295942027841686',
             leaderboards: '1401296432916467847',
+            vcReminderChannel1: '1391860639063871585',
+            vcReminderChannel2: '1391860639063871585',
+            vcReminderChannel3: '1391860639063871585',
+            ticketCategory: '1404433490266816632',
         }
     }
 
@@ -87,6 +93,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             vcReminderChannel1: '1389393102258573475',
             vcReminderChannel2: '1389393146647154808',
             vcReminderChannel3: '1403494299903066142',
+            ticketCategory: '1404278113784823849',
         }
     }
 
