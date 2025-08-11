@@ -52,7 +52,7 @@ export default class TicketHandler {
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('RSN (RuneScape Name)')
+            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
@@ -86,14 +86,14 @@ export default class TicketHandler {
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('RSN (RuneScape Name)')
+            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
         const reportedUserInput = new TextInputBuilder()
             .setCustomId('reported_user')
-            .setLabel('RSN/Discord User you are reporting')
+            .setLabel('RSN & Discord User you are reporting')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(100);
@@ -107,7 +107,7 @@ export default class TicketHandler {
 
         const descriptionInput = new TextInputBuilder()
             .setCustomId('description')
-            .setLabel('Briefly describe the issue')
+            .setLabel('Briefly describe the issue.')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
@@ -128,7 +128,7 @@ export default class TicketHandler {
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('RSN (RuneScape Name)')
+            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
@@ -162,7 +162,7 @@ export default class TicketHandler {
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('RSN (RuneScape Name)')
+            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
@@ -1244,7 +1244,12 @@ export default class TicketHandler {
             const ownerRole = getRoles(channel.guild?.id).owner;
 
             // Create welcome message
-            const welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
+            let welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
+
+            //TODO
+            // if (ticketType === 'report') {
+            //     welcomeMessage += '\nPlease also provide any additional evidence you got (screenshots, recordings, messages).';
+            // }
 
             // Create embed with form data using fields for better organization
             const embed = new EmbedBuilder()
@@ -1260,14 +1265,14 @@ export default class TicketHandler {
             switch (ticketType) {
                 case 'suggestion':
                     embed.addFields(
-                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Suggestion', value: `\`\`\`${formData.suggestion}\`\`\``, inline: false },
                         { name: 'Why would this work?', value: `\`\`\`${formData.reason}\`\`\``, inline: false }
                     );
                     break;
                 case 'report':
                     embed.addFields(
-                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Reported User', value: `\`\`\`${formData.reported_user}\`\`\``, inline: false },
                         { name: 'Reason', value: `\`\`\`${formData.reason}\`\`\``, inline: false },
                         { name: 'Description', value: `\`\`\`${formData.description}\`\`\``, inline: false }
@@ -1275,14 +1280,14 @@ export default class TicketHandler {
                     break;
                 case 'contentcreator':
                     embed.addFields(
-                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Platform URL', value: `\`\`\`${formData.platform_url}\`\`\``, inline: false },
                         { name: 'Additional Information', value: `\`\`\`${formData.additional}\`\`\``, inline: false }
                     );
                     break;
                 case 'other':
                     embed.addFields(
-                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'How can we assist?', value: `\`\`\`${formData.assistance}\`\`\``, inline: false }
                     );
                     break;
