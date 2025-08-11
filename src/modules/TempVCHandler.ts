@@ -1,5 +1,4 @@
 
-import { ParentChannelOptions, TempChannelsManager, TempChannelsManagerEvents } from '@hunteroi/discord-temp-channels';
 import Bot from '../Bot';
 import { getChannels } from '../GuildSpecifics';
 import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember } from 'discord.js';
@@ -7,16 +6,14 @@ import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMem
 export default interface TempChannelManager {
     client: Bot;
     built: boolean;
-    on(eventName: TempChannelsManagerEvents, listener: (...args: unknown[]) => void | Promise<void>): this;
 }
 
-export default class TempChannelManager extends TempChannelsManager {
+export default class TempChannelManager {
     public client: Bot;
     public built: boolean;
     private tempChannelIds: Set<string>;
 
     constructor(client: Bot) {
-        super(client);
         this.client = client;
         this.built = false;
         this.tempChannelIds = new Set();
@@ -27,7 +24,7 @@ export default class TempChannelManager extends TempChannelsManager {
     }
 
     private async loadTempChannelIds(): Promise<void> {
-        const excludedChannels = ['1389392880518566138', '1389391295130374237']; // join to create and afk
+        const excludedChannels = ['1389392880518566138', '1389391295130374237']; // join to create and afk // TODO - not hardcoding
         const channels = getChannels(process.env.GUILD_ID);
 
         try {
@@ -221,7 +218,7 @@ export default class TempChannelManager extends TempChannelsManager {
         }
     }
 
-    public __initParentListener(channelId: string, options?: ParentChannelOptions): void {
+    public __initParentListener(channelId: string): void {
         this.client.logger.log({
             handler: this.constructor.name,
             message: `Temp VC create channel ${channelId} configured with custom fallback system`
