@@ -97,6 +97,7 @@ export default class ButtonHandler {
             case 'failTrialee': this.failTrialee(interaction); break;
             case 'nextUpkeep': this.nextUpkeep(interaction); break;
             case 'prevUpkeep': this.prevUpkeep(interaction); break;
+            case 'tempvc_setLimit': this.client.tempManager?.setVCUserLimit(interaction); break;
         }
     }
 

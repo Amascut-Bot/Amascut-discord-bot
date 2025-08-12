@@ -1,7 +1,7 @@
 
 import Bot from '../Bot';
 import { getChannels } from '../GuildSpecifics';
-import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember } from 'discord.js';
+import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, Channel, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, GuildChannel, VoiceChannel } from 'discord.js';
 
 export default interface TempChannelManager {
     client: Bot;
@@ -102,6 +102,8 @@ export default class TempChannelManager {
             if (newChannel) {
                 await member.voice.setChannel(newChannel);
                 this.tempChannelIds.add(newChannel.id);
+
+                await this.postTempVcDashboard(newChannel);
             }
 
         } catch (error) {
@@ -111,6 +113,25 @@ export default class TempChannelManager {
                 error: error as Error
             });
         }
+    }
+
+    private async postTempVcDashboard(channel: VoiceChannel) {
+        const container = new ContainerBuilder()
+            .setAccentColor(this.client.color)
+            .addTextDisplayComponents(builder => builder.setContent('## Temp VC Control Panel'))
+            .addSeparatorComponents(builder => builder.setSpacing(SeparatorSpacingSize.Large));
+
+        const setLimitButton = new ButtonBuilder()
+            .setCustomId('tempvc_setLimit')
+            .setLabel('Set Limit to 5 or Reset Limit')
+            .setStyle(ButtonStyle.Success);
+
+        container.addActionRowComponents(builder => builder.addComponents(setLimitButton));
+
+        await channel.send({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2
+        });
     }
 
     private async createTempVCWithFallback(member: GuildMember): Promise<any> {
@@ -240,5 +261,28 @@ export default class TempChannelManager {
     public loaded(): void {
         this.built = true;
         this.client.logger.log({ handler: this.constructor.name, message: 'Loaded handler for TempVC' }, true);
+    }
+
+    public async setVCUserLimit(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        if (interaction.channel?.type === ChannelType.GuildVoice) {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            const isVCOwner = interaction.channel.permissionsFor(interaction.user)?.has('ManageChannels');
+
+            if (isVCOwner) {
+                if (interaction.channel.userLimit === 5) {
+                    await interaction.channel.setUserLimit(0);
+                    await interaction.editReply('Successfully reset User Limit!');
+                    return;
+                }
+                else {
+                    await interaction.channel.setUserLimit(5);
+                    await interaction.editReply('Successfully set User Limit to 5 Users!');
+                    return;
+                }
+            } else {
+                await interaction.editReply('You are not the owner of this Voice Channel!');
+                return;
+            }
+        }
     }
 }
