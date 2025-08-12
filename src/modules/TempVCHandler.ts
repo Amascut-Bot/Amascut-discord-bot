@@ -346,26 +346,31 @@ export default class TempChannelManager {
                     await interaction.editReply('Owner is still connected!');
                     await interaction.message.delete();
                 } else {
-                    //remove old owner and set new one
-                    await interaction.channel.permissionOverwrites.delete(tempVCOwner);
-                    await interaction.channel.permissionOverwrites.create(interaction.member, {
-                        Connect: true,
-                        Speak: true,
-                        Stream: true,
-                        UseVAD: true,
-                        ManageChannels: true
-                    });
+                    // check if user is actually in this vc
+                    if (interaction.member.voice.channelId === interaction.channel.id) {
+                        //remove old owner and set new one
+                        await interaction.channel.permissionOverwrites.delete(tempVCOwner);
+                        await interaction.channel.permissionOverwrites.create(interaction.member, {
+                            Connect: true,
+                            Speak: true,
+                            Stream: true,
+                            UseVAD: true,
+                            ManageChannels: true
+                        });
 
-                    const match = /Team #(\d+)/g.exec(interaction.channel.name);
+                        const match = /Team #(\d+)/g.exec(interaction.channel.name);
 
-                    if (match) {
-                        await interaction.channel.setName(
-                            interaction.channel.name.replace(/^Team #(\d+) \| .+$/, `Team #$1 | ${interaction.member.displayName}`)
-                        );
+                        if (match) {
+                            await interaction.channel.setName(
+                                interaction.channel.name.replace(/^Team #(\d+) \| .+$/, `Team #$1 | ${interaction.member.displayName}`)
+                            );
+                        }
+
+                        await interaction.editReply('Successfully claimed TempVC!');
+                        await interaction.message.delete();
+                    } else {
+                        await interaction.editReply('You are not in this Voice Channel!');
                     }
-
-                    await interaction.editReply('Successfully claimed TempVC!');
-                    await interaction.message.delete();
                 }
             } else {
                 await interaction.editReply(`Can't find previous owner to check, if they are still connected!`);
