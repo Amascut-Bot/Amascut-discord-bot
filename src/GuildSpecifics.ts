@@ -216,6 +216,9 @@ export function getRoles(guildId: string | undefined) : Roles {
             releaseDay1k: '1401274388187447429',
             releaseDay500: '1401274362987810907',
             verified: '1391860635435798724',
+            enr500: '1404800709462982716',
+            enr1000: '1404800755436748840',
+            enr2000: '1404800783798501396',
         }
     }
 
@@ -289,6 +292,9 @@ export function getRoles(guildId: string | undefined) : Roles {
             tumekensLight: '1401431760704901193',
             amaskitty: '1401431834780241940',
             verified: '1390353573216387072',
+            enr500: '1401450408492404877',
+            enr1000: '1401450459256066141',
+            enr2000: '1401450500481749062',
         }
     }
 
