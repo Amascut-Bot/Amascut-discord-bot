@@ -76,6 +76,11 @@ export default class ButtonHandler {
             return;
         }
 
+        if (id.startsWith('tempvc_')) {
+            this.client.tempManager?.handleTempVcDashboardInteraction(interaction);
+            return;
+        }
+
         switch (id) {
             case 'rejectRoleAssign': this.rejectRoleAssign(interaction); break;
             case 'approveReport': this.approveReport(interaction); break;
@@ -97,7 +102,6 @@ export default class ButtonHandler {
             case 'failTrialee': this.failTrialee(interaction); break;
             case 'nextUpkeep': this.nextUpkeep(interaction); break;
             case 'prevUpkeep': this.prevUpkeep(interaction); break;
-            case 'tempvc_setLimit': this.client.tempManager?.setVCUserLimit(interaction); break;
         }
     }
 

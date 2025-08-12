@@ -1,7 +1,7 @@
 
 import Bot from '../Bot';
 import { getChannels } from '../GuildSpecifics';
-import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, Channel, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, GuildChannel, VoiceChannel } from 'discord.js';
+import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, Channel, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, GuildChannel, VoiceChannel, User, OverwriteType } from 'discord.js';
 
 export default interface TempChannelManager {
     client: Bot;
@@ -88,15 +88,6 @@ export default class TempChannelManager {
         if (!member || !guild) return;
 
         try {
-            // Check if user already has a temp VC
-            for (const channelId of this.tempChannelIds) {
-                const channel = guild.channels.cache.get(channelId);
-                if (channel && channel.name.includes(member.displayName)) {
-                    await member.voice.setChannel(channel.id);
-                    return;
-                }
-            }
-
             // Create a new temp VC
             const newChannel = await this.createTempVCWithFallback(member);
             if (newChannel) {
@@ -113,25 +104,6 @@ export default class TempChannelManager {
                 error: error as Error
             });
         }
-    }
-
-    private async postTempVcDashboard(channel: VoiceChannel) {
-        const container = new ContainerBuilder()
-            .setAccentColor(this.client.color)
-            .addTextDisplayComponents(builder => builder.setContent('## Temp VC Control Panel'))
-            .addSeparatorComponents(builder => builder.setSpacing(SeparatorSpacingSize.Large));
-
-        const setLimitButton = new ButtonBuilder()
-            .setCustomId('tempvc_setLimit')
-            .setLabel('Set Limit to 5 or Reset Limit')
-            .setStyle(ButtonStyle.Success);
-
-        container.addActionRowComponents(builder => builder.addComponents(setLimitButton));
-
-        await channel.send({
-            components: [container],
-            flags: MessageFlags.IsComponentsV2
-        });
     }
 
     private async createTempVCWithFallback(member: GuildMember): Promise<any> {
@@ -248,6 +220,13 @@ export default class TempChannelManager {
                     });
                 }
             }
+        } else {
+            // check if user that left was the vc owner
+            const owner = await this.getTempVcOwner(channel as VoiceChannel);
+
+            if (owner?.voice.channelId !== channel?.id) {
+                await this.postTempVcClaimButton(channel as VoiceChannel);
+            }
         }
     }
 
@@ -263,18 +242,87 @@ export default class TempChannelManager {
         this.client.logger.log({ handler: this.constructor.name, message: 'Loaded handler for TempVC' }, true);
     }
 
-    public async setVCUserLimit(interaction: ButtonInteraction<'cached'>): Promise<void> {
+    //#region VC Dashboard
+
+    public async handleTempVcDashboardInteraction(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        switch (interaction.customId) {
+            case 'tempvc_setLimit': this.setTempVCUserLimit(interaction, 5); break;
+            case 'tempvc_resetLimit': this.setTempVCUserLimit(interaction, 0); break;
+            case 'tempvc_claim': this.claimTempVC(interaction); break;
+        }
+    }
+
+    private async postTempVcDashboard(channel: VoiceChannel) {
+        const container = new ContainerBuilder()
+            .setAccentColor(this.client.color)
+            .addTextDisplayComponents(builder => builder.setContent('## Temp VC Control Panel'))
+            .addSeparatorComponents(builder => builder.setSpacing(SeparatorSpacingSize.Large))
+            .addTextDisplayComponents(builder => builder.setContent('You can always edit this channel manually by clicking the ⚙️ in your Voice Channel!'))
+            .addSeparatorComponents(builder => builder.setSpacing(SeparatorSpacingSize.Large));
+
+        const setLimitButton = new ButtonBuilder()
+            .setCustomId('tempvc_setLimit')
+            .setLabel('Set Limit to 5')
+            .setStyle(ButtonStyle.Success);
+
+        const resetLimitButton = new ButtonBuilder()
+            .setCustomId('tempvc_resetLimit')
+            .setLabel('Reset Limit')
+            .setStyle(ButtonStyle.Danger);
+
+        container.addActionRowComponents(builder => builder.addComponents(setLimitButton, resetLimitButton));
+
+        await channel.send({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2
+        });
+    }
+
+    private async postTempVcClaimButton(channel: VoiceChannel) {
+        const container = new ContainerBuilder()
+            .setAccentColor(this.client.color)
+            .addTextDisplayComponents(builder => builder.setContent('Owner has left, you can claim this VC to use the Dashboard!'))
+
+        const claimButton = new ButtonBuilder()
+            .setCustomId('tempvc_claim')
+            .setLabel('Claim')
+            .setStyle(ButtonStyle.Primary);
+
+        container.addActionRowComponents(builder => builder.addComponents(claimButton));
+
+        await channel.send({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2
+        });
+    }
+
+    private async getTempVcOwner(channel: VoiceChannel) : Promise<GuildMember | undefined> {
+        const overwrites = channel.permissionOverwrites.cache;
+        const userOverwrites = overwrites.filter(overwrite => overwrite.type === OverwriteType.Member && overwrite.allow.has('ManageChannels'));
+
+        const owners = userOverwrites.map(async overwrite => await channel.guild.members.fetch(overwrite.id));
+
+        if (owners.length > 0) {
+            return owners[0];
+        }
+
+        return undefined;
+    }
+
+    private async setTempVCUserLimit(interaction: ButtonInteraction<'cached'>, limit: number): Promise<void> {
         if (interaction.channel?.type === ChannelType.GuildVoice) {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-            const isVCOwner = interaction.channel.permissionsFor(interaction.user)?.has('ManageChannels');
+            //const isTempVCOwner = interaction.channel.permissionsFor(interaction.user)?.has('ManageChannels');
+            const tempVCOwner = await this.getTempVcOwner(interaction.channel);
+            const isTempVCOwner = tempVCOwner && tempVCOwner.id === interaction.user.id;
 
-            if (isVCOwner) {
-                if (interaction.channel.userLimit === 5) {
+            if (isTempVCOwner) {
+                if (limit === 0) {
                     await interaction.channel.setUserLimit(0);
                     await interaction.editReply('Successfully reset User Limit!');
                     return;
                 }
-                else {
+                else if (limit === 5) {
                     await interaction.channel.setUserLimit(5);
                     await interaction.editReply('Successfully set User Limit to 5 Users!');
                     return;
@@ -285,4 +333,46 @@ export default class TempChannelManager {
             }
         }
     }
+
+    private async claimTempVC(interaction: ButtonInteraction<'cached'>) : Promise<void> {
+        if (interaction.channel?.type === ChannelType.GuildVoice) {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+            const tempVCOwner = await this.getTempVcOwner(interaction.channel);
+
+            if (tempVCOwner) {
+                // check if original owner is still connected / reconnected
+                if (tempVCOwner.voice.channelId === interaction.channelId) {
+                    await interaction.editReply('Owner is still connected!');
+                    await interaction.message.delete();
+                } else {
+                    //remove old owner and set new one
+                    await interaction.channel.permissionOverwrites.delete(tempVCOwner);
+                    await interaction.channel.permissionOverwrites.create(interaction.member, {
+                        Connect: true,
+                        Speak: true,
+                        Stream: true,
+                        UseVAD: true,
+                        ManageChannels: true
+                    });
+
+                    const match = /Team #(\d+)/g.exec(interaction.channel.name);
+
+                    if (match) {
+                        await interaction.channel.setName(
+                            interaction.channel.name.replace(/^Team #(\d+) \| .+$/, `Team #$1 | ${interaction.member.displayName}`)
+                        );
+                    }
+
+                    await interaction.editReply('Successfully claimed TempVC!');
+                    await interaction.message.delete();
+                }
+            } else {
+                await interaction.editReply(`Can't find previous owner to check, if they are still connected!`);
+                this.client.logger.log({ handler: this.constructor.name, message: `Failed to TempVC Owner of Channel ${interaction.channel.id}` }, true);
+            }
+        }
+    }
+
+    //#endregion
 }
