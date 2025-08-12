@@ -24,8 +24,8 @@ export default class TempChannelManager {
     }
 
     private async loadTempChannelIds(): Promise<void> {
-        const excludedChannels = ['1389392880518566138', '1389391295130374237']; // join to create and afk // TODO - not hardcoding
         const channels = getChannels(process.env.GUILD_ID);
+        const excludedChannels = [channels.tempVCCreate, channels.afkVC]; // join to create and afk
 
         try {
             const primaryCategory = await this.client.channels.fetch(channels.tempVCCategory);
@@ -118,7 +118,19 @@ export default class TempChannelManager {
         const guild = member.guild;
 
         const existingTempChannels = guild.channels.cache.filter(c => this.tempChannelIds.has(c.id));
-        const channelCount = existingTempChannels.size + 1;
+        let channelCount = 0;
+
+        // getting the highest channel Team-Name number, this should fix channels beeing named with the same number over and over again
+        existingTempChannels.forEach(c => {
+            const match = /Team #(\d+)/g.exec(c.name);
+
+            if (match && channelCount < parseFloat(match[1])) {
+                channelCount = parseFloat(match[1]);
+            }
+        });
+
+        channelCount++;
+
         const channelName = `Team #${channelCount} | ${member.displayName}`;
 
         try {
