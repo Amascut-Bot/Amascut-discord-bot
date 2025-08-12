@@ -1,7 +1,7 @@
 
 import Bot from '../Bot';
 import { getChannels } from '../GuildSpecifics';
-import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, Channel, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, GuildChannel, VoiceChannel, User, OverwriteType } from 'discord.js';
+import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, Channel, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, GuildChannel, VoiceChannel, User, OverwriteType, ContainerComponent, TextDisplayComponent } from 'discord.js';
 
 export default interface TempChannelManager {
     client: Bot;
@@ -221,8 +221,30 @@ export default class TempChannelManager {
                 }
             }
         } else {
-            // check if user that left was the vc owner
+            const channels = getChannels(process.env.GUILD_ID);
+            const excludedChannels = [channels.tempVCCreate, channels.afkVC]; // join to create and afk
+
+            if (excludedChannels.includes(channel?.id ?? '')) {
+                return;
+            }
+
+            // check if vc owner is still present
             const owner = await this.getTempVcOwner(channel as VoiceChannel);
+
+            // also check if claim button is already there
+            const messages = (await channel?.messages.fetch())?.filter(msg => msg.author.id === this.client.user?.id);
+
+            if (messages && messages.size > 0) {
+                for (const [id, message] of messages) {
+                    if (message.components.length > 0) {
+                        const msgComponents = (message.components[0] as ContainerComponent).components;
+
+                        if ((msgComponents[0] as TextDisplayComponent).content === 'Owner has left, you can claim this VC to use the Dashboard!') {
+                            return;
+                        }
+                    }
+                }
+            }
 
             if (owner?.voice.channelId !== channel?.id) {
                 await this.postTempVcClaimButton(channel as VoiceChannel);
