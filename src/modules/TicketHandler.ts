@@ -1391,7 +1391,7 @@ export default class TicketHandler {
             await channel.send({ content: welcomeMessage, embeds: [embed], components: [closeButton] });
 
             if (ticketType === 'report') {
-                await channel.send('To help us assist you faster, please provide any supporting evidence such as screenshots, recordings, or messages.');
+                await channel.send('## To help us assist you faster, please provide any supporting evidence such as screenshots, recordings, or messages.');
             }
 
             this.client.logger.log({
