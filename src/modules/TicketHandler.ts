@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, TextChannel, TextInputBuilder, TextInputStyle, User } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -19,6 +19,12 @@ export default class TicketHandler {
 
         if (interaction.isModalSubmit()) {
             this.handleTicketModalSubmit(interaction);
+        }
+
+        if (interaction.isChatInputCommand()) {
+            switch (interaction.commandName) {
+                case 'create-clearance-ticket': this.handleCreateClearanceTicket(interaction as ChatInputCommandInteraction); break;
+            }
         }
 
         if (id.startsWith('ticket:download_transcript_')) {
@@ -262,6 +268,67 @@ export default class TicketHandler {
 
     //#endregion
 
+    //#region Command Handlers
+
+    private async handleCreateClearanceTicket(interaction: ChatInputCommandInteraction): Promise<void> {
+        if (!interaction.inCachedGuild()) return;
+
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            const reportedUser: User = interaction.options.getUser('reporteduser', true);
+            const rsn: string = interaction.options.getString('rsn', true);
+            const description: string = interaction.options.getString('description', true);
+
+            const formData: any = {};
+            formData.rsn = rsn;
+            formData.discordid = reportedUser.id;
+            formData.description = description;
+
+            const ticketNumber = await this.getNextTicketNumber('clearance');
+
+            const ticketChannel = await this.createTicketChannel(
+                interaction.guild,
+                'clearance',
+                reportedUser.id,
+                ticketNumber
+            );
+
+            if (!ticketChannel) {
+                await interaction.editReply({
+                    content: 'Failed to create ticket channel. Please try again or contact an administrator.'
+                });
+                return;
+            }
+
+            await this.sendTicketWelcomeMessage(
+                ticketChannel,
+                interaction.user.id,
+                'clearance',
+                formData
+            );
+
+            await this.saveTicketSubmit(interaction.user.id, ticketChannel.id, 'clearance');
+
+            await interaction.editReply({
+                content: `Your ticket has been created! Please check <#${ticketChannel.id}> for further assistance.`
+            });
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to handle ticket clearance creation',
+                error,
+                handler: 'TicketHandler'
+            });
+
+            await interaction.editReply({
+                content: 'An error occurred while creating your ticket. Please try again or contact an administrator.'
+            });
+        }
+    }
+
+    //#endregion
+
     //#region CLOSE HANDLERS
     private async handleTicketClose(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const channelName = interaction.channel?.name;
@@ -454,6 +521,15 @@ export default class TicketHandler {
                 const reportedUser = reportedUserField.value.replace(/```/g, '').trim();
                 forumTitle = `Report-${ticketOpener}-${reportedUser}`;
             }
+        } else if (ticketType === 'clearance' && originalTicketEmbed?.fields) {
+            const reportedUserField = originalTicketEmbed.fields.find(field =>
+                field.name === 'Reported User'
+            );
+
+            if (reportedUserField) {
+                const reportedUser = reportedUserField.value.replace(/```/g, '').trim();
+                forumTitle = `Clearance-${reportedUser}`;
+            }
         }
 
         const summaryEmbed = new EmbedBuilder()
@@ -474,7 +550,7 @@ export default class TicketHandler {
             throw new Error('Could not find or access the forum channel.');
         }
 
-        const tagName = ticketType === 'contentcreator' ? 'Content Creator' :
+        const tagName = ticketType === 'contentcreator' ? 'Content Creator' : ticketType === 'clearance' ? 'report' :
                        ticketType.charAt(0).toUpperCase() + ticketType.slice(1);
 
         const availableTags = forumChannel.availableTags;
@@ -562,6 +638,10 @@ export default class TicketHandler {
             if (currentBlock.trim()) {
                 await forumPost.send({ content: currentBlock });
             }
+
+            // close and lock forum to not randomly reach discords limit for open forum threads (1000)
+            await forumPost.setLocked(true);
+            await forumPost.setArchived(true);
 
             return forumPost.id;
         } catch(error) {
@@ -1246,10 +1326,9 @@ export default class TicketHandler {
             // Create welcome message
             let welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
 
-            //TODO
-            // if (ticketType === 'report') {
-            //     welcomeMessage += '\nPlease also provide any additional evidence you got (screenshots, recordings, messages).';
-            // }
+            if (ticketType === 'clearance') {
+                welcomeMessage = 'Your clearance ticket has been created.';
+            }
 
             // Create embed with form data using fields for better organization
             const embed = new EmbedBuilder()
@@ -1291,6 +1370,13 @@ export default class TicketHandler {
                         { name: 'How can we assist?', value: `\`\`\`${formData.assistance}\`\`\``, inline: false }
                     );
                     break;
+                case 'clearance':
+                    embed.addFields(
+                        { name: 'Reported User', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Discord ID', value: `\`\`\`${formData.discordid}\`\`\``, inline: false },
+                        { name: 'Description', value: `\`\`\`${formData.description}\`\`\``, inline: false }
+                    );
+                    break;
             }
 
             // Create close button
@@ -1303,6 +1389,10 @@ export default class TicketHandler {
                 );
 
             await channel.send({ content: welcomeMessage, embeds: [embed], components: [closeButton] });
+
+            if (ticketType === 'report') {
+                await channel.send('To help us assist you faster, please provide any supporting evidence such as screenshots, recordings, or messages.');
+            }
 
             this.client.logger.log({
                 message: `Sent welcome message to ticket channel: ${channel.name}`,
@@ -1341,6 +1431,9 @@ export default class TicketHandler {
                 break;
             case 'other':
                 ticketObject.ticketType = 3;
+                break;
+            case 'clearance':
+                ticketObject.ticketType = 4;
                 break;
         }
 
