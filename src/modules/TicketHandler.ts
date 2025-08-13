@@ -1340,6 +1340,9 @@ export default class TicketHandler {
                     iconURL: channel.guild.members.cache.get(userId)?.user.displayAvatarURL() || undefined
                 });
 
+            let urls: string[] = [];
+            const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+
             // Format the form data based on ticket type using fields
             switch (ticketType) {
                 case 'suggestion':
@@ -1348,6 +1351,9 @@ export default class TicketHandler {
                         { name: 'Suggestion', value: `\`\`\`${formData.suggestion}\`\`\``, inline: false },
                         { name: 'Why would this work?', value: `\`\`\`${formData.reason}\`\`\``, inline: false }
                     );
+
+                    urls = urls.concat(formData.suggestion.match(urlRegex) || []);
+                    urls = urls.concat(formData.reason.match(urlRegex) || []);
                     break;
                 case 'report':
                     embed.addFields(
@@ -1356,6 +1362,9 @@ export default class TicketHandler {
                         { name: 'Reason', value: `\`\`\`${formData.reason}\`\`\``, inline: false },
                         { name: 'Description', value: `\`\`\`${formData.description}\`\`\``, inline: false }
                     );
+
+                    urls = urls.concat(formData.reason.match(urlRegex) || []);
+                    urls = urls.concat(formData.description.match(urlRegex) || []);
                     break;
                 case 'contentcreator':
                     embed.addFields(
@@ -1363,12 +1372,17 @@ export default class TicketHandler {
                         { name: 'Platform URL', value: `\`\`\`${formData.platform_url}\`\`\``, inline: false },
                         { name: 'Additional Information', value: `\`\`\`${formData.additional}\`\`\``, inline: false }
                     );
+
+                    urls = urls.concat(formData.platform_url.match(urlRegex) || []);
+                    urls = urls.concat(formData.additional.match(urlRegex) || []);
                     break;
                 case 'other':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'How can we assist?', value: `\`\`\`${formData.assistance}\`\`\``, inline: false }
                     );
+
+                    urls = urls.concat(formData.assistance.match(urlRegex) || []);
                     break;
                 case 'clearance':
                     embed.addFields(
@@ -1376,6 +1390,8 @@ export default class TicketHandler {
                         { name: 'Discord ID', value: `\`\`\`${formData.discordid}\`\`\``, inline: false },
                         { name: 'Description', value: `\`\`\`${formData.description}\`\`\``, inline: false }
                     );
+
+                    urls = urls.concat(formData.description.match(urlRegex) || []);
                     break;
             }
 
@@ -1392,6 +1408,10 @@ export default class TicketHandler {
 
             if (ticketType === 'report') {
                 await channel.send('## To help us assist you faster, please provide any supporting evidence such as screenshots, recordings, or messages.');
+            }
+
+            if (urls.length > 0) {
+                await channel.send(`Found following URL's:\n${urls.join('\n\n')}`);
             }
 
             this.client.logger.log({
