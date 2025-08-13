@@ -161,7 +161,7 @@ export default class TempChannelManager {
 
     private async createTempChannel(guild: any, channelName: string, categoryId: string, member: GuildMember, categoryType: string): Promise<any> {
         try {
-            const channel = await guild.channels.create({
+            const channel: VoiceChannel = await guild.channels.create({
                 name: channelName,
                 type: ChannelType.GuildVoice,
                 parent: categoryId,
@@ -183,8 +183,23 @@ export default class TempChannelManager {
                 handler: this.constructor.name,
                 message: `Created temp VC "${channelName}" in ${categoryType} category for ${member.user.tag}`
             }, true);
-            return channel;
 
+            const tempVCCreate = await guild.channels.fetch(getChannels(process.env.GUILD_ID).tempVCCreate) as VoiceChannel;
+            const overwrites = tempVCCreate.permissionOverwrites.cache.map(overwrite => ({
+                id: overwrite.id,
+                allow: overwrite.allow.bitfield,
+                deny: overwrite.deny.bitfield,
+                type: overwrite.type
+            })).concat(channel.permissionOverwrites.cache.map(overwrite => ({
+                id: overwrite.id,
+                allow: overwrite.allow.bitfield,
+                deny: overwrite.deny.bitfield,
+                type: overwrite.type
+            })));
+
+            await channel.permissionOverwrites.set(overwrites);
+
+            return channel;
         } catch (error) {
             if (error instanceof DiscordAPIError && error.code === 50035) { // Max number of channels in category
                  this.client.logger.error({
