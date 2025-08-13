@@ -523,7 +523,7 @@ export default class TicketHandler {
             }
         } else if (ticketType === 'clearance' && originalTicketEmbed?.fields) {
             const reportedUserField = originalTicketEmbed.fields.find(field =>
-                field.name === 'Reported User'
+                field.name === 'RSN'
             );
 
             if (reportedUserField) {
@@ -1386,7 +1386,7 @@ export default class TicketHandler {
                     break;
                 case 'clearance':
                     embed.addFields(
-                        { name: 'Reported User', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Discord ID', value: `\`\`\`${formData.discordid}\`\`\``, inline: false },
                         { name: 'Description', value: `\`\`\`${formData.description}\`\`\``, inline: false }
                     );
