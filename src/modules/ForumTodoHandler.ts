@@ -41,8 +41,8 @@ export default class ForumTodoHandler {
 
         try {
             await channel.setAppliedTags([ForumTodoHandler.DONE_TAG_ID]);
-            await channel.setLocked(true);
-            await channel.setArchived(true);
+            //await channel.setLocked(true);
+            //await channel.setArchived(true);
 
             this.client.logger.log({
                 message: `Completed todo thread ${channel.name} (${channel.id}) by ${user.tag}`,
