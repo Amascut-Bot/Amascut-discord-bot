@@ -523,7 +523,7 @@ export default class TicketHandler {
             }
         } else if (ticketType === 'clearance' && originalTicketEmbed?.fields) {
             const reportedUserField = originalTicketEmbed.fields.find(field =>
-                field.name === 'RSN'
+                field.name === 'RSN' || 'Reported User'
             );
 
             if (reportedUserField) {
