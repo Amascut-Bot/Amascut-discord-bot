@@ -76,6 +76,11 @@ export default class ButtonHandler {
             return;
         }
 
+        if (id.startsWith('tempvc_')) {
+            this.client.tempManager?.handleTempVcDashboardInteraction(interaction);
+            return;
+        }
+
         switch (id) {
             case 'rejectRoleAssign': this.rejectRoleAssign(interaction); break;
             case 'approveReport': this.approveReport(interaction); break;

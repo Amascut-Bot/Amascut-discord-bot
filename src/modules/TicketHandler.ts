@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, TextChannel, TextInputBuilder, TextInputStyle, User } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -19,6 +19,12 @@ export default class TicketHandler {
 
         if (interaction.isModalSubmit()) {
             this.handleTicketModalSubmit(interaction);
+        }
+
+        if (interaction.isChatInputCommand()) {
+            switch (interaction.commandName) {
+                case 'create-clearance-ticket': this.handleCreateClearanceTicket(interaction as ChatInputCommandInteraction); break;
+            }
         }
 
         if (id.startsWith('ticket:download_transcript_')) {
@@ -52,7 +58,7 @@ export default class TicketHandler {
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('RSN (RuneScape Name)')
+            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
@@ -86,14 +92,14 @@ export default class TicketHandler {
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('RSN (RuneScape Name)')
+            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
         const reportedUserInput = new TextInputBuilder()
             .setCustomId('reported_user')
-            .setLabel('RSN/Discord User you are reporting')
+            .setLabel('RSN & Discord User you are reporting')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(100);
@@ -107,7 +113,7 @@ export default class TicketHandler {
 
         const descriptionInput = new TextInputBuilder()
             .setCustomId('description')
-            .setLabel('Briefly describe the issue')
+            .setLabel('Briefly describe the issue.')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
@@ -128,7 +134,7 @@ export default class TicketHandler {
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('RSN (RuneScape Name)')
+            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
@@ -162,7 +168,7 @@ export default class TicketHandler {
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('RSN (RuneScape Name)')
+            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
@@ -252,6 +258,67 @@ export default class TicketHandler {
                 message: 'Failed to handle ticket modal submission',
                 error,
                 handler: 'InteractionHandler'
+            });
+
+            await interaction.editReply({
+                content: 'An error occurred while creating your ticket. Please try again or contact an administrator.'
+            });
+        }
+    }
+
+    //#endregion
+
+    //#region Command Handlers
+
+    private async handleCreateClearanceTicket(interaction: ChatInputCommandInteraction): Promise<void> {
+        if (!interaction.inCachedGuild()) return;
+
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            const reportedUser: User = interaction.options.getUser('reporteduser', true);
+            const rsn: string = interaction.options.getString('rsn', true);
+            const description: string = interaction.options.getString('description', true);
+
+            const formData: any = {};
+            formData.rsn = rsn;
+            formData.discordid = reportedUser.id;
+            formData.description = description;
+
+            const ticketNumber = await this.getNextTicketNumber('clearance');
+
+            const ticketChannel = await this.createTicketChannel(
+                interaction.guild,
+                'clearance',
+                reportedUser.id,
+                ticketNumber
+            );
+
+            if (!ticketChannel) {
+                await interaction.editReply({
+                    content: 'Failed to create ticket channel. Please try again or contact an administrator.'
+                });
+                return;
+            }
+
+            await this.sendTicketWelcomeMessage(
+                ticketChannel,
+                interaction.user.id,
+                'clearance',
+                formData
+            );
+
+            await this.saveTicketSubmit(interaction.user.id, ticketChannel.id, 'clearance');
+
+            await interaction.editReply({
+                content: `Your ticket has been created! Please check <#${ticketChannel.id}> for further assistance.`
+            });
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to handle ticket clearance creation',
+                error,
+                handler: 'TicketHandler'
             });
 
             await interaction.editReply({
@@ -454,6 +521,15 @@ export default class TicketHandler {
                 const reportedUser = reportedUserField.value.replace(/```/g, '').trim();
                 forumTitle = `Report-${ticketOpener}-${reportedUser}`;
             }
+        } else if (ticketType === 'clearance' && originalTicketEmbed?.fields) {
+            const reportedUserField = originalTicketEmbed.fields.find(field =>
+                field.name === 'RSN'
+            );
+
+            if (reportedUserField) {
+                const reportedUser = reportedUserField.value.replace(/```/g, '').trim();
+                forumTitle = `Clearance-${reportedUser}`;
+            }
         }
 
         const summaryEmbed = new EmbedBuilder()
@@ -474,7 +550,7 @@ export default class TicketHandler {
             throw new Error('Could not find or access the forum channel.');
         }
 
-        const tagName = ticketType === 'contentcreator' ? 'Content Creator' :
+        const tagName = ticketType === 'contentcreator' ? 'Content Creator' : ticketType === 'clearance' ? 'report' :
                        ticketType.charAt(0).toUpperCase() + ticketType.slice(1);
 
         const availableTags = forumChannel.availableTags;
@@ -562,6 +638,10 @@ export default class TicketHandler {
             if (currentBlock.trim()) {
                 await forumPost.send({ content: currentBlock });
             }
+
+            // close and lock forum to not randomly reach discords limit for open forum threads (1000)
+            await forumPost.setLocked(true);
+            await forumPost.setArchived(true);
 
             return forumPost.id;
         } catch(error) {
@@ -1168,6 +1248,7 @@ export default class TicketHandler {
         try {
             const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
             const { stripRole } = this.client.util
+            const categoryId = getChannels(guild.id).ticketCategory;
 
             // Get admin and owner role IDs
             const adminRoleId = stripRole(getRoles(guild?.id).admin);
@@ -1177,7 +1258,7 @@ export default class TicketHandler {
             const channel = await guild.channels.create({
                 name: channelName,
                 type: ChannelType.GuildText,
-                parent: null, // No category as requested
+                parent: categoryId,
                 permissionOverwrites: [
                     {
                         id: guild.roles.everyone.id,
@@ -1243,7 +1324,11 @@ export default class TicketHandler {
             const ownerRole = getRoles(channel.guild?.id).owner;
 
             // Create welcome message
-            const welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
+            let welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
+
+            if (ticketType === 'clearance') {
+                welcomeMessage = 'Your clearance ticket has been created.';
+            }
 
             // Create embed with form data using fields for better organization
             const embed = new EmbedBuilder()
@@ -1255,35 +1340,58 @@ export default class TicketHandler {
                     iconURL: channel.guild.members.cache.get(userId)?.user.displayAvatarURL() || undefined
                 });
 
+            let urls: string[] = [];
+            const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+
             // Format the form data based on ticket type using fields
             switch (ticketType) {
                 case 'suggestion':
                     embed.addFields(
-                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Suggestion', value: `\`\`\`${formData.suggestion}\`\`\``, inline: false },
                         { name: 'Why would this work?', value: `\`\`\`${formData.reason}\`\`\``, inline: false }
                     );
+
+                    urls = urls.concat(formData.suggestion.match(urlRegex) || []);
+                    urls = urls.concat(formData.reason.match(urlRegex) || []);
                     break;
                 case 'report':
                     embed.addFields(
-                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Reported User', value: `\`\`\`${formData.reported_user}\`\`\``, inline: false },
                         { name: 'Reason', value: `\`\`\`${formData.reason}\`\`\``, inline: false },
                         { name: 'Description', value: `\`\`\`${formData.description}\`\`\``, inline: false }
                     );
+
+                    urls = urls.concat(formData.reason.match(urlRegex) || []);
+                    urls = urls.concat(formData.description.match(urlRegex) || []);
                     break;
                 case 'contentcreator':
                     embed.addFields(
-                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Platform URL', value: `\`\`\`${formData.platform_url}\`\`\``, inline: false },
                         { name: 'Additional Information', value: `\`\`\`${formData.additional}\`\`\``, inline: false }
                     );
+
+                    urls = urls.concat(formData.platform_url.match(urlRegex) || []);
+                    urls = urls.concat(formData.additional.match(urlRegex) || []);
                     break;
                 case 'other':
                     embed.addFields(
-                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'How can we assist?', value: `\`\`\`${formData.assistance}\`\`\``, inline: false }
                     );
+
+                    urls = urls.concat(formData.assistance.match(urlRegex) || []);
+                    break;
+                case 'clearance':
+                    embed.addFields(
+                        { name: 'RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Discord ID', value: `\`\`\`${formData.discordid}\`\`\``, inline: false },
+                        { name: 'Description', value: `\`\`\`${formData.description}\`\`\``, inline: false }
+                    );
+
+                    urls = urls.concat(formData.description.match(urlRegex) || []);
                     break;
             }
 
@@ -1297,6 +1405,14 @@ export default class TicketHandler {
                 );
 
             await channel.send({ content: welcomeMessage, embeds: [embed], components: [closeButton] });
+
+            if (ticketType === 'report') {
+                await channel.send('## To help us assist you faster, please provide any supporting evidence such as screenshots, recordings, or messages.');
+            }
+
+            if (urls.length > 0) {
+                await channel.send(`Found following URL's:\n${urls.join('\n\n')}`);
+            }
 
             this.client.logger.log({
                 message: `Sent welcome message to ticket channel: ${channel.name}`,
@@ -1335,6 +1451,9 @@ export default class TicketHandler {
                 break;
             case 'other':
                 ticketObject.ticketType = 3;
+                break;
+            case 'clearance':
+                ticketObject.ticketType = 4;
                 break;
         }
 

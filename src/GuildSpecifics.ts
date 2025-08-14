@@ -42,7 +42,10 @@ export function getChannels(guildId: string | undefined) : Channels {
             botRoleLog: '1391860640674484227',
             reportLog: '1391860641316343983',
             tempVCCategory: '1391860639584096317',
+            tempVCCategory2: '1391860639584096317',
+            tempVCCategory3: '1391860639584096317',
             tempVCCreate: '1391860639584096318',
+            afkVC: '1391860639584096319',
             dpmCalc: '1391860639063871582',
             trialScheduling: '000000000000000000',
             reaperScheduling: '000000000000000000',
@@ -56,6 +59,10 @@ export function getChannels(guildId: string | undefined) : Channels {
             ADMIN_CHANNEL: '1391860637369372764',
             leaderboardSubmission: '1401295942027841686',
             leaderboards: '1401296432916467847',
+            vcReminderChannel1: '1391860639063871585',
+            vcReminderChannel2: '1391860639063871585',
+            vcReminderChannel3: '1391860639063871585',
+            ticketCategory: '1404433490266816632',
         }
     }
 
@@ -71,6 +78,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             tempVCCategory2: '1402375561887748216',
             tempVCCategory3: '1403384312782389400',
             tempVCCreate: '1389392880518566138',
+            afkVC: '1389391295130374237',
             dpmCalc: '1389379617915408448',
             trialScheduling: '000000000000000000',
             reaperScheduling: '000000000000000000',
@@ -87,6 +95,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             vcReminderChannel1: '1389393102258573475',
             vcReminderChannel2: '1389393146647154808',
             vcReminderChannel3: '1403494299903066142',
+            ticketCategory: '1404278113784823849',
         }
     }
 
@@ -207,6 +216,9 @@ export function getRoles(guildId: string | undefined) : Roles {
             releaseDay1k: '1401274388187447429',
             releaseDay500: '1401274362987810907',
             verified: '1391860635435798724',
+            enr500: '1404800709462982716',
+            enr1000: '1404800755436748840',
+            enr2000: '1404800783798501396',
         }
     }
 
@@ -280,6 +292,9 @@ export function getRoles(guildId: string | undefined) : Roles {
             tumekensLight: '1401431760704901193',
             amaskitty: '1401431834780241940',
             verified: '1390353573216387072',
+            enr500: '1401450408492404877',
+            enr1000: '1401450459256066141',
+            enr2000: '1401450500481749062',
         }
     }
 

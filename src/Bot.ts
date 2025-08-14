@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import { Client, ClientOptions, MessageReaction, PartialMessageReaction, User, PartialUser, Role, GuildMember, TextChannel, EmbedBuilder, GuildEmoji, DiscordAPIError } from 'discord.js';
-import { TempChannelsManagerEvents } from '@hunteroi/discord-temp-channels';
 import BotLogger from './modules/LoggingHandler';
 import InteractionHandler from './modules/InteractionHandler';
 import EventHandler from './modules/EventHandler';

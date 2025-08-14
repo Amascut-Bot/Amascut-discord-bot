@@ -36,10 +36,11 @@ export default class Pass extends BotInteraction {
 
     get options() {
         const assignOptions: any = {
+            '500% Enrage': 'enr500',
+            '1000% Enrage': 'enr1000',
+            '2000% Enrage': 'enr2000',
             'Silver spoon': 'silverSpoon',
             'Golden spoon': 'goldenSpoon',
-            'Release Week 500%': 'releaseWeek500',
-            'Release Week 1000%': 'releaseWeek1k',
             'the Sunforged (Release week 4000%)': 'sunforged',
             'the Lightbearer (Release week 2000%)': 'lightbearer',
             'Release day 4k': 'releaseDay4k',
@@ -66,7 +67,7 @@ export default class Pass extends BotInteraction {
     }
 
     private isVerifiedEligible(role: string) : Boolean {
-        const verifiedRoles: string[] = ['releaseWeek500', 'releaseWeek1k', 'sunforged', 'lightbearer', 'releaseDay4k'];
+        const verifiedRoles: string[] = ['releaseWeek500', 'releaseWeek1k', 'sunforged', 'lightbearer', 'releaseDay4k', 'enr500', 'enr1000', 'enr2000'];
 
         if (verifiedRoles.includes(role)) return true;
 

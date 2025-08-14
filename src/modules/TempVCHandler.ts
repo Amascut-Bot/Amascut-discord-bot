@@ -1,22 +1,19 @@
 
-import { ParentChannelOptions, TempChannelsManager, TempChannelsManagerEvents } from '@hunteroi/discord-temp-channels';
 import Bot from '../Bot';
 import { getChannels } from '../GuildSpecifics';
-import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember } from 'discord.js';
+import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, Channel, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, GuildChannel, VoiceChannel, User, OverwriteType, ContainerComponent, TextDisplayComponent } from 'discord.js';
 
 export default interface TempChannelManager {
     client: Bot;
     built: boolean;
-    on(eventName: TempChannelsManagerEvents, listener: (...args: unknown[]) => void | Promise<void>): this;
 }
 
-export default class TempChannelManager extends TempChannelsManager {
+export default class TempChannelManager {
     public client: Bot;
     public built: boolean;
     private tempChannelIds: Set<string>;
 
     constructor(client: Bot) {
-        super(client);
         this.client = client;
         this.built = false;
         this.tempChannelIds = new Set();
@@ -27,8 +24,8 @@ export default class TempChannelManager extends TempChannelsManager {
     }
 
     private async loadTempChannelIds(): Promise<void> {
-        const excludedChannels = ['1389392880518566138', '1389391295130374237']; // join to create and afk
         const channels = getChannels(process.env.GUILD_ID);
+        const excludedChannels = [channels.tempVCCreate, channels.afkVC]; // join to create and afk
 
         try {
             const primaryCategory = await this.client.channels.fetch(channels.tempVCCategory);
@@ -91,20 +88,13 @@ export default class TempChannelManager extends TempChannelsManager {
         if (!member || !guild) return;
 
         try {
-            // Check if user already has a temp VC
-            for (const channelId of this.tempChannelIds) {
-                const channel = guild.channels.cache.get(channelId);
-                if (channel && channel.name.includes(member.displayName)) {
-                    await member.voice.setChannel(channel.id);
-                    return;
-                }
-            }
-
             // Create a new temp VC
             const newChannel = await this.createTempVCWithFallback(member);
             if (newChannel) {
                 await member.voice.setChannel(newChannel);
                 this.tempChannelIds.add(newChannel.id);
+
+                await this.postTempVcDashboard(newChannel);
             }
 
         } catch (error) {
@@ -121,7 +111,19 @@ export default class TempChannelManager extends TempChannelsManager {
         const guild = member.guild;
 
         const existingTempChannels = guild.channels.cache.filter(c => this.tempChannelIds.has(c.id));
-        const channelCount = existingTempChannels.size + 1;
+        let channelCount = 0;
+
+        // getting the highest channel Team-Name number, this should fix channels beeing named with the same number over and over again
+        existingTempChannels.forEach(c => {
+            const match = /Team #(\d+)/g.exec(c.name);
+
+            if (match && channelCount < parseFloat(match[1])) {
+                channelCount = parseFloat(match[1]);
+            }
+        });
+
+        channelCount++;
+
         const channelName = `Team #${channelCount} | ${member.displayName}`;
 
         try {
@@ -159,7 +161,7 @@ export default class TempChannelManager extends TempChannelsManager {
 
     private async createTempChannel(guild: any, channelName: string, categoryId: string, member: GuildMember, categoryType: string): Promise<any> {
         try {
-            const channel = await guild.channels.create({
+            const channel: VoiceChannel = await guild.channels.create({
                 name: channelName,
                 type: ChannelType.GuildVoice,
                 parent: categoryId,
@@ -181,8 +183,23 @@ export default class TempChannelManager extends TempChannelsManager {
                 handler: this.constructor.name,
                 message: `Created temp VC "${channelName}" in ${categoryType} category for ${member.user.tag}`
             }, true);
-            return channel;
 
+            const tempVCCreate = await guild.channels.fetch(getChannels(process.env.GUILD_ID).tempVCCreate) as VoiceChannel;
+            const overwrites = tempVCCreate.permissionOverwrites.cache.map(overwrite => ({
+                id: overwrite.id,
+                allow: overwrite.allow.bitfield,
+                deny: overwrite.deny.bitfield,
+                type: overwrite.type
+            })).concat(channel.permissionOverwrites.cache.map(overwrite => ({
+                id: overwrite.id,
+                allow: overwrite.allow.bitfield,
+                deny: overwrite.deny.bitfield,
+                type: overwrite.type
+            })));
+
+            await channel.permissionOverwrites.set(overwrites);
+
+            return channel;
         } catch (error) {
             if (error instanceof DiscordAPIError && error.code === 50035) { // Max number of channels in category
                  this.client.logger.error({
@@ -218,10 +235,39 @@ export default class TempChannelManager extends TempChannelsManager {
                     });
                 }
             }
+        } else {
+            const channels = getChannels(process.env.GUILD_ID);
+            const excludedChannels = [channels.tempVCCreate, channels.afkVC]; // join to create and afk
+
+            if (excludedChannels.includes(channel?.id ?? '')) {
+                return;
+            }
+
+            // check if vc owner is still present
+            const owner = await this.getTempVcOwner(channel as VoiceChannel);
+
+            // also check if claim button is already there
+            const messages = (await channel?.messages.fetch())?.filter(msg => msg.author.id === this.client.user?.id);
+
+            if (messages && messages.size > 0) {
+                for (const [id, message] of messages) {
+                    if (message.components.length > 0) {
+                        const msgComponents = (message.components[0] as ContainerComponent).components;
+
+                        if ((msgComponents[0] as TextDisplayComponent).content === 'Owner has left, you can claim this VC to use the Dashboard!') {
+                            return;
+                        }
+                    }
+                }
+            }
+
+            if (owner?.voice.channelId !== channel?.id) {
+                await this.postTempVcClaimButton(channel as VoiceChannel);
+            }
         }
     }
 
-    public __initParentListener(channelId: string, options?: ParentChannelOptions): void {
+    public __initParentListener(channelId: string): void {
         this.client.logger.log({
             handler: this.constructor.name,
             message: `Temp VC create channel ${channelId} configured with custom fallback system`
@@ -232,4 +278,143 @@ export default class TempChannelManager extends TempChannelsManager {
         this.built = true;
         this.client.logger.log({ handler: this.constructor.name, message: 'Loaded handler for TempVC' }, true);
     }
+
+    //#region VC Dashboard
+
+    public async handleTempVcDashboardInteraction(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        switch (interaction.customId) {
+            case 'tempvc_setLimit': this.setTempVCUserLimit(interaction, 5); break;
+            case 'tempvc_resetLimit': this.setTempVCUserLimit(interaction, 0); break;
+            case 'tempvc_claim': this.claimTempVC(interaction); break;
+        }
+    }
+
+    private async postTempVcDashboard(channel: VoiceChannel) {
+        const container = new ContainerBuilder()
+            .setAccentColor(this.client.color)
+            .addTextDisplayComponents(builder => builder.setContent('## Temp VC Control Panel'))
+            .addSeparatorComponents(builder => builder.setSpacing(SeparatorSpacingSize.Large))
+            .addTextDisplayComponents(builder => builder.setContent('You can always edit this channel manually by clicking the ⚙️ in your Voice Channel!'))
+            .addSeparatorComponents(builder => builder.setSpacing(SeparatorSpacingSize.Large));
+
+        const setLimitButton = new ButtonBuilder()
+            .setCustomId('tempvc_setLimit')
+            .setLabel('Set Limit to 5')
+            .setStyle(ButtonStyle.Success);
+
+        const resetLimitButton = new ButtonBuilder()
+            .setCustomId('tempvc_resetLimit')
+            .setLabel('Reset Limit')
+            .setStyle(ButtonStyle.Danger);
+
+        container.addActionRowComponents(builder => builder.addComponents(setLimitButton, resetLimitButton));
+
+        await channel.send({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2
+        });
+    }
+
+    private async postTempVcClaimButton(channel: VoiceChannel) {
+        const container = new ContainerBuilder()
+            .setAccentColor(this.client.color)
+            .addTextDisplayComponents(builder => builder.setContent('Owner has left, you can claim this VC to use the Dashboard!'))
+
+        const claimButton = new ButtonBuilder()
+            .setCustomId('tempvc_claim')
+            .setLabel('Claim')
+            .setStyle(ButtonStyle.Primary);
+
+        container.addActionRowComponents(builder => builder.addComponents(claimButton));
+
+        await channel.send({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2
+        });
+    }
+
+    private async getTempVcOwner(channel: VoiceChannel) : Promise<GuildMember | undefined> {
+        const overwrites = channel.permissionOverwrites.cache;
+        const userOverwrites = overwrites.filter(overwrite => overwrite.type === OverwriteType.Member && overwrite.allow.has('ManageChannels'));
+
+        const owners = userOverwrites.map(async overwrite => await channel.guild.members.fetch(overwrite.id));
+
+        if (owners.length > 0) {
+            return owners[0];
+        }
+
+        return undefined;
+    }
+
+    private async setTempVCUserLimit(interaction: ButtonInteraction<'cached'>, limit: number): Promise<void> {
+        if (interaction.channel?.type === ChannelType.GuildVoice) {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            //const isTempVCOwner = interaction.channel.permissionsFor(interaction.user)?.has('ManageChannels');
+            const tempVCOwner = await this.getTempVcOwner(interaction.channel);
+            const isTempVCOwner = tempVCOwner && tempVCOwner.id === interaction.user.id;
+
+            if (isTempVCOwner) {
+                if (limit === 0) {
+                    await interaction.channel.setUserLimit(0);
+                    await interaction.editReply('Successfully reset User Limit!');
+                    return;
+                }
+                else if (limit === 5) {
+                    await interaction.channel.setUserLimit(5);
+                    await interaction.editReply('Successfully set User Limit to 5 Users!');
+                    return;
+                }
+            } else {
+                await interaction.editReply('You are not the owner of this Voice Channel!');
+                return;
+            }
+        }
+    }
+
+    private async claimTempVC(interaction: ButtonInteraction<'cached'>) : Promise<void> {
+        if (interaction.channel?.type === ChannelType.GuildVoice) {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+            const tempVCOwner = await this.getTempVcOwner(interaction.channel);
+
+            if (tempVCOwner) {
+                // check if original owner is still connected / reconnected
+                if (tempVCOwner.voice.channelId === interaction.channelId) {
+                    await interaction.editReply('Owner is still connected!');
+                    await interaction.message.delete();
+                } else {
+                    // check if user is actually in this vc
+                    if (interaction.member.voice.channelId === interaction.channel.id) {
+                        //remove old owner and set new one
+                        await interaction.channel.permissionOverwrites.delete(tempVCOwner);
+                        await interaction.channel.permissionOverwrites.create(interaction.member, {
+                            Connect: true,
+                            Speak: true,
+                            Stream: true,
+                            UseVAD: true,
+                            ManageChannels: true
+                        });
+
+                        const match = /Team #(\d+)/g.exec(interaction.channel.name);
+
+                        if (match) {
+                            await interaction.channel.setName(
+                                interaction.channel.name.replace(/^Team #(\d+) \| .+$/, `Team #$1 | ${interaction.member.displayName}`)
+                            );
+                        }
+
+                        await interaction.editReply('Successfully claimed TempVC!');
+                        await interaction.message.delete();
+                    } else {
+                        await interaction.editReply('You are not in this Voice Channel!');
+                    }
+                }
+            } else {
+                await interaction.editReply(`Can't find previous owner to check, if they are still connected!`);
+                this.client.logger.log({ handler: this.constructor.name, message: `Failed to TempVC Owner of Channel ${interaction.channel.id}` }, true);
+            }
+        }
+    }
+
+    //#endregion
 }

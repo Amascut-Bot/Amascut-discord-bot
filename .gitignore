@@ -59,3 +59,5 @@ dashboard-data.json
 
 # Google Credentials
 google-credentials.json
+src/interactions/info/BossRevenueV3.ts
+reminder-data.json

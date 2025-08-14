@@ -1,5 +1,4 @@
-import { ActivityType, DiscordAPIError } from 'discord.js';
-import { TempChannelsManagerEvents } from '@hunteroi/discord-temp-channels';
+import { ActivityType } from 'discord.js';
 import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import TempChannelManager from '../modules/TempVCHandler';
@@ -40,27 +39,6 @@ export default class Ready extends BotEvent {
         this.client.cacheTrackedMessages();
 
         this.client.tempManager = new TempChannelManager(this.client);
-        this.client.tempManager.on(TempChannelsManagerEvents.error, (error) => {
-            if (error instanceof DiscordAPIError && error.code === 40032) {
-                return this.client.logger.log({
-                    handler: 'TempChannelManager',
-                    message: 'Caught a non-critical "Target user is not connected to voice" error. This is likely due to a user leaving the creation channel too quickly. The bot will not crash.'
-                }, true);
-            }
-            if (error instanceof DiscordAPIError && error.code === 50035) {
-                return this.client.logger.error({
-                    handler: 'TempChannelManager',
-                    message: 'CRITICAL: Temp VC category is full (50 channels). Please clean up old channels or create a second category.',
-                    error: error
-                });
-            }
-            this.client.logger.error({
-                handler: 'TempChannelManager',
-                message: 'An unhandled error occurred in the temp channel manager.',
-                error: error
-            });
-        });
-
         this.client.tempManager.__initParentListener(getChannels(process.env.GUILD_ID).tempVCCreate);
         this.client.logger.log({ message: `Running on the ${process.env.ENVIRONMENT} environment` }, true);
         this.client.user?.setPresence({
