@@ -21,7 +21,7 @@ export default class CreateClearanceTicket extends BotInteraction {
         return new SlashCommandBuilder()
             .setName(this.name)
             .setDescription(this.description)
-            .addUserOption((option) => option.setName('reporteduser').setDescription('Reported user').setRequired(true))
+            .addUserOption((option) => option.setName('reporteduser').setDescription('Reported User').setRequired(true))
             .addStringOption((option) => option.setName('rsn').setDescription('Reported Users RSN').setRequired(true))
             .addStringOption((option) => option.setName('description').setDescription('Report Description').setRequired(true));
     }
