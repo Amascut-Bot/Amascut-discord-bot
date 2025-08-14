@@ -12,11 +12,13 @@ export default class TempChannelManager {
     public client: Bot;
     public built: boolean;
     private tempChannelIds: Set<string>;
+    private learnerTempChannelIds: Set<string>;
 
     constructor(client: Bot) {
         this.client = client;
         this.built = false;
         this.tempChannelIds = new Set();
+        this.learnerTempChannelIds = new Set();
 
         this.setupVoiceStateListener();
         this.loadTempChannelIds();
@@ -25,12 +27,13 @@ export default class TempChannelManager {
 
     private async loadTempChannelIds(): Promise<void> {
         const channels = getChannels(process.env.GUILD_ID);
-        const excludedChannels = [channels.tempVCCreate, channels.afkVC]; // join to create and afk
+        const excludedChannels = [channels.tempVCCreate, channels.afkVC, channels.learnerWaiting, channels.learnerTempVCCreate, channels.learnerTeaching]; // join to create and afk, learner join to create, waiting room, drop in room
 
         try {
             const primaryCategory = await this.client.channels.fetch(channels.tempVCCategory);
             const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
             const tertiaryCategory = await this.client.channels.fetch(channels.tempVCCategory3);
+            const learnerCategory = await this.client.channels.fetch(channels.learnerCategory);
 
             if (primaryCategory && primaryCategory.type === ChannelType.GuildCategory) {
                 const primaryVcs = await primaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
@@ -41,18 +44,26 @@ export default class TempChannelManager {
             }
 
             if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory) {
-                const primaryVcs = await secondaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
+                const secondaryVcs = await secondaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
 
-                for (const [key, vc] of primaryVcs) {
+                for (const [key, vc] of secondaryVcs) {
                     this.tempChannelIds.add(vc.id);
                 }
             }
 
             if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory) {
-                const primaryVcs = await tertiaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
+                const tertiaryVcs = await tertiaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
 
-                for (const [key, vc] of primaryVcs) {
+                for (const [key, vc] of tertiaryVcs) {
                     this.tempChannelIds.add(vc.id);
+                }
+            }
+
+            if (learnerCategory && learnerCategory.type === ChannelType.GuildCategory) {
+                const learnerVcs = await learnerCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
+
+                for (const [key, vc] of learnerVcs) {
+                    this.learnerTempChannelIds.add(vc.id);
                 }
             }
         } catch (error) {
@@ -62,7 +73,6 @@ export default class TempChannelManager {
                 error: error as Error
             });
         }
-
     }
 
     private setupVoiceStateListener(): void {
@@ -70,29 +80,36 @@ export default class TempChannelManager {
             const channels = getChannels(process.env.GUILD_ID);
 
             // User joins the "create" channel
-            if (newState.channelId === channels.tempVCCreate && newState.member) {
+            if ((newState.channelId === channels.tempVCCreate || newState.channelId === channels.learnerTempVCCreate) && newState.member) {
                 await this.handleTempVCCreation(newState);
             }
 
             // User leaves a voice channel
-            if (oldState.channel && oldState.channelId !== channels.tempVCCreate) {
+            if (oldState.channel && oldState.channelId !== channels.tempVCCreate && oldState.channelId !== channels.learnerTempVCCreate) {
                 this.handleTempVCDeletion(oldState);
             }
         });
     }
 
     private async handleTempVCCreation(voiceState: VoiceState): Promise<void> {
+        const channels = getChannels(process.env.GUILD_ID);
         const member = voiceState.member as GuildMember;
         const guild = voiceState.guild;
+        const category = voiceState.channelId === channels.tempVCCreate ? 'main' : voiceState.channelId === channels.learnerTempVCCreate ? 'learner' : '';
 
         if (!member || !guild) return;
 
         try {
             // Create a new temp VC
-            const newChannel = await this.createTempVCWithFallback(member);
+            const newChannel = await this.createTempVCWithFallback(member, category);
             if (newChannel) {
                 await member.voice.setChannel(newChannel);
-                this.tempChannelIds.add(newChannel.id);
+
+                if (category === 'main') {
+                    this.tempChannelIds.add(newChannel.id);
+                } else if (category === 'learner') {
+                    this.learnerTempChannelIds.add(newChannel.id);
+                }
 
                 await this.postTempVcDashboard(newChannel);
             }
@@ -106,16 +123,16 @@ export default class TempChannelManager {
         }
     }
 
-    private async createTempVCWithFallback(member: GuildMember): Promise<any> {
+    private async createTempVCWithFallback(member: GuildMember, category: string): Promise<any> {
         const channels = getChannels(process.env.GUILD_ID);
         const guild = member.guild;
 
-        const existingTempChannels = guild.channels.cache.filter(c => this.tempChannelIds.has(c.id));
+        const existingTempChannels = category === 'main' ? guild.channels.cache.filter(c => this.tempChannelIds.has(c.id)) : guild.channels.cache.filter(c => this.learnerTempChannelIds.has(c.id));
         let channelCount = 0;
 
         // getting the highest channel Team-Name number, this should fix channels beeing named with the same number over and over again
         existingTempChannels.forEach(c => {
-            const match = /Team #(\d+)/g.exec(c.name);
+            const match = /#(\d+)/g.exec(c.name);
 
             if (match && channelCount < parseFloat(match[1])) {
                 channelCount = parseFloat(match[1]);
@@ -124,28 +141,36 @@ export default class TempChannelManager {
 
         channelCount++;
 
-        const channelName = `Team #${channelCount} | ${member.displayName}`;
+        const channelName = category === 'main' ? `Team #${channelCount} | ${member.displayName}` : `Teaching #${channelCount}`;
 
         try {
-            const primaryCategory = await this.client.channels.fetch(channels.tempVCCategory);
-            if (primaryCategory && primaryCategory.type === ChannelType.GuildCategory && primaryCategory.children.cache.size < 50) {
-                return await this.createTempChannel(guild, channelName, channels.tempVCCategory, member, 'primary');
+            if (category === 'main') {
+                const primaryCategory = await this.client.channels.fetch(channels.tempVCCategory);
+                if (primaryCategory && primaryCategory.type === ChannelType.GuildCategory && primaryCategory.children.cache.size < 50) {
+                    return await this.createTempChannel(guild, channelName, channels.tempVCCategory, member, 'primary');
+                }
+
+                const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
+                if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory && secondaryCategory.children.cache.size < 50) {
+                    return await this.createTempChannel(guild, channelName, channels.tempVCCategory2, member, 'secondary');
+                }
+
+                const tertiaryCategory = await this.client.channels.fetch(channels.tempVCCategory3);
+                if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory && tertiaryCategory.children.cache.size < 50) {
+                    return await this.createTempChannel(guild, channelName, channels.tempVCCategory3, member, 'tertiary');
+                }
+            } else if (category === 'learner') {
+                const learnerCategory = await this.client.channels.fetch(channels.learnerCategory);
+                if (learnerCategory && learnerCategory.type === ChannelType.GuildCategory && learnerCategory.children.cache.size < 50) {
+                    return await this.createTempChannel(guild, channelName, channels.learnerCategory, member, 'learner');
+                }
             }
 
-            const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
-            if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory && secondaryCategory.children.cache.size < 50) {
-                return await this.createTempChannel(guild, channelName, channels.tempVCCategory2, member, 'secondary');
-            }
-
-            const tertiaryCategory = await this.client.channels.fetch(channels.tempVCCategory3);
-            if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory && tertiaryCategory.children.cache.size < 50) {
-                return await this.createTempChannel(guild, channelName, channels.tempVCCategory3, member, 'tertiary');
-            }
 
             this.client.logger.error({
                 handler: this.constructor.name,
-                message: `Both temp VC categories are full! Cannot create channel for ${member.user.tag}`,
-                error: new Error('Both temp VC categories are full!')
+                message: `All temp VC categories are full! Cannot create channel for ${member.user.tag}`,
+                error: new Error('All temp VC categories are full!')
             });
             return null;
 
@@ -184,7 +209,8 @@ export default class TempChannelManager {
                 message: `Created temp VC "${channelName}" in ${categoryType} category for ${member.user.tag}`
             }, true);
 
-            const tempVCCreate = await guild.channels.fetch(getChannels(process.env.GUILD_ID).tempVCCreate) as VoiceChannel;
+            const tempVCCreate = categoryType === 'learner' ? await guild.channels.fetch(getChannels(process.env.GUILD_ID).learnerTempVCCreate) as VoiceChannel
+                : await guild.channels.fetch(getChannels(process.env.GUILD_ID).tempVCCreate) as VoiceChannel;
             const overwrites = tempVCCreate.permissionOverwrites.cache.map(overwrite => ({
                 id: overwrite.id,
                 allow: overwrite.allow.bitfield,
@@ -198,6 +224,16 @@ export default class TempChannelManager {
             })));
 
             await channel.permissionOverwrites.set(overwrites);
+
+            // allow everyone to join in learner channels, because create channel is hidden for everyone
+            if (categoryType === 'learner') {
+                await channel.permissionOverwrites.edit(
+                    channel.guild.roles.everyone,
+                    {
+                        ViewChannel: null
+                    }
+                )
+            }
 
             return channel;
         } catch (error) {
@@ -215,10 +251,18 @@ export default class TempChannelManager {
     private async handleTempVCDeletion(oldState: VoiceState): Promise<void> {
         const channel = oldState.channel;
 
-        if (channel && this.tempChannelIds.has(channel.id) && channel.members.size === 0) {
+        if (channel && (this.tempChannelIds.has(channel.id) || this.learnerTempChannelIds.has(channel.id)) && channel.members.size === 0) {
             try {
                 await channel.delete('Temp VC auto-cleanup: empty channel');
-                this.tempChannelIds.delete(channel.id);
+
+                if (this.tempChannelIds.has(channel.id)) {
+                    this.tempChannelIds.delete(channel.id);
+                }
+
+                if (this.learnerTempChannelIds.has(channel.id)) {
+                    this.learnerTempChannelIds.delete(channel.id);
+                }
+
                 this.client.logger.log({
                     handler: this.constructor.name,
                     message: `Auto-deleted empty temp VC: ${channel.name}`
@@ -226,7 +270,13 @@ export default class TempChannelManager {
             } catch (error) {
                 // Channel might have been deleted already
                 if (error instanceof DiscordAPIError && error.code === 10003) {
-                    this.tempChannelIds.delete(channel.id);
+                    if (this.tempChannelIds.has(channel.id)) {
+                        this.tempChannelIds.delete(channel.id);
+                    }
+
+                    if (this.learnerTempChannelIds.has(channel.id)) {
+                        this.learnerTempChannelIds.delete(channel.id);
+                    }
                 } else {
                     this.client.logger.error({
                         handler: this.constructor.name,
@@ -236,10 +286,8 @@ export default class TempChannelManager {
                 }
             }
         } else {
-            const channels = getChannels(process.env.GUILD_ID);
-            const excludedChannels = [channels.tempVCCreate, channels.afkVC]; // join to create and afk
-
-            if (excludedChannels.includes(channel?.id ?? '')) {
+            //only in main temp VC's and only if channel still is there
+            if (!this.tempChannelIds.has(channel?.id ?? '')) {
                 return;
             }
 

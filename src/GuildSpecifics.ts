@@ -63,6 +63,10 @@ export function getChannels(guildId: string | undefined) : Channels {
             vcReminderChannel2: '1391860639063871585',
             vcReminderChannel3: '1391860639063871585',
             ticketCategory: '1404433490266816632',
+            learnerCategory: '1405663718875861052',
+            learnerTempVCCreate: '1405664879075004596',
+            learnerWaiting: '1405671688514965615',
+            learnerTeaching: '1405671729959014460',
         }
     }
 
@@ -96,6 +100,10 @@ export function getChannels(guildId: string | undefined) : Channels {
             vcReminderChannel2: '1389393146647154808',
             vcReminderChannel3: '1403494299903066142',
             ticketCategory: '1404278113784823849',
+            learnerCategory: '1404510300715356232',
+            learnerTempVCCreate: '1405678891565187112',
+            learnerWaiting: '1405668159922503810',
+            learnerTeaching: '1405338959063814227',
         }
     }
 
