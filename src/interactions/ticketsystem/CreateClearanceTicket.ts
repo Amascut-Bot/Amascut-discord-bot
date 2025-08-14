@@ -10,7 +10,7 @@ export default class CreateClearanceTicket extends BotInteraction {
     }
 
     get description() {
-        return 'Open a ticket to discuss with reported user';
+        return 'Open a Ticket to discuss with reported user';
     }
 
     get permissions() {
