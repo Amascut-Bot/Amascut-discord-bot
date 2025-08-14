@@ -309,10 +309,14 @@ export default class TempChannelManager {
 
         container.addActionRowComponents(builder => builder.addComponents(setLimitButton, resetLimitButton));
 
-        await channel.send({
-            components: [container],
-            flags: MessageFlags.IsComponentsV2
-        });
+        try {
+            await channel.send({
+                components: [container],
+                flags: MessageFlags.IsComponentsV2
+            });
+        } catch (error) {
+            // do nothing, if this fails all users have left the vc to quickly so it is already deleted
+        }
     }
 
     private async postTempVcClaimButton(channel: VoiceChannel) {
@@ -327,10 +331,14 @@ export default class TempChannelManager {
 
         container.addActionRowComponents(builder => builder.addComponents(claimButton));
 
-        await channel.send({
-            components: [container],
-            flags: MessageFlags.IsComponentsV2
-        });
+        try {
+            await channel.send({
+                components: [container],
+                flags: MessageFlags.IsComponentsV2
+            });
+        } catch (error) {
+            // do nothing, if this fails all users have left the vc to quickly so it is already deleted
+        }
     }
 
     private async getTempVcOwner(channel: VoiceChannel) : Promise<GuildMember | undefined> {
