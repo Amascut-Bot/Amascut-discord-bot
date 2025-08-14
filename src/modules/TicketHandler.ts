@@ -399,14 +399,9 @@ export default class TicketHandler {
                 }
             }
 
-            if (!ticketUserId) {
-                await interaction.editReply({
-                    content: 'Could not identify ticket opener. Please use the Delete button instead to remove this ticket, or contact an administrator.'
-                });
-                return;
+            if (ticketUserId) {
+                await channel.permissionOverwrites.delete(ticketUserId);
             }
-
-            await channel.permissionOverwrites.delete(ticketUserId);
 
             const closedEmbed = new EmbedBuilder()
                 .setTitle('Ticket Closed')
