@@ -102,8 +102,20 @@ export default class TempChannelManager {
         try {
             // Create a new temp VC
             const newChannel = await this.createTempVCWithFallback(member, category);
+
             if (newChannel) {
-                await member.voice.setChannel(newChannel);
+                try {
+                    await member.voice.setChannel(newChannel);
+                } catch (error) {
+                    if (error instanceof DiscordAPIError && error.code === 40032) {	//Target user is not connected to voice
+                        //if user left vc to quickly, before you could have moved to their created vc, delete the created vc so it doesn't stick around
+                        if (newChannel) {
+                            await newChannel.delete();
+                            return;
+                        }
+                    }
+                    throw error;
+                }
 
                 if (category === 'main') {
                     this.tempChannelIds.add(newChannel.id);
@@ -113,7 +125,6 @@ export default class TempChannelManager {
 
                 await this.postTempVcDashboard(newChannel);
             }
-
         } catch (error) {
             this.client.logger.error({
                 handler: this.constructor.name,
