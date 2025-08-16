@@ -2,8 +2,6 @@
 
 A Discord bot for Amascut Server.
 
-#FUCKAMASCUTRSDISCORD
-#JMODSUPPORTED
 #SHOUTOUTCALANDDEMMANDEM
 
 ## What it does
