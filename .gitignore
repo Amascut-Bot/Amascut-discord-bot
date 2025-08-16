@@ -21,6 +21,7 @@ dist/
 copy.sh
 connect.sh
 *config.json
+!tsconfig.json
 config.json
 *.ppk
 *.pem
