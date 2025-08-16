@@ -192,13 +192,13 @@ export default class TempChannelManager {
             }
         });
 
-        channelCount++;
         let INVALID_COMMUNITY_PROPERTY_NAME = false;
         const MAX_TRIES = 100;
         let TRIES = 0;
 
         do {
             try {
+                channelCount++;
                 const channelName = categoryType === 'learner' ? `Teaching #${channelCount}`
                     : INVALID_COMMUNITY_PROPERTY_NAME && TRIES === 1 ? `Team #${channelCount} | ${member.displayName}`
                     : INVALID_COMMUNITY_PROPERTY_NAME ? `Team #${channelCount}` : `Team #${channelCount} | ${member.displayName}`;
