@@ -325,11 +325,26 @@ export default class Upload extends BotInteraction {
                         return this.convertEmbedEmojis(resolvedEmbed, interaction);
                     });
 
+                    // Resolve placeholders in containers too
+                    const newComponents = partToEdit.components.map(component => {
+                        let componentString = JSON.stringify(component);
+                        componentString = this.resolvePlaceholders(componentString, tagToUrlMap, { channelId: targetChannel.id });
+                        const resolvedComponent = JSON.parse(componentString);
+                        return this.convertComponentsV2Emojis(resolvedComponent, interaction);
+                    });
+
                     try {
-                        await partToEdit.sentMessage.edit({
-                            content: newContent || undefined,
-                            embeds: newEmbeds
-                        });
+                        if (partToEdit.sentMessage.flags.has(MessageFlags.IsComponentsV2)) {
+                            await partToEdit.sentMessage.edit({
+                                components: newComponents
+                            });
+                        }
+                        else {
+                            await partToEdit.sentMessage.edit({
+                                content: newContent || undefined,
+                                embeds: newEmbeds
+                            });
+                        }
                     } catch (e) {
                         this.client.logger.error({ message: `Failed to edit message ${partToEdit.sentMessage.id}`, error: e as Error });
                             }
