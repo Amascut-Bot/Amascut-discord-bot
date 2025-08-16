@@ -1,7 +1,7 @@
 
 import Bot from '../Bot';
 import { getChannels } from '../GuildSpecifics';
-import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, Channel, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, GuildChannel, VoiceChannel, User, OverwriteType, ContainerComponent, TextDisplayComponent } from 'discord.js';
+import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, Channel, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, GuildChannel, VoiceChannel, User, OverwriteType, ContainerComponent, TextDisplayComponent, Guild } from 'discord.js';
 
 export default interface TempChannelManager {
     client: Bot;
@@ -138,42 +138,26 @@ export default class TempChannelManager {
         const channels = getChannels(process.env.GUILD_ID);
         const guild = member.guild;
 
-        const existingTempChannels = category === 'main' ? guild.channels.cache.filter(c => this.tempChannelIds.has(c.id)) : guild.channels.cache.filter(c => this.learnerTempChannelIds.has(c.id));
-        let channelCount = 0;
-
-        // getting the highest channel Team-Name number, this should fix channels beeing named with the same number over and over again
-        existingTempChannels.forEach(c => {
-            const match = /#(\d+)/g.exec(c.name);
-
-            if (match && channelCount < parseFloat(match[1])) {
-                channelCount = parseFloat(match[1]);
-            }
-        });
-
-        channelCount++;
-
-        const channelName = category === 'main' ? `Team #${channelCount} | ${member.displayName}` : `Teaching #${channelCount}`;
-
         try {
             if (category === 'main') {
                 const primaryCategory = await this.client.channels.fetch(channels.tempVCCategory);
                 if (primaryCategory && primaryCategory.type === ChannelType.GuildCategory && primaryCategory.children.cache.size < 50) {
-                    return await this.createTempChannel(guild, channelName, channels.tempVCCategory, member, 'primary');
+                    return await this.createTempChannel(guild, channels.tempVCCategory, member, 'primary');
                 }
 
                 const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
                 if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory && secondaryCategory.children.cache.size < 50) {
-                    return await this.createTempChannel(guild, channelName, channels.tempVCCategory2, member, 'secondary');
+                    return await this.createTempChannel(guild, channels.tempVCCategory2, member, 'secondary');
                 }
 
                 const tertiaryCategory = await this.client.channels.fetch(channels.tempVCCategory3);
                 if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory && tertiaryCategory.children.cache.size < 50) {
-                    return await this.createTempChannel(guild, channelName, channels.tempVCCategory3, member, 'tertiary');
+                    return await this.createTempChannel(guild, channels.tempVCCategory3, member, 'tertiary');
                 }
             } else if (category === 'learner') {
                 const learnerCategory = await this.client.channels.fetch(channels.learnerCategory);
                 if (learnerCategory && learnerCategory.type === ChannelType.GuildCategory && learnerCategory.children.cache.size < 50) {
-                    return await this.createTempChannel(guild, channelName, channels.learnerCategory, member, 'learner');
+                    return await this.createTempChannel(guild, channels.learnerCategory, member, 'learner');
                 }
             }
 
@@ -195,68 +179,97 @@ export default class TempChannelManager {
         }
     }
 
-    private async createTempChannel(guild: any, channelName: string, categoryId: string, member: GuildMember, categoryType: string): Promise<any> {
-        try {
-            const channel: VoiceChannel = await guild.channels.create({
-                name: channelName,
-                type: ChannelType.GuildVoice,
-                parent: categoryId,
-                bitrate: 64000,
-                permissionOverwrites: [
-                    {
-                        id: member.id,
-                        allow: [
-                            PermissionFlagsBits.Connect,
-                            PermissionFlagsBits.Speak,
-                            PermissionFlagsBits.Stream,
-                            PermissionFlagsBits.UseVAD,
-                            PermissionFlagsBits.ManageChannels
-                        ]
-                    }
-                ]
-            });
-            this.client.logger.log({
-                handler: this.constructor.name,
-                message: `Created temp VC "${channelName}" in ${categoryType} category for ${member.user.tag}`
-            }, true);
+    private async createTempChannel(guild: Guild, categoryId: string, member: GuildMember, categoryType: string): Promise<any> {
+        const existingTempChannels = categoryType === 'learner' ? guild.channels.cache.filter(c => this.learnerTempChannelIds.has(c.id)) : guild.channels.cache.filter(c => this.tempChannelIds.has(c.id));
+        let channelCount = 0;
 
-            const tempVCCreate = categoryType === 'learner' ? await guild.channels.fetch(getChannels(process.env.GUILD_ID).learnerTempVCCreate) as VoiceChannel
-                : await guild.channels.fetch(getChannels(process.env.GUILD_ID).tempVCCreate) as VoiceChannel;
-            const overwrites = tempVCCreate.permissionOverwrites.cache.map(overwrite => ({
-                id: overwrite.id,
-                allow: overwrite.allow.bitfield,
-                deny: overwrite.deny.bitfield,
-                type: overwrite.type
-            })).concat(channel.permissionOverwrites.cache.map(overwrite => ({
-                id: overwrite.id,
-                allow: overwrite.allow.bitfield,
-                deny: overwrite.deny.bitfield,
-                type: overwrite.type
-            })));
+        // getting the highest channel Team-Name number, this should fix channels beeing named with the same number over and over again
+        existingTempChannels.forEach(c => {
+            const match = /#(\d+)/g.exec(c.name);
 
-            await channel.permissionOverwrites.set(overwrites);
-
-            // allow everyone to join in learner channels, because create channel is hidden for everyone
-            if (categoryType === 'learner') {
-                await channel.permissionOverwrites.edit(
-                    channel.guild.roles.everyone,
-                    {
-                        ViewChannel: null
-                    }
-                )
+            if (match && channelCount < parseFloat(match[1])) {
+                channelCount = parseFloat(match[1]);
             }
+        });
 
-            return channel;
-        } catch (error) {
-            if (error instanceof DiscordAPIError && error.code === 50035) { // Max number of channels in category
-                 this.client.logger.error({
-                    handler: this.constructor.name,
-                    message: `Category ${categoryType} is full when trying to create channel for ${member.user.tag}`,
-                    error: error
+        channelCount++;
+        let INVALID_COMMUNITY_PROPERTY_NAME = false;
+        const MAX_TRIES = 100;
+        let TRIES = 0;
+
+        do {
+            try {
+                const channelName = categoryType === 'learner' ? `Teaching #${channelCount}`
+                    : INVALID_COMMUNITY_PROPERTY_NAME && TRIES === 1 ? `Team #${channelCount} | ${member.displayName}`
+                    : INVALID_COMMUNITY_PROPERTY_NAME ? `Team #${channelCount}` : `Team #${channelCount} | ${member.displayName}`;
+
+                const channel: VoiceChannel = await guild.channels.create({
+                    name: channelName,
+                    type: ChannelType.GuildVoice,
+                    parent: categoryId,
+                    bitrate: 64000,
+                    permissionOverwrites: [
+                        {
+                            id: member.id,
+                            allow: [
+                                PermissionFlagsBits.Connect,
+                                PermissionFlagsBits.Speak,
+                                PermissionFlagsBits.Stream,
+                                PermissionFlagsBits.UseVAD,
+                                PermissionFlagsBits.ManageChannels
+                            ]
+                        }
+                    ]
                 });
+                this.client.logger.log({
+                    handler: this.constructor.name,
+                    message: `Created temp VC "${channelName}" in ${categoryType} category for ${member.user.tag}`
+                }, true);
+
+                const tempVCCreate = categoryType === 'learner' ? await guild.channels.fetch(getChannels(process.env.GUILD_ID).learnerTempVCCreate) as VoiceChannel
+                    : await guild.channels.fetch(getChannels(process.env.GUILD_ID).tempVCCreate) as VoiceChannel;
+                const overwrites = tempVCCreate.permissionOverwrites.cache.map(overwrite => ({
+                    id: overwrite.id,
+                    allow: overwrite.allow.bitfield,
+                    deny: overwrite.deny.bitfield,
+                    type: overwrite.type
+                })).concat(channel.permissionOverwrites.cache.map(overwrite => ({
+                    id: overwrite.id,
+                    allow: overwrite.allow.bitfield,
+                    deny: overwrite.deny.bitfield,
+                    type: overwrite.type
+                })));
+
+                await channel.permissionOverwrites.set(overwrites);
+
+                // allow everyone to join in learner channels, because create channel is hidden for everyone
+                if (categoryType === 'learner') {
+                    await channel.permissionOverwrites.edit(
+                        channel.guild.roles.everyone,
+                        {
+                            ViewChannel: null
+                        }
+                    )
+                }
+
+                return channel;
+            } catch (error) {
+                if (error instanceof DiscordAPIError && error.code === 50035 && error.message.includes('CHANNEL_PARENT_MAX_CHANNELS')) { // Max number of channels in category
+                    this.client.logger.error({
+                        handler: this.constructor.name,
+                        message: `Category ${categoryType} is full when trying to create channel for ${member.user.tag}`,
+                        error: error
+                    });
+                    throw error;
+                } else if (error instanceof DiscordAPIError && error.code === 50035 && error.message.includes('INVALID_COMMUNITY_PROPERTY_NAME')) { // ?!?!?!?!?!??!?!?!
+                    INVALID_COMMUNITY_PROPERTY_NAME = true;
+                    TRIES++;
+                } else {
+                    throw error;
+                }
             }
-            throw error;
         }
+        while (TRIES < MAX_TRIES)
     }
 
     private async handleTempVCDeletion(oldState: VoiceState): Promise<void> {
