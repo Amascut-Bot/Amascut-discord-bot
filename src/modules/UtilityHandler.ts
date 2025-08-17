@@ -1,4 +1,4 @@
-import { EmbedBuilder, ChatInputCommandInteraction, Interaction, APIEmbedField, AttachmentBuilder, TextChannel } from 'discord.js';
+import { EmbedBuilder, ChatInputCommandInteraction, Interaction, APIEmbedField, AttachmentBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize } from 'discord.js';
 import Bot from '../Bot';
 import * as config from '../../config.json';
 import { Override } from '../entity/Override';
@@ -741,6 +741,20 @@ export default class UtilityHandler {
         }
 
         return result;
+    }
+
+    //#endregion
+
+    //#region Builders
+
+    public getContainerBuilder(success: boolean | null, title: string) : ContainerBuilder {
+        const container = new ContainerBuilder();
+
+        if (success === true) container.setAccentColor(this.colours.green).addTextDisplayComponents(builder => builder.setContent(`${title} - Success`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+        if (success === false) container.setAccentColor(this.colours.red).addTextDisplayComponents(builder => builder.setContent(`${title} - Error`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+        if (success === null) container.setAccentColor(this.client.color).addTextDisplayComponents(builder => builder.setContent(`${title}`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+
+        return container;
     }
 
     //#endregion
