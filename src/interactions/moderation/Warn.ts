@@ -83,7 +83,7 @@ export default class Warn extends BotInteraction {
                         await repository.remove(foundWarning);
 
                         const response = this.client.util.getContainerBuilder(true, 'Remove warning')
-                            .addTextDisplayComponents(builder => builder.setContent(`Successfully removed warning with ID \`${foundWarning.id}\` from User <@${foundWarning.user}>\nThe reason of the warning was: \`${foundWarning.reason}\``));
+                            .addTextDisplayComponents(builder => builder.setContent(`Successfully removed warning with ID \`${id}\` from User <@${foundWarning.user}>\nThe reason of the warning was: \`${foundWarning.reason}\``));
                         return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
                     } else {
                         const response = this.client.util.getContainerBuilder(false, 'Remove warning')
