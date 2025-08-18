@@ -39,7 +39,7 @@ export default class Warn extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        await interaction.deferReply();
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const action: number = interaction.options.getNumber('action', true);
         const user: User | null = interaction.options.getUser('user', false);
