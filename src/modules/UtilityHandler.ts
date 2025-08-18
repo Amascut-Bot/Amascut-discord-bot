@@ -214,7 +214,8 @@ export default class UtilityHandler {
             threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
             duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
             combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
-            serverPings: ['serverAnnouncements', 'goodMorning']
+            serverPings: ['serverAnnouncements', 'goodMorning'],
+            vanity: ['silverSpoon', 'goldenSpoon', 'releaseWeek500', 'releaseWeek1k', 'sunforged', 'lightbearer', 'releaseDay4k', 'catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer', 'visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty', 'enr500', 'enr1000', 'enr2000']
         }
     }
 
