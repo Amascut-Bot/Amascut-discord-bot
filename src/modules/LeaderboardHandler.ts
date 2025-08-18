@@ -54,7 +54,7 @@ export default class LeaderboardHandler {
             allowedMentions: { 'parse': [] }
         });
 
-        await interaction.editReply('Enrage-Leaderboard Submission successfully rejected');
+        await interaction.editReply('Enrage Leaderboard Submission successfully rejected');
     }
 
     private async handleLeaderboardApprove(interaction: ButtonInteraction<'cached'>) {
