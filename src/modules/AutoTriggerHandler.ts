@@ -24,6 +24,17 @@ export default class AutoTriggerHandler {
         'Again with this insolence?'
     ];
 
+    private static readonly whitelistedTauntChannels = [
+        '1389393102258573475', //nm
+        '1403494299903066142', //enr push
+        '1389393146647154808', //enr farm
+        '1401385848993222866', //verified
+        '1389392657939173396', //clown activity
+        '1389379873348255864', //general
+        '1389416608274976839', //theorycrafting
+        '1391157147626246204', //bot spam
+    ];
+
     constructor(client: Bot) {
         this.client = client;
     }
@@ -35,10 +46,13 @@ export default class AutoTriggerHandler {
 
         if (!await this.handleYoink(message)) return true;
 
-        if (await this.checkTauntTriggers(message)) return true;
+        // only taunt in specific channels if prod guild
+        if (message.guild?.id !== '885457551397912596' || AutoTriggerHandler.whitelistedTauntChannels.includes(message.channel.id)) {
+            if (await this.checkTauntTriggers(message)) return true;
 
-        if (message.mentions.has(this.client.user!.id)) {
-            return await this.handleMentions(message);
+            if (message.mentions.has(this.client.user!.id)) {
+                return await this.handleMentions(message);
+            }
         }
 
         return false;
