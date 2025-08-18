@@ -1,4 +1,5 @@
 import { Warning } from '../../entity/Warning';
+import { getChannels } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, User } from 'discord.js';
 
@@ -39,7 +40,14 @@ export default class Warn extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        const adminChannelId = getChannels(interaction.guild?.id).ADMIN_CHANNEL;
+
+        if (interaction.channel?.id === adminChannelId) {
+            await interaction.deferReply();
+        } else {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        }
+
 
         const action: number = interaction.options.getNumber('action', true);
         const user: User | null = interaction.options.getUser('user', false);
