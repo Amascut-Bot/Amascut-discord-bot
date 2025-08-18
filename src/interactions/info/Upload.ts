@@ -243,11 +243,7 @@ export default class Upload extends BotInteraction {
                         tagToUrlMap.set(part.nameTag, sentMessage.url);
                     }
 
-                    // Always pin messages that contain Table of Contents
-                    const hasTableOfContents = finalEmbeds.some(embed => embed.title && embed.title.toLowerCase().includes('table of contents'))
-                                                || components.some(comps => comps.components.some((component: any) => component.type === 10 && component.content.toLowerCase().includes('table of contents')));
-
-                    if (hasTableOfContents) {
+                    if (part.pinAndDeleteOld) {
                         try {
                             await sentMessage.pin();
                             this.client.logger.log({ message: `Successfully pinned Table of Contents message ${sentMessage.id}` }, true);
