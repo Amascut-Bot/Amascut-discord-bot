@@ -18,7 +18,7 @@ export default class Ready extends BotEvent {
     }
 
     private get statuses(): string[] {
-        return ['Meow!'];
+        return ['Meowdy!'];
     }
 
     async run(client: Bot) {
@@ -42,7 +42,7 @@ export default class Ready extends BotEvent {
         this.client.tempManager.__initParentListener(getChannels(process.env.GUILD_ID).tempVCCreate);
         this.client.logger.log({ message: `Running on the ${process.env.ENVIRONMENT} environment` }, true);
         this.client.user?.setPresence({
-            activities: [{ name: `Meow!`, type: ActivityType.Watching }]
+            activities: [{ name: `Meowdy!`, type: ActivityType.Watching }]
         });
         setInterval((): void => {
             const current = this.statuses.shift() ?? '';
