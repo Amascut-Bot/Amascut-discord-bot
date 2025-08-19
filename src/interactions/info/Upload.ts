@@ -56,7 +56,7 @@ export default class Upload extends BotInteraction {
     }
 
     get permissions() {
-        return 'ELEVATED_ROLE';
+        return 'EDITOR';
     }
 
     get slashData() {
@@ -123,12 +123,11 @@ export default class Upload extends BotInteraction {
         }
         // -- END check attachments --
 
-        // The editor role can only use /upload to the staging guide category
+        // (bypass for admins)The editor role can only use /upload to the staging guide category
         if (!isAdmin && parentCategory === stagingCategory && !memberEditorRole) {
-            return await interaction.editReply({ content: 'sit lmao' })
+            return await interaction.editReply({ content: 'You do not have permissions to post guides here.' })
         }
 
-        // If the category is not the staging area and the user has the editor role
         if (!isAdmin && parentCategory !== stagingCategory && memberEditorRole) {
             return await interaction.editReply({ content: 'You do not have permissions to post guides here.' })
         }
