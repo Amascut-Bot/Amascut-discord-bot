@@ -3,6 +3,7 @@ import { Warning } from '../../entity/Warning';
 import { getChannels } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, User } from 'discord.js';
+import UtilityHandler from '../../modules/UtilityHandler';
 
 export default class Warn extends BotInteraction {
     get name() {
@@ -140,13 +141,13 @@ export default class Warn extends BotInteraction {
                     let content: string = '';
 
                     if (id) {
-                        content = `Found warning for ID \`${id}\`:\n`
+                        content = `Found warning for ID \`${id}\`:\n\n`
                     } else if (user) {
                         content = `Found warnings for User <@${user.id}>:\n\n`
                     } else if (reportRef) {
-                        content = `Found warnings for Report reference \`${reportRef}\`:\n`
+                        content = `Found warnings for report reference \`${reportRef}\`:\n\n`
                     } else {
-                        content = `Found warnings:\n`
+                        content = `Found warnings:\n\n`
                     }
 
                     for (const warning of foundWarnings) {
@@ -157,10 +158,13 @@ export default class Warn extends BotInteraction {
                             content += `**Reason:** \`${warning.reason}\`\n`;
                             content += `**Report reference:** \`${warning.reportRef}\`\n\n`;
                         } else {
-                            content += `**ID:** \`${warning.id}\`, **User:** <@${warning.user}>, **Reason:** \`${warning.reason}\`, **Report reference:** \`${warning.reportRef}\`\n`;
+                            content += `**ID:** \`${warning.id}\`\n`;
+                            content += `**User:** <@${warning.user}>\n`;
+                            content += `**Reason:** \`${warning.reason}\`\n`;
+                            content += `**Report reference:** \`${warning.reportRef}\`\n\n`;
                         }
                     }
-
+                    
                     content = content.trim();
 
                     response.addTextDisplayComponents(builder => builder.setContent(content));
