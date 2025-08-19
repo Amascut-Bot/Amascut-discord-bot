@@ -1,18 +1,24 @@
-# Amascut Bot
+# Amascut, Goddess of Destruction Utility Bot
 
-A Discord bot for Amascut Server.
+A project for Amascut Discord staff.
 
-#SHOUTOUTCALANDDEMMANDEM
+<a href="https://discord.gg/amascut"><img src="https://discordapp.com/api/guilds/885457551397912596/widget.png?style=banner2" alt="Discord invite"></a>
 
-## What it does
-- Temp voice channels
-- Reaction roles
-- Auto roles
-- Twitch integration
-- General server management
+## Installation / Running the Bot
 
-## Setup
-1. Clone this repo
-2. `npm install`
-3. Create `.env` file with your bot token
-4. `npm start`
+1. `npm install`
+2. Set up a `config.json` with webhooks and overriden `OWNER` permissions.
+3. Set your development TOKEN variable in `.env`.
+4. Set your environment ENVIRONMENT variable in `.env`.
+
+### Getting Started
+
+```shell
+npm install
+npm run start
+```
+
+### Acknowledgements
+
+- [txj-xyz](https://github.com/txj-xyz) for the bot framework.
+- [discord.js](https://discord.js.org/#/) for the TypeScript Discord API.
