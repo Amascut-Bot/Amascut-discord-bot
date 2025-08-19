@@ -125,19 +125,19 @@ export default class AutoTriggerHandler {
             return true;
         }
 
-        const messageMatch = message.content.match(/(?<=yoink\s).*/g);
+        const messageMatch = message.content.match(/(?<=yoink\s).*/gi);
 
         // yoink
         if (message.content.startsWith(`<@${this.client.user?.id}> yoink `) && message.member!.permissions.has('ManageEmojisAndStickers')) {
-            let emojiMentionMatch = message.content.match(/<a?:\w+:\d+>/g);
+            let emojiMentionMatch = message.content.match(/<a?:\w+:\d+>/gi);
 
             // if yoink is not directly an emoji but only its name lookup the last 20 messages for someone to post the emoji
             if (!emojiMentionMatch) {
-                const messages = await message.channel.messages.fetch( { limit: 20 });
+                const messages = await message.channel.messages.fetch({ limit: 20 });
 
 
                 if (messageMatch) {
-                    const regex = new RegExp(`<a?:${messageMatch[0]}:\\d+>`);
+                    const regex = new RegExp(`<a?:${messageMatch[0]}:\\d+>`, 'gi');
                     messages.some(msg => {
                         emojiMentionMatch = msg.content.match(regex);
 
@@ -151,20 +151,20 @@ export default class AutoTriggerHandler {
 
             if (emojiMentionMatch) {
                 const isGif = emojiMentionMatch[0].startsWith('<a:');
-                const emojiNameMatch = emojiMentionMatch ? emojiMentionMatch[0].match(/:(\w+):/) : '';
-                const emojiIdMatch = emojiMentionMatch ? emojiMentionMatch[0].match(/:(\d+)>/) : '';
+                const emojiNameMatch = emojiMentionMatch ? emojiMentionMatch[0].match(/:(\w+):/i) : '';
+                const emojiIdMatch = emojiMentionMatch ? emojiMentionMatch[0].match(/:(\d+)>/i) : '';
 
                 if (emojiNameMatch && emojiIdMatch) {
                     const emojiName = emojiNameMatch[1];
                     const emojiId = emojiIdMatch[1];
                     const emojiUrl = `https://cdn.discordapp.com/emojis/${emojiId}.${isGif ? 'gif' : 'png'}`;
 
-                    await message.guild!.emojis.create({
+                    const emoji = await message.guild!.emojis.create({
                         name: emojiName,
                         attachment: emojiUrl
                     });
 
-                    await message.reply(`yoinked!`);
+                    await message.reply(`yoinked <${emoji.animated ? 'a' : ''}:upload_emoji:${emoji.id}>!`);
                     return false;
                 }
             }
