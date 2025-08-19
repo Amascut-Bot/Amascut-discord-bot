@@ -1,7 +1,9 @@
+import { report } from 'process';
 import { Warning } from '../../entity/Warning';
 import { getChannels } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, User } from 'discord.js';
+import UtilityHandler from '../../modules/UtilityHandler';
 
 export default class Warn extends BotInteraction {
     get name() {
@@ -36,6 +38,7 @@ export default class Warn extends BotInteraction {
             .addNumberOption((option) => option.setName('action').setDescription('Action').addChoices([...this.actionOptions]).setRequired(true))
             .addUserOption((option) => option.setName('user').setDescription('User').setRequired(false))
             .addStringOption((option) => option.setName('reason').setDescription('Reason of the warning').setRequired(false))
+            .addStringOption((option) => option.setName('reportref').setDescription('Any ticket reference').setRequired(false))
             .addNumberOption((option) => option.setName('id').setDescription('Id of the warning (when removing)').setRequired(false));
     }
 
@@ -52,6 +55,7 @@ export default class Warn extends BotInteraction {
         const action: number = interaction.options.getNumber('action', true);
         const user: User | null = interaction.options.getUser('user', false);
         const reason: string | null = interaction.options.getString('reason', false);
+        const reportRef: string | null = interaction.options.getString('reportref', false);
         const id: number | null = interaction.options.getNumber('id', false);
 
         const { dataSource } = this.client;
@@ -61,11 +65,14 @@ export default class Warn extends BotInteraction {
             case 0:
                 // Add warning
                 if (user && reason) {
-                    const newWarning: Warning = repository.create({
+                    const warningData: Partial<Warning> = {
                         user: user.id,
                         reason: reason,
-                        issuedBy: interaction.user.id
-                    });
+                        issuedBy: interaction.user.id,
+                    };
+                    if (reportRef) warningData.reportRef = reportRef;
+
+                    const newWarning: Warning = repository.create(warningData);
 
                     const savedWarning: Warning = await repository.save(newWarning);
 
@@ -123,29 +130,41 @@ export default class Warn extends BotInteraction {
                     filters += `\n- **User:** <@${user.id}>`;
                 }
 
+                if (reportRef) {
+                    foundWarnings = foundWarnings.filter(x => x.reportRef === reportRef);
+                    filters += `\n- **Report reference:** \`${reportRef}\``;
+                }
+
                 if (foundWarnings.length > 0 && foundWarnings.length < 50) {
                     const response = this.client.util.getContainerBuilder(null, `List warnings - \`${foundWarnings.length}\` found`);
 
                     let content: string = '';
 
                     if (id) {
-                        content = `Found warning for ID \`${id}\`:\n`
+                        content = `Found warning for ID \`${id}\`:\n\n`
                     } else if (user) {
-                        content = `Found warnings for User <@${user.id}>:\n`
+                        content = `Found warnings for User <@${user.id}>:\n\n`
+                    } else if (reportRef) {
+                        content = `Found warnings for report reference \`${reportRef}\`:\n\n`
                     } else {
-                        content = `Found warnings:\n`
+                        content = `Found warnings:\n\n`
                     }
 
                     for (const warning of foundWarnings) {
                         if (id) {
                             content += `**User:** <@${warning.user}>\n**Reason:** \`${warning.reason}\``;
                         } else if (user) {
-                            content += `**ID:** \`${warning.id}\`, **Reason:** \`${warning.reason}\`\n`;
+                            content += `**ID:** \`${warning.id}\`\n`;
+                            content += `**Reason:** \`${warning.reason}\`\n`;
+                            content += `**Report reference:** \`${warning.reportRef}\`\n\n`;
                         } else {
-                            content += `**ID:** \`${warning.id}\`, **User:** <@${warning.user}>, **Reason:** \`${warning.reason}\`\n`;
+                            content += `**ID:** \`${warning.id}\`\n`;
+                            content += `**User:** <@${warning.user}>\n`;
+                            content += `**Reason:** \`${warning.reason}\`\n`;
+                            content += `**Report reference:** \`${warning.reportRef}\`\n\n`;
                         }
                     }
-
+                    
                     content = content.trim();
 
                     response.addTextDisplayComponents(builder => builder.setContent(content));
@@ -153,7 +172,7 @@ export default class Warn extends BotInteraction {
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
                 } else if (foundWarnings.length >= 50) {
                     const response = this.client.util.getContainerBuilder(false, 'List warnings')
-                        .addTextDisplayComponents(builder => builder.setContent(`Found to many warnings (\`${foundWarnings.length}\`), please specify your search until a proper pagination system is implemented.`));
+                        .addTextDisplayComponents(builder => builder.setContent(`Found too many warnings (\`${foundWarnings.length}\`), please specify your search until a proper pagination system is implemented.`));
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
                 } else {
                     const response = this.client.util.getContainerBuilder(false, 'List warnings')

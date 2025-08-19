@@ -16,5 +16,8 @@ export class Warning {
     issuedBy: string
 
     @CreateDateColumn({ name: 'created_at'})
-    createdAt: Date;
+    createdAt: Date
+
+    @Column({ nullable: true })
+    reportRef?: string;
 }
