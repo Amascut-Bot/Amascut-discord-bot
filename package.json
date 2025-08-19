@@ -1,7 +1,7 @@
 {
-    "name": "solak-util-bot",
+    "name": "amascut-util-bot",
     "version": "1.0.0",
-    "description": "A bot made to help Solak Administration",
+    "description": "A bot made to help Amascut Administration",
     "scripts": {
         "build": "tsc -v",
         "watch": "tsc --watch",
