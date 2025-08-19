@@ -129,7 +129,7 @@ export default class Upload extends BotInteraction {
         }
 
         // If the category is not the staging area and the user has the editor role
-        if (parentCategory !== stagingCategory && memberEditorRole) {
+        if (!isAdmin && parentCategory !== stagingCategory && memberEditorRole) {
             return await interaction.editReply({ content: 'You do not have permissions to post guides here.' })
         }
 
