@@ -130,8 +130,8 @@ export default class Warn extends BotInteraction {
                 }
 
                 if (reportRef) {
-                    foundWarnings = foundWarnings.filter(x => x.user === reportRef);
-                    filters += `\n- **Report reference:** <@${reportRef}>`;
+                    foundWarnings = foundWarnings.filter(x => x.reportRef === reportRef);
+                    filters += `\n- **Report reference:** \`${reportRef}\``;
                 }
 
                 if (foundWarnings.length > 0 && foundWarnings.length < 50) {
@@ -144,7 +144,7 @@ export default class Warn extends BotInteraction {
                     } else if (user) {
                         content = `Found warnings for User <@${user.id}>:\n\n`
                     } else if (reportRef) {
-                        content = `Found warnings for Report reference <@${reportRef}>:\n`
+                        content = `Found warnings for Report reference \`${reportRef}\`:\n`
                     } else {
                         content = `Found warnings:\n`
                     }
@@ -157,7 +157,7 @@ export default class Warn extends BotInteraction {
                             content += `**Reason:** \`${warning.reason}\`\n`;
                             content += `**Report reference:** \`${warning.reportRef}\`\n\n`;
                         } else {
-                            content += `**ID:** \`${warning.id}\`, **User:** <@${warning.user}>, **Reason:** \`${warning.reason}, **Report reference**: ${warning.reportRef}\`\n`;
+                            content += `**ID:** \`${warning.id}\`, **User:** <@${warning.user}>, **Reason:** \`${warning.reason}\`, **Report reference:** \`${warning.reportRef}\`\n`;
                         }
                     }
 
