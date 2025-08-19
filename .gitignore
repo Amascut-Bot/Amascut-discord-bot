@@ -4,6 +4,10 @@
 .idea
 .vscode
 /slash-reloader-config.json
+
+# Bun Compiler Ignore
+bun.lock
+
 /config.json
 /lavalink-server.json
 /lavasfy-servers.json
