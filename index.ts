@@ -35,4 +35,5 @@ const manager = new Indomitable(options)
     });
 
 // start the bot
+// test
 manager.spawn();
