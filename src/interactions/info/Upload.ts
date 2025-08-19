@@ -1,9 +1,9 @@
 import BotInteraction from '../../types/BotInteraction';
-import { Attachment, ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, TextChannel, ChannelType, Message, MessageFlags } from 'discord.js';
+import { Attachment, ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, TextChannel, ChannelType, Message, MessageFlags, GuildMember, Role } from 'discord.js';
 import { parseTree, getNodeValue, ParseError, findNodeAtOffset, Node } from 'jsonc-parser';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { getChannels } from '../../GuildSpecifics';
+import { getChannels, getRoles } from '../../GuildSpecifics';
 
 type ParsedMessage = {
     content: string;
@@ -78,12 +78,28 @@ export default class Upload extends BotInteraction {
             );
     }
 
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction<'cached'>) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
+        const member: GuildMember = await interaction.member.fetch(true);
+        const roles = getRoles(interaction.guild?.id, true);
+        const memberEditorRole = member.roles.cache.get(roles?.editor);
+        const isAdmin = member.roles.cache.some(role => role.id === roles.owner || role.id === roles.admin);
+        const stagingCategory: string = getChannels(interaction.guild?.id)?.stagingEditorHub!;
         const attachment: Attachment | null = interaction.options.getAttachment('file', true);
         const targetChannel = (interaction.options.getChannel('channel', false) || interaction.channel) as TextChannel;
 
+        // check if the channel has a parent, if not then crash :)
+        const parentCategory: string | null = targetChannel.parentId;
+        if (!parentCategory) {
+            return await interaction.editReply({ content: 'The channel you selected has no parent category.' })
+        }
+
+        // Check if the user has the editor role in the guild.
+        if (!memberEditorRole && !isAdmin) {
+            return await interaction.editReply({ content: 'You do not have permission to use this command.' })
+        }
+
+        // -- START check attachments --
         if (!attachment) {
             return await interaction.editReply({ content: 'No file was provided.' });
         }
@@ -104,6 +120,17 @@ export default class Upload extends BotInteraction {
             return await interaction.editReply({
                 content: 'File is too large. Please upload a file smaller than 5MB.'
             });
+        }
+        // -- END check attachments --
+
+        // The editor role can only use /upload to the staging guide category
+        if (!isAdmin && parentCategory === stagingCategory && !memberEditorRole) {
+            return await interaction.editReply({ content: 'sit lmao' })
+        }
+
+        // If the category is not the staging area and the user has the editor role
+        if (parentCategory !== stagingCategory && memberEditorRole) {
+            return await interaction.editReply({ content: 'You do not have permissions to post guides here.' })
         }
 
         try {

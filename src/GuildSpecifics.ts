@@ -7,7 +7,7 @@ interface Roles {
 }
 
 export function getChannels(guildId: string | undefined) : Channels {
-    let result = {}
+    let result = {} as Channels;
 
     //AGOD Bot Testing (Alex)
     if (guildId === '856557117832691752') {
@@ -104,14 +104,18 @@ export function getChannels(guildId: string | undefined) : Channels {
             learnerTempVCCreate: '1405678891565187112',
             learnerWaiting: '1405668159922503810',
             learnerTeaching: '1405338959063814227',
+            // Staging Guide Category
+            stagingEditorHub: '1389394110686953472',
+            // Prod Guide Category
+            editorHub: '1389410242210693212'
         }
     }
 
     return result;
 }
 
-export function getRoles(guildId: string | undefined) : Roles {
-    let result = {};
+export function getRoles(guildId: string | undefined, stripRole: boolean = false) : Roles {
+    let result = {} as Roles;
 
     //AGOD Bot Testing (Alex)
     if (guildId === '856557117832691752') {
@@ -303,8 +307,10 @@ export function getRoles(guildId: string | undefined) : Roles {
             enr500: '1401450408492404877',
             enr1000: '1401450459256066141',
             enr2000: '1401450500481749062',
+            // Editor Roles
+            editor: '1389397640533250058'           
         }
     }
 
-    return Object.fromEntries(Object.entries(result).map(([key, value]) => [key, `<@&${value}>`]));
+    return Object.fromEntries(Object.entries(result).map(([key, value]) => [key, stripRole ? value : `<@&${value}>`]));
 }
