@@ -3,7 +3,8 @@
     "version": "1.0.0",
     "description": "A bot made to help Solak Administration",
     "scripts": {
-        "build": "tsc --watch",
+        "build": "tsc -v",
+        "watch": "tsc --watch",
         "start": "ts-node --transpile-only index.ts",
         "start-js": "node ./dist/index.js"
     },
