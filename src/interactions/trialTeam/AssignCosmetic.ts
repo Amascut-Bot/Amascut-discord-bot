@@ -39,11 +39,12 @@ export default class Pass extends BotInteraction {
             '500% Enrage': 'enr500',
             '1000% Enrage': 'enr1000',
             '2000% Enrage': 'enr2000',
+            '4000% Enrage': 'enr4000',
             'Silver spoon': 'silverSpoon',
             'Golden spoon': 'goldenSpoon',
-            'the Sunforged (Release week 4000%)': 'sunforged',
-            'the Lightbearer (Release week 2000%)': 'lightbearer',
-            'Release day 4k': 'releaseDay4k',
+            'the Lightbearer (Release week 2000%)': 'rw2000',
+            'the Sunforged (Release week 4000%)': 'rw4000',
+            'Release day 4k': 'rd4000',
             'Cat-Bound Initiate (100KC)': 'catBoundInitiate',
             'Scarab-Marked Disciple (250KC)': 'scarabMarkedDisciple',
             'Whisperer of the Wanderer (500KC)': 'whispererOfTheWanderer',
@@ -67,7 +68,7 @@ export default class Pass extends BotInteraction {
     }
 
     private isVerifiedEligible(role: string) : Boolean {
-        const verifiedRoles: string[] = ['releaseWeek500', 'releaseWeek1k', 'sunforged', 'lightbearer', 'releaseDay4k', 'enr500', 'enr1000', 'enr2000'];
+        const verifiedRoles: string[] = ['enr500', 'enr1000', 'enr2000', 'enr4000', 'rd500', 'rd1000', 'rd2000', 'rd4000', 'rw500', 'rw1000', 'rw2000', 'rw4000', 'firstDevourer'];
 
         if (verifiedRoles.includes(role)) return true;
 

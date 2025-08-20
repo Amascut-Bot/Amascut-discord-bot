@@ -35,5 +35,4 @@ const manager = new Indomitable(options)
     });
 
 // start the bot
-// testasdfasdf
 manager.spawn();
