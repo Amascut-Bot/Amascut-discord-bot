@@ -139,7 +139,7 @@ export default class Warn extends BotInteraction {
                     filters += `\n- **Report reference:** \`${reportRef}\``;
                 }
 
-                if (foundWarnings.length > 0 && foundWarnings.length < 50) {
+                if (foundWarnings.length > 0 && foundWarnings.length < 25) {
                     const response = this.client.util.getContainerBuilder(null, `List warnings - \`${foundWarnings.length}\` found`);
 
                     let content: string = '';
@@ -168,7 +168,7 @@ export default class Warn extends BotInteraction {
                             content += `**Report reference:** <#${warning.reportRef}>\n\n`;
                         }
                     }
-                    
+
                     content = content.trim();
 
                     response.addTextDisplayComponents(builder => builder.setContent(content));
