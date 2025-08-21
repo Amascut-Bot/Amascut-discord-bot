@@ -2,6 +2,7 @@ import { GuildMember, Role, EmbedBuilder, TextChannel } from 'discord.js';
 import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import { getChannels, getRoles } from '../GuildSpecifics';
+import { Timeout } from '../entity/Timeout';
 
 export default class GuildMemberAdd extends BotEvent {
     get name(): string {
@@ -90,6 +91,32 @@ export default class GuildMemberAdd extends BotEvent {
         } catch (error) {
             this.client.logger.error({
                 message: `Failed to assign role to new member ${member.user.tag}`,
+                handler: this.constructor.name,
+                error
+            });
+        }
+
+
+        try {
+            const timeoutRepository = this.client.dataSource.getRepository(Timeout);
+            const activeTimeout = await timeoutRepository.findOne({
+                where: { user: member.id, isActive: true }
+            });
+
+            if (activeTimeout && activeTimeout.expiresAt > new Date()) {
+                const remainingTime = activeTimeout.expiresAt.getTime() - Date.now();
+                await member.timeout(remainingTime, `Reapplying timeout - ${activeTimeout.reason}`);
+                
+                this.client.logger.log({
+                    message: `Reapplied timeout to rejoining member ${member.user.tag} (${remainingTime}ms remaining)`,
+                    handler: this.constructor.name
+                }, true);
+            } else if (activeTimeout && activeTimeout.expiresAt <= new Date()) {
+                await timeoutRepository.update(activeTimeout.id, { isActive: false });
+            }
+        } catch (error) {
+            this.client.logger.error({
+                message: `Failed to check/reapply timeout for ${member.user.tag}`,
                 handler: this.constructor.name,
                 error
             });
