@@ -279,7 +279,7 @@ export default class UtilityHandler {
         const overrides = {
             roleConfirmations: ['erethdorsBane', 'solakWRHolder', 'fours'],
         }
-        if (this.categories.killCount.includes(role) || this.categories.collectionLog.includes(role) || this.categories.vanity.includes(role)) {
+        if (this.categories.killCount.includes(role) || this.categories.collectionLog.includes(role) || this.categories.vanity.includes(role) || this.categories.enrage.includes(role)) {
             return 'achievementsAndLogs'
         } else if (overrides.roleConfirmations.includes(role) || this.categories.combined.includes(role) || this.categories.duo.includes(role) || this.categories.threeSeven.includes(role)) {
             return 'roleConfirmations'
@@ -787,10 +787,10 @@ export default class UtilityHandler {
     public parseDuration(input: string): number | null {
         const match = input.match(/^(\d+)([smhdw])$/i);
         if (!match) return null;
-        
+
         const value = parseInt(match[1]);
         const unit = match[2].toLowerCase();
-        
+
         const multipliers = {
             's': 1000,
             'm': 60 * 1000,
@@ -798,10 +798,10 @@ export default class UtilityHandler {
             'd': 24 * 60 * 60 * 1000,
             'w': 7 * 24 * 60 * 60 * 1000
         };
-        
+
         const ms = value * multipliers[unit as keyof typeof multipliers];
         const maxTimeout = 28 * 24 * 60 * 60 * 1000;
-        
+
         return ms <= maxTimeout ? ms : null;
     }
 
