@@ -31,6 +31,7 @@ interface Categories {
     combined: string[]
     serverPings: string[]
     vanity: string[]
+    enrage: string[]
 }
 
 interface Hierarchy {
@@ -203,7 +204,8 @@ export default class UtilityHandler {
             duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
             combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
             serverPings: ['serverAnnouncements', 'goodMorning'],
-            vanity: ['silverSpoon', 'goldenSpoon', 'releaseWeek500', 'releaseWeek1k', 'sunforged', 'lightbearer', 'releaseDay4k', 'catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer', 'visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty', 'enr500', 'enr1000', 'enr2000']
+            vanity: ['silverSpoon', 'goldenSpoon', 'catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer', 'visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty'],
+            enrage: ['enr500', 'enr1000', 'enr2000', 'enr4000', 'rd500', 'rd1000', 'rd2000', 'rd4000', 'rw500', 'rw1000', 'rw2000', 'rw4000']
         }
     }
 
@@ -215,7 +217,25 @@ export default class UtilityHandler {
             duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
             combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
             serverPings: ['serverAnnouncements', 'goodMorning'],
-            vanity: ['silverSpoon', 'goldenSpoon', 'releaseWeek500', 'releaseWeek1k', 'sunforged', 'lightbearer', 'releaseDay4k', 'catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer', 'visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty', 'enr500', 'enr1000', 'enr2000']
+            vanity: ['silverSpoon', 'goldenSpoon', 'catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer', 'visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty']
+        }
+    }
+
+    // instead of a hierarchy, enrages are a whitelist
+    get enrageHierarchy(): Hierarchy {
+        return {
+            enr500: ['enr500', 'enr1000', 'enr2000', 'enr4000', 'rd500', 'rd1000', 'rd2000', 'rd4000', 'rw500', 'rw1000', 'rw2000', 'rw4000', 'firstDevourer'],
+            enr1000: ['enr1000', 'enr2000', 'enr4000', 'rd1000', 'rd2000', 'rd4000', 'rw1000', 'rw2000', 'rw4000', 'firstDevourer'],
+            enr2000: ['enr2000', 'enr4000', 'rd2000', 'rd4000', 'rw2000', 'rw4000', 'firstDevourer'],
+            enr4000: ['enr4000', 'rd4000', 'rw4000'],
+            rd500: ['rd500', 'rd1000', 'rd2000', 'firstDevourer'], // not release day 4000!
+            rd1000: ['rd1000', 'rd2000', 'firstDevourer'], // not release day 4000!
+            rd2000: ['rd2000', 'firstDevourer'], // not release day 4000!
+            rd4000: ['rd4000'],
+            rw500: ['rd500', 'rd1000', 'rd2000', 'rw500', 'rw1000', 'rw2000', 'firstDevourer'], // not release week 4000!
+            rw1000: ['rd1000', 'rd2000', 'rw1000', 'rw2000', 'firstDevourer'], // not release week 4000!
+            rw2000: ['rd2000', 'rw2000', 'firstDevourer'], // not release week 4000!
+            rw4000: ['rd4000', 'rw4000'],
         }
     }
 
@@ -247,6 +267,8 @@ export default class UtilityHandler {
             category = 'serverPings';
         } else if (this.categories.vanity.includes(role)) {
             category = 'vanity';
+        } else if (this.categories.enrage.includes(role)) {
+            category = 'enrage';
         } else {
             category = ''
         }

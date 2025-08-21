@@ -69,22 +69,33 @@ export default class StringSelectHandler {
                 return await interaction.editReply({embeds: [addResultEmbed]});
             }
         } else if (roleIds.length > 1) {
-            const { categorize, stripRole, hierarchy } = this.client.util;
+            const { categorize, hierarchy, enrageHierarchy } = this.client.util;
 
             //special logic for hierarchy tags
             const hasRoleOrHigher = (role: string) => {
                 try {
                     if (!categorize(role) || categorize(role) === 'vanity' || categorize(role) === '') return false;
-                    const categorizedHierarchy = hierarchy[categorize(role)];
-                    const sliceFromIndex: number = categorizedHierarchy.indexOf(role);
-                    const hierarchyList = categorizedHierarchy.slice(sliceFromIndex);
-                    const hierarchyIdList = hierarchyList.map((item: string) => stripRole(getRoles(interaction.guild?.id)[item]));
-                    const intersection = hierarchyIdList.filter((roleId: string) => userRoles.includes(roleId));
-                    if (intersection.length === 0) {
-                        return false
+
+                    //special logic for enrage roles
+                    if (categorize(role) === 'enrage') {
+                        const whitelist = enrageHierarchy[role];
+                        const whitelistIds = whitelist.map((item: string) => getRoles(interaction.guild.id, true)[item]);
+                        const intersection = whitelistIds.filter((roleId: string) => userRoles.includes(roleId));
+                        if (intersection.length === 0) {
+                            return false;
+                        }
+                        return true;
                     } else {
-                        return true
-                    };
+                        const categorizedHierarchy = hierarchy[categorize(role)];
+                        const sliceFromIndex: number = categorizedHierarchy.indexOf(role);
+                        const hierarchyList = categorizedHierarchy.slice(sliceFromIndex);
+                        const hierarchyIdList = hierarchyList.map((item: string) => getRoles(interaction.guild?.id, true)[item]);
+                        const intersection = hierarchyIdList.filter((roleId: string) => userRoles.includes(roleId));
+                        if (intersection.length === 0) {
+                            return false
+                        }
+                        return true;
+                    }
                 }
                 catch (err) { return false }
             }
@@ -97,6 +108,16 @@ export default class StringSelectHandler {
                         await this.client.logReactionRoleChange(user, roleObject!, 'added');
                         return await interaction.editReply({embeds: [addResultEmbed]});
                     } else {
+                        // go through whitelist
+                        if (categorize(roleIds[i]) === 'enrage') {
+                            const whitelist = enrageHierarchy[roleIds[i]];
+                            const whitelistMentions = whitelist.map((item: string) => getRoles(interaction.guild.id, false)[item]);
+
+                            roleReqError += whitelistMentions.join(', ');
+                            continue;
+                        }
+
+                        // normal alias
                         if (i > 1) {
                             roleReqError += ", ";
                         }

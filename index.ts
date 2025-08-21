@@ -35,6 +35,4 @@ const manager = new Indomitable(options)
     });
 
 // start the bot
-// patze is indeed cute
-// alex is indeed super cute
 manager.spawn();

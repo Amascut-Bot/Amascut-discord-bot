@@ -216,21 +216,26 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             serverAnnouncements: '000000000000000000',
             goodMorning: '000000000000000000',
             member: '1391860635406700566',
+            verified: '1391860635435798724',
             devourerFirstWeek: '1401274911594647626',
             devourerDayOne: '1401274865113370685',
             silverSpoon: '1401274832284553226',
             goldenSpoon: '1401274807085039791',
-            firstDevourer: '1401274550821453906',
-            sunforged: '1401274490910146682',
-            lightbearer: '1401274458852950140',
-            releaseDay4k: '1401274424220450838',
-            releaseDay2k: '1401274406369755187',
-            releaseDay1k: '1401274388187447429',
-            releaseDay500: '1401274362987810907',
-            verified: '1391860635435798724',
+
+            // Enrage Roles
             enr500: '1404800709462982716',
             enr1000: '1404800755436748840',
             enr2000: '1404800783798501396',
+            enr4000: '000000000000000000',
+            rd500: '1401274362987810907',
+            rd1000: '1401274388187447429',
+            rd2000: '1401274406369755187',
+            rd4000: '1401274424220450838',
+            rw500: '000000000000000000',
+            rw1000: '000000000000000000',
+            rw2000: '1401274458852950140',
+            rw4000: '1401274490910146682',
+            firstDevourer: '000000000000000000',
         }
     }
 
@@ -282,18 +287,18 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             serverAnnouncements: '000000000000000000',
             goodMorning: '000000000000000000',
             member: '1389655724946100345',
-            silverSpoon: '1400869056445415594',
-            goldenSpoon: '1400869015940759662',
-            releaseWeek1k: '1402610645328986152',
-            releaseWeek500: '1402610603268374548',
-            sunforged: '1400868744045002963',
-            lightbearer: '1400868680522534933',
-            releaseDay4k: '1400868619449139412',
+            verified: '1390353573216387072',
+
+            // KC Roles
             catBoundInitiate: '1401429471692722292',
             scarabMarkedDisciple: '1401429722704904313',
             whispererOfTheWanderer: '1401429855731449948',
             bearerOfTheUnholySigil: '1401429929341485056',
             fangOfTheDevourer: '1401430017367343106',
+
+            // Collection Log Roles
+            silverSpoon: '1400869056445415594',
+            goldenSpoon: '1400869015940759662',
             visionmaker: '1401431808096342026',
             tumekenMask: '1401431409620422677',
             tumekenRobeTop: '1401431461156098070',
@@ -303,12 +308,24 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             devourersGuard: '1401431662327369780',
             tumekensLight: '1401431760704901193',
             amaskitty: '1401431834780241940',
-            verified: '1390353573216387072',
+
+            // Enrage Roles
             enr500: '1401450408492404877',
             enr1000: '1401450459256066141',
             enr2000: '1401450500481749062',
+            enr4000: '1401450529959313428',
+            rd500: '1400868489048359086',
+            rd1000: '1400868543653744670',
+            rd2000: '1400868598376960130',
+            rd4000: '1400868619449139412',
+            rw500: '1402610603268374548',
+            rw1000: '1402610645328986152',
+            rw2000: '1400868680522534933',
+            rw4000: '1400868744045002963',
+            firstDevourer: '1400868959833690152',
+
             // Editor Roles
-            editor: '1389397640533250058'           
+            editor: '1389397640533250058'
         }
     }
 
