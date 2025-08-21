@@ -174,7 +174,7 @@ export default class Warn extends BotInteraction {
                     response.addTextDisplayComponents(builder => builder.setContent(content));
 
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
-                } else if (foundWarnings.length >= 50) {
+                } else if (foundWarnings.length >= 25) {
                     const response = this.client.util.getContainerBuilder(false, 'List warnings')
                         .addTextDisplayComponents(builder => builder.setContent(`Found too many warnings (\`${foundWarnings.length}\`), please specify your search until a proper pagination system is implemented.`));
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
