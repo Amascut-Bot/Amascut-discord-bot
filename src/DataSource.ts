@@ -12,6 +12,7 @@ import { Ticket } from "./entity/Ticket"
 import { MessageShortcut } from "./entity/MessageShortcut"
 import { EnrageLeaderboard } from "./entity/EnrageLeaderboard"
 import { Warning } from "./entity/Warning"
+import { Timeout } from "./entity/Timeout"
 
 export const AppDataSource = new DataSource({
     type: "sqlite",
@@ -30,7 +31,8 @@ export const AppDataSource = new DataSource({
         Ticket,
         MessageShortcut,
         EnrageLeaderboard,
-        Warning
+        Warning,
+        Timeout
     ],
     migrations: [],
     subscribers: [],

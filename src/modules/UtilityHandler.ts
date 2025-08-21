@@ -759,4 +759,29 @@ export default class UtilityHandler {
     }
 
     //#endregion
+
+    //#region Duration
+
+    public parseDuration(input: string): number | null {
+        const match = input.match(/^(\d+)([smhdw])$/i);
+        if (!match) return null;
+        
+        const value = parseInt(match[1]);
+        const unit = match[2].toLowerCase();
+        
+        const multipliers = {
+            's': 1000,
+            'm': 60 * 1000,
+            'h': 60 * 60 * 1000,
+            'd': 24 * 60 * 60 * 1000,
+            'w': 7 * 24 * 60 * 60 * 1000
+        };
+        
+        const ms = value * multipliers[unit as keyof typeof multipliers];
+        const maxTimeout = 28 * 24 * 60 * 60 * 1000;
+        
+        return ms <= maxTimeout ? ms : null;
+    }
+
+    //#endregion
 }
