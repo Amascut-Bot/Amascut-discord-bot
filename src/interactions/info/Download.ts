@@ -38,7 +38,7 @@ export default class Download extends BotInteraction {
                     .setName('channel')
                     .setDescription('The channel to download messages from')
                     .setRequired(true)
-                    .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+                    .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.PublicThread, ChannelType.PrivateThread)
             ).addStringOption((option) => option.setName('archived').setDescription('Download from Upload-Archive if existing').addChoices(
                 ...this.options
             ).setRequired(false));

@@ -74,7 +74,7 @@ export default class Upload extends BotInteraction {
                     .setName('channel')
                     .setDescription('Which channel to send the message to')
                     .setRequired(false)
-                    .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+                    .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.PublicThread, ChannelType.PrivateThread)
             );
     }
 
