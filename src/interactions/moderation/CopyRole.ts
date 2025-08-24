@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, SlashCommandBuilder, Role, MessageFlags, APIRole, RoleCreateOptions, PermissionsBitField, PermissionFlagsBits } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, Role, APIRole, RoleCreateOptions, PermissionsBitField, PermissionFlagsBits, RoleColors } from 'discord.js';
 
 export default class CopyRole extends BotInteraction {
     get name() {
@@ -30,7 +30,6 @@ export default class CopyRole extends BotInteraction {
         const name: string = interaction.options.getString('name', true);
 
         const roleCreateOption: RoleCreateOptions = {
-            color: role.color,
             hoist: role.hoist,
             icon: role.icon,
             mentionable: role.mentionable,
@@ -41,6 +40,16 @@ export default class CopyRole extends BotInteraction {
         }
 
         const newRole = await interaction.guild?.roles.create(roleCreateOption);
+
+        if (role.colors) {
+            const roleColours = role.colors as RoleColors;
+
+            await newRole?.setColors({
+                    primaryColor: roleColours.primaryColor,
+                    secondaryColor: roleColours.secondaryColor ?? undefined,
+                    tertiaryColor: roleColours.tertiaryColor ?? undefined
+                });
+        }
 
         await interaction.editReply(`Successfully created role <@&${newRole?.id}>`);
     }
