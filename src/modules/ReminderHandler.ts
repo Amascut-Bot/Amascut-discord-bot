@@ -38,9 +38,10 @@ export default class ReminderHandler {
         for (const guild of guilds.values()) {
             const channels = getChannels(guild.id);
             const targetChannels = [
-                channels.vcReminderChannel1,
-                channels.vcReminderChannel2,
-                channels.vcReminderChannel3
+                channels.reminderChannel1,
+                channels.reminderChannel2,
+                channels.reminderChannel3,
+                channels.reminderChannel4
             ].filter(Boolean);
 
             for (const channelId of targetChannels) {
@@ -111,9 +112,10 @@ export default class ReminderHandler {
         for (const guild of guilds.values()) {
             const channels = getChannels(guild.id);
             const targetChannels = [
-                channels.vcReminderChannel1,
-                channels.vcReminderChannel2,
-                channels.vcReminderChannel3
+                channels.reminderChannel1,
+                channels.reminderChannel2,
+                channels.reminderChannel3,
+                channels.reminderChannel4
             ].filter(Boolean);
 
             for (const channelId of targetChannels) {
@@ -149,7 +151,7 @@ export default class ReminderHandler {
                     container.setAccentColor(this.client.color);
 
                     const reminderText = new TextDisplayBuilder()
-                        .setContent('Please take the time to fill out the following form: https://forms.gle/gcrYyAbPDZWarTtJA');
+                        .setContent('# Important\nAll hours are splits (Ironmen keeps) unless specified otherwise as per our <#1389379617915408445>.\nKeeps must be stated whilst team forming to avoid confusion (e.g. +2 500s KEEPS).\nConfirm **each hour** with a screenshot of the whole team agreeing!');
 
                     container.addTextDisplayComponents(reminderText);
 
