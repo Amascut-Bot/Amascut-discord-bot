@@ -319,18 +319,26 @@ export default class TempChannelManager {
             const owner = await this.getTempVcOwner(channel as VoiceChannel);
 
             // also check if claim button is already there
-            const messages = (await channel?.messages.fetch())?.filter(msg => msg.author.id === this.client.user?.id);
+            try {
+                const messages = (await channel?.messages.fetch())?.filter(msg => msg.author.id === this.client.user?.id);
 
-            if (messages && messages.size > 0) {
-                for (const [id, message] of messages) {
-                    if (message.components.length > 0) {
-                        const msgComponents = (message.components[0] as ContainerComponent).components;
+                if (messages && messages.size > 0) {
+                    for (const [id, message] of messages) {
+                        if (message.components.length > 0) {
+                            const msgComponents = (message.components[0] as ContainerComponent).components;
 
-                        if ((msgComponents[0] as TextDisplayComponent).content === 'Owner has left, you can claim this VC to use the Dashboard!') {
-                            return;
+                            if ((msgComponents[0] as TextDisplayComponent).content === 'Owner has left, you can claim this VC to use the Dashboard!') {
+                                return;
+                            }
                         }
                     }
                 }
+            } catch (error) {
+                if (error instanceof DiscordAPIError && error.code === 10003) {
+                    // channel doesn't exist anymore, ignore
+                    return;
+                }
+                throw error;
             }
 
             if (owner?.voice.channelId !== channel?.id) {
