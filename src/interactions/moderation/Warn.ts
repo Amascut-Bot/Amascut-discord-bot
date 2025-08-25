@@ -2,7 +2,7 @@ import { report } from 'process';
 import { Warning } from '../../entity/Warning';
 import { getChannels } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, TextChannel, User } from 'discord.js';
+import { ChannelType, ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, TextChannel, User } from 'discord.js';
 import UtilityHandler from '../../modules/UtilityHandler';
 
 export default class Warn extends BotInteraction {
@@ -23,6 +23,7 @@ export default class Warn extends BotInteraction {
             'Add': 0,
             'Remove': 1,
             'List': 2,
+            'Update': 3
         }
         const options: any = [];
         Object.keys(ticketTypes).forEach((key: string) => {
@@ -38,7 +39,7 @@ export default class Warn extends BotInteraction {
             .addNumberOption((option) => option.setName('action').setDescription('Action').addChoices([...this.actionOptions]).setRequired(true))
             .addUserOption((option) => option.setName('user').setDescription('User').setRequired(false))
             .addStringOption((option) => option.setName('reason').setDescription('Reason of the warning').setRequired(false))
-            .addChannelOption((option) => option.setName('reportref').setDescription('Any ticket reference').setRequired(false))
+            .addChannelOption((option) => option.setName('reportref').setDescription('Any ticket reference').setRequired(false).addChannelTypes(ChannelType.PublicThread, ChannelType.PrivateThread))
             .addNumberOption((option) => option.setName('id').setDescription('Id of the warning (when removing)').setRequired(false));
     }
 
@@ -156,17 +157,20 @@ export default class Warn extends BotInteraction {
 
                     for (const warning of foundWarnings) {
                         if (id) {
-                            content += `**User:** <@${warning.user}>\n**Reason:** \`${warning.reason}\``;
+                            content += `**User:** <@${warning.user}>\n`
+                            content += `**Reason:** \`${warning.reason}\`\n`;
+                            if (warning.reportRef) content += `**Report reference:** <#${warning.reportRef}>\n`;
                         } else if (user) {
                             content += `**ID:** \`${warning.id}\`\n`;
                             content += `**Reason:** \`${warning.reason}\`\n`;
-                            content += `**Report reference:** <#${warning.reportRef}>\n\n`;
+                            if (warning.reportRef) content += `**Report reference:** <#${warning.reportRef}>\n`;
                         } else {
                             content += `**ID:** \`${warning.id}\`\n`;
                             content += `**User:** <@${warning.user}>\n`;
                             content += `**Reason:** \`${warning.reason}\`\n`;
-                            content += `**Report reference:** <#${warning.reportRef}>\n\n`;
+                            if (warning.reportRef) content += `**Report reference:** <#${warning.reportRef}>\n`;
                         }
+                        content += '\n';
                     }
 
                     content = content.trim();
@@ -184,6 +188,34 @@ export default class Warn extends BotInteraction {
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
                 }
 
+            case 3:
+                if (id) {
+                    const foundWarning: Warning | null = await repository.findOne({
+                        where: {
+                            id: id
+                        }
+                    });
+
+                    if (foundWarning) {
+                        if (user) foundWarning.user = user.id;
+                        if (reportRef) foundWarning.reportRef = reportRef.id;
+                        if (reason) foundWarning.reason = reason;
+
+                        await repository.save(foundWarning);
+
+                        const response = this.client.util.getContainerBuilder(true, 'Update warning')
+                            .addTextDisplayComponents(builder => builder.setContent(`Successfully updated warning with ID \`${id}\` from User <@${foundWarning.user}>\n**Reason:** \`${foundWarning.reason}\`${reportRef ? `\n**Report reference:** <#${reportRef.id}>` : ''}`));
+                        return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
+                    } else {
+                        const response = this.client.util.getContainerBuilder(false, 'Update warning')
+                            .addTextDisplayComponents(builder => builder.setContent(`Could not find a warning with ID \`${id}\``));
+                        return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
+                    }
+                } else {
+                    const response = this.client.util.getContainerBuilder(false, 'Update warning')
+                        .addTextDisplayComponents(builder => builder.setContent('You have to provide an ID to update a warning!'));
+                    return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
+                }
             default:
                 break;
         }
