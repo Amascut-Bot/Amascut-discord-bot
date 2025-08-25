@@ -110,7 +110,7 @@ export default class Upload extends BotInteraction {
             });
         }
 
-        if (!attachment.name?.endsWith('.txt') && attachment.contentType !== 'text/plain') {
+        if (!attachment.name?.endsWith('.txt') || attachment.contentType !== 'text/plain') {
             return await interaction.editReply({
                 content: 'Please upload a valid text file (.txt).'
             });
@@ -149,7 +149,7 @@ export default class Upload extends BotInteraction {
                 const archiveDir = path.join(process.cwd(), 'upload_archives');
                 await fs.mkdir(archiveDir, { recursive: true });
                 const timestamp = new Date().toISOString().replace(/:/g, '-');
-                const archiveFileName = `${timestamp}_${targetChannel.name}_${attachment.name}`;
+                const archiveFileName = `${timestamp}_${targetChannel.id}.txt`;
                 const archiveFilePath = path.join(archiveDir, archiveFileName);
                 await fs.writeFile(archiveFilePath, fileContent);
             } catch (archiveError) {

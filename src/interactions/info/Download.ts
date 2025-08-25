@@ -54,7 +54,7 @@ export default class Download extends BotInteraction {
             //try to find an archived file first, if no one to be found, download the channel
             const archiveDir = path.join(process.cwd(), 'upload_archives');
             //2025-07-14T21-37-50.955Z_test-channel_role-assign-archive3
-            const pattern = new RegExp(channel.name);
+            const pattern = new RegExp(channel.id);
 
             const archivedFile = await this.getNewestFile(archiveDir, pattern);
 
@@ -67,7 +67,7 @@ export default class Download extends BotInteraction {
 
                 // Send log message
                 try {
-                    const logChannelId = interaction.channelId;
+                    const logChannelId = getChannels(interaction.guild?.id).uploadLogChannel;
                     const logChannel = await this.client.channels.fetch(logChannelId);
                     if (logChannel instanceof TextChannel) {
                         // Create a new attachment to be sent to the log channel
@@ -88,7 +88,7 @@ export default class Download extends BotInteraction {
                 }
 
                 return await interaction.editReply({
-                    content: `Here is the archive of the last uplaod from <#${channel.id}>.`,
+                    content: `Here is the archive of the last upload from <#${channel.id}>.`,
                     files: [attachment],
                 });
             }
@@ -174,7 +174,7 @@ export default class Download extends BotInteraction {
             const fileContent = messageBlocks.join('\n.\n');
 
             const attachment = new AttachmentBuilder(Buffer.from(fileContent, 'utf-8'), {
-                name: `${channel.name}-archive.txt`,
+                name: `${channel.name}-download.txt`,
             });
 
             // Send log message
@@ -184,7 +184,7 @@ export default class Download extends BotInteraction {
                 if (logChannel instanceof TextChannel) {
                     // Create a new attachment to be sent to the log channel
                     const logAttachment = new AttachmentBuilder(Buffer.from(fileContent, 'utf-8'), {
-                        name: `${channel.name}-archive.txt`,
+                        name: `${channel.name}-download.txt`,
                     });
                     await logChannel.send({
                         content: `${interaction.user.username} downloaded from <#${channel.id}>`,
@@ -200,7 +200,7 @@ export default class Download extends BotInteraction {
             }
 
             await interaction.editReply({
-                content: `Here is the archive of the last ${reversedMessages.length} messages from <#${channel.id}>.`,
+                content: `Here is the download of the last ${reversedMessages.length} messages from <#${channel.id}>.`,
                 files: [attachment],
             });
 
