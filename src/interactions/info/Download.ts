@@ -67,7 +67,7 @@ export default class Download extends BotInteraction {
 
                 // Send log message
                 try {
-                    const logChannelId = interaction.channelId;
+                    const logChannelId = getChannels(interaction.guild?.id).uploadLogChannel;
                     const logChannel = await this.client.channels.fetch(logChannelId);
                     if (logChannel instanceof TextChannel) {
                         // Create a new attachment to be sent to the log channel
@@ -88,7 +88,7 @@ export default class Download extends BotInteraction {
                 }
 
                 return await interaction.editReply({
-                    content: `Here is the archive of the last uplaod from <#${channel.id}>.`,
+                    content: `Here is the archive of the last upload from <#${channel.id}>.`,
                     files: [attachment],
                 });
             }
