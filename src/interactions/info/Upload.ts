@@ -110,7 +110,7 @@ export default class Upload extends BotInteraction {
             });
         }
 
-        if (!attachment.name?.endsWith('.txt') || attachment.contentType !== 'text/plain') {
+        if (!attachment.name?.endsWith('.txt') || !attachment.contentType.includes('text/plain')) {
             return await interaction.editReply({
                 content: 'Please upload a valid text file (.txt).'
             });
