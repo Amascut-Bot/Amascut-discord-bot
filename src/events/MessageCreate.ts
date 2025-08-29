@@ -47,6 +47,10 @@ export default class MessageCreate extends BotEvent {
             return;
         }
 
+        if (await this.client.autoTrigger.customAutomod(message)) {
+            return;
+        }
+
         // Handle guild-specific auto-triggers
         if (await this.client.autoTrigger.handleAutoTriggers(message)) {
             return;

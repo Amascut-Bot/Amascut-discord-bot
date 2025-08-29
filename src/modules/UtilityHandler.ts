@@ -1,9 +1,10 @@
-import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize } from 'discord.js';
+import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize, GuildMember } from 'discord.js';
 import Bot from '../Bot';
 import * as config from '../../config.json';
 import { Override } from '../entity/Override';
 import axios from 'axios';
 import { getRoles, getChannels } from '../GuildSpecifics';
+import { Timeout } from '../entity/Timeout';
 
 export default interface UtilityHandler {
     client: Bot;
@@ -431,8 +432,8 @@ export default class UtilityHandler {
     public getContainerBuilder(success: boolean | null, title: string) : ContainerBuilder {
         const container = new ContainerBuilder();
 
-        if (success === true) container.setAccentColor(this.colours.green).addTextDisplayComponents(builder => builder.setContent(`${title} - Success`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
-        if (success === false) container.setAccentColor(this.colours.red).addTextDisplayComponents(builder => builder.setContent(`${title} - Error`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+        if (success === true) container.setAccentColor(this.colours.green).addTextDisplayComponents(builder => builder.setContent(`${title}`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+        if (success === false) container.setAccentColor(this.colours.red).addTextDisplayComponents(builder => builder.setContent(`${title}`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
         if (success === null) container.setAccentColor(this.client.color).addTextDisplayComponents(builder => builder.setContent(`${title}`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
 
         return container;
@@ -440,7 +441,7 @@ export default class UtilityHandler {
 
     //#endregion
 
-    //#region Duration
+    //#region Timeout
 
     public parseDuration(input: string): number | null {
         const match = input.match(/^(\d+)([smhdw])$/i);
@@ -461,6 +462,32 @@ export default class UtilityHandler {
         const maxTimeout = 28 * 24 * 60 * 60 * 1000;
 
         return ms <= maxTimeout ? ms : null;
+    }
+
+    public async timeout(issuedBy: GuildMember | null, member: GuildMember, duration: string, reason: string): Promise<boolean> {
+        try {
+            const { dataSource } = this.client;
+            const repository = dataSource.getRepository(Timeout);
+
+            const durationValue = this.parseDuration(duration);
+            const expiresAt = new Date(Date.now() + duration);
+            const issuer = issuedBy?.id ?? this.client.user!.id
+
+            await member.timeout(durationValue, reason);
+
+            const timeoutRecord = repository.create({
+                user: member.id,
+                reason,
+                issuedBy: issuer,
+                expiresAt,
+                isActive: true
+            });
+            await repository.save(timeoutRecord);
+
+            return true;
+        } catch (error) {
+            return false;
+        }
     }
 
     //#endregion
