@@ -1,6 +1,4 @@
-import { Collection, Message, Guild, PartialMessage, Attachment } from 'discord.js';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { Collection, Message, PartialMessage, Attachment } from 'discord.js';
 
 export default class TranscriptGenerator {
 

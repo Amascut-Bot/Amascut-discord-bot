@@ -53,13 +53,9 @@ lerna-debug.log*
 /upload_archives/
 /message-tags.json
 ticket-numbers.json
-active-reaction-messages.json
 boss-configs.json
-dpm-thresholds.json
-reaction-roles.json
 notifications.json
 monitored-streamers.json
-exported-users.json
 dashboard-data.json
 
 # Google Credentials

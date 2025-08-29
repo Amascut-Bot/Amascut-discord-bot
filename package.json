@@ -13,23 +13,16 @@
     "dependencies": {
         "@types/node-cron": "^3.0.11",
         "axios": "^1.10.0",
-        "bufferutil": "^4.0.5",
-        "count-interval": "^1.0.1",
         "discord-api-types": "^0.37.8",
         "discord.js": "^14.22.1",
         "dotenv": "^16.6.1",
-        "express": "^5.1.0",
         "googleapis": "^155.0.1",
-        "indomitable": "^2.0.2",
         "jsonc-parser": "^3.3.1",
         "node-cron": "^4.2.0",
-        "petitio": "^1.4.0",
-        "pg": "^8.16.2",
         "reflect-metadata": "^0.1.13",
         "sqlite3": "^5.1.4",
         "svg2img": "^1.0.0-beta.2",
         "typeorm": "^0.3.11",
-        "utf-8-validate": "^5.0.5",
         "uuid": "^8.3.2"
     },
     "devDependencies": {

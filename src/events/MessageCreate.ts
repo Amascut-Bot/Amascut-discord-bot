@@ -1,4 +1,4 @@
-import { Message, SlashCommandBuilder, TextChannel, NewsChannel, ThreadChannel, DMChannel, PartialDMChannel } from 'discord.js';
+import { Message, SlashCommandBuilder } from 'discord.js';
 import BotEvent from '../types/BotEvent';
 import { readdirSync } from 'fs';
 import BotInteraction from '../types/BotInteraction';

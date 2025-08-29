@@ -38,8 +38,8 @@ export default class RemoveStreamer extends BotInteraction {
         return 'Removes a Twitch streamer from the notification list.';
     }
 
-    get permissions(): string {
-        return 'ELEVATED_ROLE';
+    get permissions() {
+        return 'ADMIN';
     }
 
     get slashData() {

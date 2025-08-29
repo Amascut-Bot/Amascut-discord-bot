@@ -30,7 +30,6 @@ export default class TwitchHandler {
     private clientSecret: string;
     private accessToken: string | null = null;
     private tokenExpiry: Date | null = null;
-    private liveStreamers: Set<string> = new Set();
     private contentCreatorsDashboardMessageId: string | null = null;
     private liveNotificationMessages: Map<string, string> = new Map(); // streamer userName -> message ID
     private isFirstCheck: boolean = true;
@@ -66,7 +65,7 @@ export default class TwitchHandler {
         let hasStatusChanges = false;
 
         // Process streamers who went OFFLINE
-        for (const [userName, messageId] of trackedNotifications.entries()) {
+        for (const [userName] of trackedNotifications.entries()) {
             if (!liveUserNamesFromAPI.has(userName)) {
                 // This streamer has a notification but is not live according to the API
                 this.client.logger.log({ message: `${userName} just went offline (or was found offline during check).`, handler: this.constructor.name }, true);

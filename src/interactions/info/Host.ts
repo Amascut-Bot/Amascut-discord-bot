@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, TextChannel, MessageFlags, ContainerBuilder, TextDisplayBuilder, SeparatorSpacingSize, SectionBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, TextChannel, MessageFlags, ContainerBuilder, TextDisplayBuilder, SeparatorSpacingSize, SectionBuilder } from 'discord.js';
 
 export default class Host extends BotInteraction {
     get name() {
@@ -22,7 +22,7 @@ export default class Host extends BotInteraction {
 
         const message: string | null = interaction.options.getString('message', false);
 
-        const { colours, emojis } = this.client.util;
+        const { colours } = this.client.util;
 
         const container = new ContainerBuilder();
         container.setAccentColor(this.client.color);

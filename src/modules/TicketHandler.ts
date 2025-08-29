@@ -879,123 +879,6 @@ export default class TicketHandler {
         }
     }
 
-    private async handleTicketDeleteConfirm(interaction: ButtonInteraction<'cached'>): Promise<void> {
-        // Check if user has admin/owner permissions
-        const hasPermission = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
-        if (!hasPermission) {
-            await interaction.reply({ content: 'You do not have permission to use this command.', flags: MessageFlags.Ephemeral });
-            return;
-        }
-
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-        try {
-            const channel = interaction.channel as TextChannel;
-
-            // First, log the ticket to the forum, which now also attaches the transcript
-            await interaction.editReply({ content: 'Archiving ticket to forum...' });
-            const forumPostId = await this.logTicketToForum(channel, interaction.user, 'Automatically logged before deletion');
-
-            if (!forumPostId) {
-                await interaction.editReply({ content: 'Error: Failed to archive ticket to the forum. Aborting deletion.' });
-                return;
-            }
-
-            // New: Attempt to find the ticket opener and send them a DM with a download button
-            const ticketOpenerId = await this.findTicketOpener(channel);
-            this.client.logger.log({
-                message: `[Transcript] Found ticket opener ID: ${ticketOpenerId} for channel ${channel.name}`,
-                handler: this.constructor.name
-            }, true);
-
-            if (ticketOpenerId) {
-                try {
-                    const ticketOpener = await this.client.users.fetch(ticketOpenerId);
-                    this.client.logger.log({
-                        message: `[Transcript] Fetched user ${ticketOpener.username} (${ticketOpener.id})`,
-                        handler: this.constructor.name
-                    }, true);
-
-                    const dmEmbed = new EmbedBuilder()
-                        .setTitle('Ticket Closed')
-                        .setDescription(`Your ticket **#${channel.name}** has been closed and archived. You can download a copy of the transcript at any time.`)
-                        .setColor(this.client.color)
-                        .setTimestamp();
-
-                    const buttonId = `ticket:download_transcript_${forumPostId}`;
-                    const downloadButton = new ActionRowBuilder<ButtonBuilder>()
-                        .addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(buttonId)
-                                .setLabel('Download Transcript')
-                                .setStyle(ButtonStyle.Primary)
-                        );
-
-                    this.client.logger.log({
-                        message: `[Transcript] Sending DM to ${ticketOpener.username} with button ID: "${buttonId}"`,
-                        handler: this.constructor.name
-                    }, true);
-
-                    await ticketOpener.send({
-                        embeds: [dmEmbed],
-                        components: [downloadButton]
-                    });
-
-                    this.client.logger.log({
-                        message: `[Transcript] Successfully sent DM to ${ticketOpener.username}`,
-                        handler: this.constructor.name
-                    }, true);
-
-
-
-                } catch (dmError: any) {
-                    this.client.logger.error({
-                        message: `Failed to DM transcript button to user ${ticketOpenerId}`,
-                        error: { message: dmError.message, stack: dmError.stack, name: dmError.name },
-                        handler: this.constructor.name
-                    });
-                    await interaction.followUp({ content: 'Could not send DM to the user. They may have DMs disabled.', flags: MessageFlags.Ephemeral });
-                }
-            } else {
-                await interaction.followUp({ content: 'Warning: Could not identify the ticket opener to send a DM.', flags: MessageFlags.Ephemeral });
-            }
-
-            this.client.logger.log({
-                message: `Ticket ${channel.name} deleted by ${interaction.user.username} (${interaction.user.id})`,
-                handler: this.constructor.name
-            }, true);
-
-            await interaction.followUp({ content: 'Ticket archived. The channel will be deleted in 5 seconds...' });
-
-            // Delete the channel after a short delay
-            setTimeout(async () => {
-                try {
-                    await channel.delete('Ticket deleted by admin/owner');
-                    await this.saveTicketClose(channel.id, interaction.user.id, forumPostId);
-                } catch (error) {
-                    this.client.logger.error({
-                        message: 'Failed to delete ticket channel',
-                        error,
-                        handler: this.constructor.name
-                    });
-                }
-            }, 5000);
-
-        } catch (error) {
-            this.client.logger.error({
-                message: 'Failed to delete ticket',
-                error,
-                handler: this.constructor.name
-            });
-
-            await interaction.editReply({ content: 'An error occurred while deleting the ticket. Please try again.' });
-        }
-    }
-
-    private async handleTicketDeleteCancel(interaction: ButtonInteraction<'cached'>): Promise<void> {
-        await interaction.update({ content: 'Ticket deletion cancelled.', embeds: [], components: [] });
-    }
-
     //#endregion
 
     //#region TRANSCRIPT SYSTEM
@@ -1314,7 +1197,7 @@ export default class TicketHandler {
 
     public async sendTicketWelcomeMessage(channel: TextChannel, userId: string, ticketType: string, formData: any): Promise<void> {
         try {
-            const { colours, capitalizeFirstLetter } = this.client.util
+            const { capitalizeFirstLetter } = this.client.util
             const adminRole = getRoles(channel.guild?.id).admin;
             const ownerRole = getRoles(channel.guild?.id).owner;
 

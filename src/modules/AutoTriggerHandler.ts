@@ -1,6 +1,6 @@
-import { GuildChannel, Message, MessageFlags, TextChannel } from 'discord.js';
+import { Message, MessageFlags, TextChannel } from 'discord.js';
 import Bot from '../Bot';
-import { getRoles, getChannels } from '../GuildSpecifics';
+import { getRoles } from '../GuildSpecifics';
 import { MessageShortcut } from '../entity/MessageShortcut';
 
 export default class AutoTriggerHandler {

@@ -1,8 +1,8 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
 import BotInteraction from "../../types/BotInteraction";
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { getRoles, getChannels } from '../../GuildSpecifics';
+import { getRoles } from '../../GuildSpecifics';
 
 const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
 const contentCreatorRoleId = getRoles(process.env.GUILD_ID).CONTENT_CREATOR_ROLE;
@@ -40,8 +40,8 @@ export default class AddStreamer extends BotInteraction {
         return 'Adds a Twitch streamer to the notification list.';
     }
 
-    get permissions(): string {
-        return 'ELEVATED_ROLE';
+    get permissions() {
+        return 'ADMIN';
     }
 
     get slashData() {

@@ -1,5 +1,5 @@
 import { Dirent, readdirSync } from 'fs';
-import { EmbedBuilder, Collection, Interaction, ModalSubmitInteraction } from 'discord.js';
+import { EmbedBuilder, Collection, Interaction } from 'discord.js';
 import Bot from '../Bot';
 import BotInteraction from '../types/BotInteraction';
 import ButtonHandler from './ButtonHandler';
@@ -68,22 +68,6 @@ export default class InteractionHandler extends EventEmitter {
         return this;
     }
 
-    public checkPermissionName(interaction: Interaction, role_name: string[]): boolean {
-        if (!interaction.inCachedGuild()) return false;
-        if (this.client.util.config.owners.includes(interaction.user.id)) return true;
-        const _checkRoleName: boolean[] = role_name.map((role_string) => interaction.member.roles.cache.some((role) => role.name === role_string));
-        const _containsRole: boolean = _checkRoleName.some((role) => role === true);
-        return _containsRole;
-    }
-
-    public checkPermissionID(interaction: Interaction, role_id: string[]): boolean {
-        if (!interaction.inCachedGuild()) return false;
-        if (this.client.util.config.owners.includes(interaction.user.id)) return true;
-        const _checkRoleID: boolean[] = role_id.map((role_id) => interaction.member.roles.cache.some((role) => role.id === role_id));
-        const _containsRole: boolean = _checkRoleID.some((role) => role === true);
-        return _containsRole;
-    }
-
     async exec(interaction: Interaction): Promise<any> {
         if (interaction.isButton()) {
             if (interaction.inCachedGuild()) {
@@ -104,13 +88,6 @@ export default class InteractionHandler extends EventEmitter {
         }
 
         if (interaction.isModalSubmit()) {
-            if (interaction.customId.startsWith('dpm_screenshots_')) {
-                const command = this.commands.get('dpm-submit');
-                if (command && 'handleModalSubmit' in command && typeof command.handleModalSubmit === 'function') {
-                    return command.handleModalSubmit(interaction);
-                }
-            }
-
             if (interaction.customId.startsWith('ticket:') || interaction.customId.startsWith('ticket_')) {
                 return new TicketHandler(this.client, interaction.customId, interaction);
             }
@@ -133,7 +110,7 @@ export default class InteractionHandler extends EventEmitter {
                 if (!command) return;
 
                 switch (command.permissions) {
-                    case 'OWNER':
+                    case 'BOT_OWNER':
                         if (interaction.isRepliable() && !this.client.util.config.owners.includes(interaction.user.id)) {
                             this.client.logger.log({
                                 message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
@@ -142,63 +119,24 @@ export default class InteractionHandler extends EventEmitter {
                             return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', ephemeral: true });
                         }
                         break;
-                    case 'ELEVATED_ROLE':
-                        const hasRolePermissions = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
-                        interface KeyMap {
-                            [key: string]: string
-                        }
-                        const keyMap: KeyMap = {
-                            'reports': 'reports',
-                            'upkeep': 'trials'
-                        }
-                        if (command.name in keyMap) {
-                            const overridePermissions = await this.client.util.hasOverridePermissions(interaction, keyMap[command.name]);
-                            if (!(hasRolePermissions || overridePermissions)) {
-                                this.client.logger.log({
-                                    message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
-                                    handler: this.constructor.name,
-                                }, true);
-                                return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', ephemeral: true });
-                            }
-                        } else {
-                            if (!hasRolePermissions) {
-                                this.client.logger.log({
-                                    message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
-                                    handler: this.constructor.name,
-                                }, true);
-                                return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', ephemeral: true });
-                            }
-                        }
-                        break;
-                    case 'TRIAL_TEAM':
-                        if (!(await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction))) {
+                    case 'OWNER':
+                        if (!(await this.client.util.hasRolePermissions(this.client, ['owner'], interaction))) {
                             this.client.logger.log({
                                 message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
                                 handler: this.constructor.name,
                             }, true);
                             return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', ephemeral: true });
                         }
-                        break;
-                    case 'REAPER':
-                        if (!(await this.client.util.hasRolePermissions(this.client, ['reaper', 'admin', 'owner'], interaction))) {
+                    case 'ADMIN':
+                        if (!(await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction))) {
                             this.client.logger.log({
                                 message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
                                 handler: this.constructor.name,
                             }, true);
                             return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', ephemeral: true });
                         }
-                        break;
                     case 'EDITOR':
                         if (!(await this.client.util.hasRolePermissions(this.client, ['editor', 'admin', 'owner'], interaction))) {
-                            this.client.logger.log({
-                                message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
-                                handler: this.constructor.name,
-                            }, true);
-                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', ephemeral: true });
-                        }
-                        break;
-                    case 'TRIAL_TEAM_AND_TEACHER':
-                        if (!(await this.client.util.hasRolePermissions(this.client, ['teacher', 'trialTeam', 'admin', 'owner'], interaction))) {
                             this.client.logger.log({
                                 message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
                                 handler: this.constructor.name,

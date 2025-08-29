@@ -14,7 +14,7 @@ export default class TimeoutCommand extends BotInteraction {
     }
 
     get permissions() {
-        return 'MODERATOR';
+        return 'ADMIN';
     }
 
     get actionOptions() {
@@ -48,18 +48,6 @@ export default class TimeoutCommand extends BotInteraction {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         }
 
-        const hasPermissions = await this.client.util.hasRolePermissions(
-            this.client,
-            ['moderator', 'admin', 'owner'],
-            interaction
-        );
-
-        if (!hasPermissions) {
-            return await interaction.editReply({
-                content: 'You do not have permission to use this command.'
-            });
-        }
-
         const action: number = interaction.options.getNumber('action', true);
         const user: User = interaction.options.getUser('user', true);
         const durationInput: string | null = interaction.options.getString('duration', false);
@@ -87,8 +75,8 @@ export default class TimeoutCommand extends BotInteraction {
 
                 const duration = this.client.util.parseDuration(durationInput);
                 if (!duration) {
-                    return await interaction.editReply({ 
-                        content: 'Invalid duration format. Use format like: 10m, 1h, 2d (max 28 days)' 
+                    return await interaction.editReply({
+                        content: 'Invalid duration format. Use format like: 10m, 1h, 2d (max 28 days)'
                     });
                 }
 
@@ -109,8 +97,8 @@ export default class TimeoutCommand extends BotInteraction {
                         content: `${user.tag} has been timed out for ${durationInput}.\nReason: ${reason}`
                     });
                 } catch (error) {
-                    await interaction.editReply({ 
-                        content: 'Failed to timeout user. Check bot permissions or if user is already timed out.' 
+                    await interaction.editReply({
+                        content: 'Failed to timeout user. Check bot permissions or if user is already timed out.'
                     });
                 }
                 break;
@@ -128,8 +116,8 @@ export default class TimeoutCommand extends BotInteraction {
                         content: `Timeout removed from ${user.tag}.`
                     });
                 } catch (error) {
-                    await interaction.editReply({ 
-                        content: 'Failed to remove timeout. User may not be timed out or bot lacks permissions.' 
+                    await interaction.editReply({
+                        content: 'Failed to remove timeout. User may not be timed out or bot lacks permissions.'
                     });
                 }
                 break;

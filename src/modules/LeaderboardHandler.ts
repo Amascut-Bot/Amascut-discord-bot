@@ -163,9 +163,8 @@ export default class LeaderboardHandler {
         //await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const { cleanContainer } = this.client.util;
-        const cleanUp = cleanContainer.bind(this.client.util)
+        const cleanUp = cleanContainer.bind(this.client.util);
 
-        const messageComponents = (interaction.message.components[0] as ContainerComponent).components;
         const container = cleanUp(interaction.message.components[0]);
 
         // Read Message-Information
