@@ -1,5 +1,4 @@
 import { GuildMember, Role, EmbedBuilder, TextChannel } from 'discord.js';
-import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import { getChannels, getRoles } from '../GuildSpecifics';
 import { Timeout } from '../entity/Timeout';
@@ -55,9 +54,6 @@ export default class GuildMemberAdd extends BotEvent {
                     .setThumbnail(member.user.displayAvatarURL())
                     .setTimestamp();
 
-                //const rolesToPing = [this.client.util.stripRole(getRoles(adminChannel.guild.id).owner), this.client.util.stripRole(getRoles(adminChannel.guild.id).admin)];
-                //const pingContent = rolesToPing.map(id => `<@&${id}>`).join(' ');
-                //await adminChannel.send({ content: pingContent, embeds: [embed] });
                 await adminChannel.send({ embeds: [embed] });
             }
         }
@@ -106,7 +102,7 @@ export default class GuildMemberAdd extends BotEvent {
             if (activeTimeout && activeTimeout.expiresAt > new Date()) {
                 const remainingTime = activeTimeout.expiresAt.getTime() - Date.now();
                 await member.timeout(remainingTime, `Reapplying timeout - ${activeTimeout.reason}`);
-                
+
                 this.client.logger.log({
                     message: `Reapplied timeout to rejoining member ${member.user.tag} (${remainingTime}ms remaining)`,
                     handler: this.constructor.name
@@ -121,31 +117,5 @@ export default class GuildMemberAdd extends BotEvent {
                 error
             });
         }
-
-        // TODO: Welcome message temporarily disabled - may be re-enabled in future
-        // Send welcome message
-        // const welcomeChannelId = '1389379873348255864'; // IF YOU THINK ABOUT ENABLING THIS, PUT IT IN GuildSpecifics.ts!
-        // const welcomeChannel = await this.client.channels.fetch(welcomeChannelId) as TextChannel;
-
-        // if (welcomeChannel) {
-        //     const welcomeEmbed = new EmbedBuilder()
-        //         .setColor('Green')
-        //         .setDescription(`Welcome ${member.user} to the **Amascut, Goddess of Destruction** server. Let us know if you have any questions or suggestions.`)
-        //         .setImage('https://cdn.discordapp.com/attachments/1389379617915408448/1390841698610843780/amas2.png?ex=6869b9c5&is=68686845&hm=8cdfcbf838f5a57184612d3367d8f119165a5b1bdada8880d7b8d4472c758509&');
-
-        //     try {
-        //         await welcomeChannel.send({ embeds: [welcomeEmbed] });
-        //         this.client.logger.log({
-        //             message: `Sent welcome message for ${member.user.tag}`,
-        //             handler: this.constructor.name
-        //         }, true);
-        //     } catch (error) {
-        //         this.client.logger.error({
-        //             message: `Failed to send welcome message for ${member.user.tag}`,
-        //             handler: this.constructor.name,
-        //             error
-        //         });
-        //     }
-        // }
     }
 }

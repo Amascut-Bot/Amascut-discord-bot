@@ -1,4 +1,3 @@
-import { EmbedBuilder } from 'discord.js';
 
 export default class WebhookLogger {
     private infoWebhookUrl: string;

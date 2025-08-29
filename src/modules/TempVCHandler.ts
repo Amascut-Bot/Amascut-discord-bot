@@ -1,7 +1,7 @@
 
 import Bot from '../Bot';
 import { getChannels } from '../GuildSpecifics';
-import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, Channel, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, GuildChannel, VoiceChannel, User, OverwriteType, ContainerComponent, TextDisplayComponent, Guild } from 'discord.js';
+import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, VoiceChannel, OverwriteType, ContainerComponent, TextDisplayComponent, Guild } from 'discord.js';
 
 export default interface TempChannelManager {
     client: Bot;
@@ -38,7 +38,7 @@ export default class TempChannelManager {
             if (primaryCategory && primaryCategory.type === ChannelType.GuildCategory) {
                 const primaryVcs = await primaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
 
-                for (const [key, vc] of primaryVcs) {
+                for (const [_, vc] of primaryVcs) {
                     this.tempChannelIds.add(vc.id);
                 }
             }
@@ -46,7 +46,7 @@ export default class TempChannelManager {
             if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory) {
                 const secondaryVcs = await secondaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
 
-                for (const [key, vc] of secondaryVcs) {
+                for (const [_, vc] of secondaryVcs) {
                     this.tempChannelIds.add(vc.id);
                 }
             }
@@ -54,7 +54,7 @@ export default class TempChannelManager {
             if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory) {
                 const tertiaryVcs = await tertiaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
 
-                for (const [key, vc] of tertiaryVcs) {
+                for (const [_, vc] of tertiaryVcs) {
                     this.tempChannelIds.add(vc.id);
                 }
             }
@@ -62,7 +62,7 @@ export default class TempChannelManager {
             if (learnerCategory && learnerCategory.type === ChannelType.GuildCategory) {
                 const learnerVcs = await learnerCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
 
-                for (const [key, vc] of learnerVcs) {
+                for (const [_, vc] of learnerVcs) {
                     this.learnerTempChannelIds.add(vc.id);
                 }
             }
@@ -323,7 +323,7 @@ export default class TempChannelManager {
                 const messages = (await channel?.messages.fetch())?.filter(msg => msg.author.id === this.client.user?.id);
 
                 if (messages && messages.size > 0) {
-                    for (const [id, message] of messages) {
+                    for (const [_, message] of messages) {
                         if (message.components.length > 0) {
                             const msgComponents = (message.components[0] as ContainerComponent).components;
 

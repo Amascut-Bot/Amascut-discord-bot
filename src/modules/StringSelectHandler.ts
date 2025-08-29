@@ -1,4 +1,4 @@
-import { StringSelectMenuInteraction, InteractionResponse, Message, EmbedBuilder, Role, MessageFlags } from 'discord.js';
+import { StringSelectMenuInteraction, InteractionResponse, Message, EmbedBuilder, MessageFlags } from 'discord.js';
 import Bot from '../Bot';
 import { getRoles } from '../GuildSpecifics';
 

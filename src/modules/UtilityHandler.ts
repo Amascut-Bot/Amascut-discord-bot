@@ -1,11 +1,7 @@
-import { EmbedBuilder, ChatInputCommandInteraction, Interaction, APIEmbedField, AttachmentBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize } from 'discord.js';
+import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize } from 'discord.js';
 import Bot from '../Bot';
 import * as config from '../../config.json';
 import { Override } from '../entity/Override';
-import * as path from 'path';
-import * as fs from 'fs/promises';
-import { DpmSubmission } from '../entity/DpmSubmission';
-import { KillTimeSubmission } from '../entity/KillTimeSubmission';
 import axios from 'axios';
 import { getRoles, getChannels } from '../GuildSpecifics';
 
@@ -26,9 +22,6 @@ interface Emojis {
 interface Categories {
     killCount: string[]
     collectionLog: string[]
-    threeSeven: string[]
-    duo: string[]
-    combined: string[]
     serverPings: string[]
     vanity: string[]
     enrage: string[]
@@ -69,155 +62,19 @@ export default class UtilityHandler {
         }
     }
 
-    // DPM thresholds - now reads from configuration file
-    private _dpmCache: any = null;
-    private _dpmCacheTime: number = 0;
-    private readonly DPM_CACHE_DURATION = 30000; // 30 seconds cache
-
-    async getDpm() {
-        // Check cache first
-        const now = Date.now();
-        if (this._dpmCache && (now - this._dpmCacheTime) < this.DPM_CACHE_DURATION) {
-            return this._dpmCache;
-        }
-
-        try {
-            const dpmConfigPath = path.join(process.cwd(), 'dpm-thresholds.json');
-            const configData = await fs.readFile(dpmConfigPath, 'utf-8');
-            const config = JSON.parse(configData);
-
-            this._dpmCache = config.thresholds;
-            this._dpmCacheTime = now;
-
-            return config.thresholds;
-        } catch (error) {
-            // Fallback to hardcoded values if file doesn't exist or is invalid
-            this.client.logger.error({
-                message: 'Failed to read DPM thresholds config, using defaults',
-                error,
-                handler: 'UtilityHandler'
-            });
-
-            const defaultThresholds = {
-                'adept': 400,
-                'mastery': 475,
-                'extreme': 590
-            };
-
-            this._dpmCache = defaultThresholds;
-            this._dpmCacheTime = now;
-
-            return defaultThresholds;
-        }
-    }
-
-    // Synchronous getter for backward compatibility (will be deprecated)
-    get dpm() {
-        // If cache exists and is fresh, return it
-        const now = Date.now();
-        if (this._dpmCache && (now - this._dpmCacheTime) < this.DPM_CACHE_DURATION) {
-            return this._dpmCache;
-        }
-
-        // Return default values for immediate use
-        return {
-            'adept': 400,
-            'mastery': 475,
-            'extreme': 590
-        };
-    }
-
-    // Method to update DPM thresholds
-    async updateDpmThresholds(newThresholds: any, updatedBy: string) {
-        const dpmConfigPath = path.join(process.cwd(), 'dpm-thresholds.json');
-
-        // Validate thresholds
-        const validatedThresholds = this.validateDpmThresholds(newThresholds);
-        if (!validatedThresholds.isValid) {
-            throw new Error(validatedThresholds.error);
-        }
-
-        const config = {
-            thresholds: newThresholds,
-            lastUpdated: new Date().toISOString(),
-            updatedBy: updatedBy
-        };
-
-        await fs.writeFile(dpmConfigPath, JSON.stringify(config, null, 2));
-
-        // Clear cache to force reload
-        this._dpmCache = null;
-        this._dpmCacheTime = 0;
-
-        this.client.logger.log({
-            message: `DPM thresholds updated by ${updatedBy}`,
-            handler: 'UtilityHandler'
-        }, true);
-    }
-
-    // Validate DPM thresholds
-    private validateDpmThresholds(thresholds: any): { isValid: boolean, error?: string } {
-        const requiredKeys = ['adept', 'mastery', 'extreme'];
-
-        for (const key of requiredKeys) {
-            if (!thresholds.hasOwnProperty(key)) {
-                return { isValid: false, error: `Missing required threshold: ${key}` };
-            }
-            if (typeof thresholds[key] !== 'number' || thresholds[key] < 0) {
-                return { isValid: false, error: `Invalid threshold value for ${key}: must be a positive number` };
-            }
-        }
-
-        // Check ordering: adept < mastery < extreme
-        if (thresholds.adept >= thresholds.mastery ||
-            thresholds.mastery >= thresholds.extreme) {
-            return { isValid: false, error: 'Thresholds must be in ascending order: adept < mastery < extreme' };
-        }
-
-        return { isValid: true };
-    }
-
-    // Get DPM role ID based on DPM value
-    public async getDpmRole(dpm: number): Promise<string> {
-        let roleToAssign;
-        const { stripRole } = this;
-        const { adept, mastery, extreme } = await this.getDpm();
-
-        if (dpm >= extreme) {
-            roleToAssign = 'extreme';
-        } else if (dpm >= mastery) {
-            roleToAssign = 'mastery';
-        } else if (dpm >= adept) {
-            roleToAssign = 'adept';
-        }
-
-        if (!roleToAssign) return '';
-
-        return stripRole(getRoles(process.env.GUILD_ID)[roleToAssign]);
-    }
-
     get categories(): Categories {
         return {
-            killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend'],
-            collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
-            threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
-            duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
-            combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
+            killCount: ['catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer'],
+            collectionLog: ['visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty'],
             serverPings: ['serverAnnouncements', 'goodMorning'],
-            vanity: ['silverSpoon', 'goldenSpoon', 'catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer', 'visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty'],
+            vanity: ['silverSpoon', 'goldenSpoon'],
             enrage: ['enr500', 'enr1000', 'enr2000', 'enr4000', 'rd500', 'rd1000', 'rd2000', 'rd4000', 'rw500', 'rw1000', 'rw2000', 'rw4000']
         }
     }
 
     get hierarchy(): Hierarchy {
         return {
-            killCount: ['solakRookie', 'solakCasual', 'solakEnthusiast', 'solakAddict', 'unlockedPerdita', 'solakFanatic', 'solakSlave', 'solakSimp', 'solakLegend'],
-            collectionLog: ['nightOutWithMyRightHand', 'probablyUsesSpecialScissors', 'oneForTheBooks', 'brokenPrinter', 'merethielsSimp', 'shroomDealer', 'guardianOfTheGrove'],
-            threeSeven: ['noRealm', 'threeSevenRootskips', 'threeSevenExperienced', 'threeSevenMaster', 'threeSevenGrandmaster'],
-            duo: ['duoRootskips', 'duoExperienced', 'duoMaster', 'duoGrandmaster'],
-            combined: ['rootskips', 'experienced', 'master', 'grandmaster'],
-            serverPings: ['serverAnnouncements', 'goodMorning'],
-            vanity: ['silverSpoon', 'goldenSpoon', 'catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer', 'visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty']
+            killCount: ['catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer']
         }
     }
 
@@ -257,12 +114,6 @@ export default class UtilityHandler {
             category = 'killCount';
         } else if (this.categories.collectionLog.includes(role)) {
             category = 'collectionLog';
-        } else if (this.categories.threeSeven.includes(role)) {
-            category = 'threeSeven';
-        } else if (this.categories.duo.includes(role)) {
-            category = 'duo';
-        } else if (this.categories.combined.includes(role)) {
-            category = 'combined';
         } else if (this.categories.serverPings.includes(role)) {
             category = 'serverPings';
         } else if (this.categories.vanity.includes(role)) {
@@ -277,11 +128,11 @@ export default class UtilityHandler {
 
     public categorizeChannel = (role: string) => {
         const overrides = {
-            roleConfirmations: ['erethdorsBane', 'solakWRHolder', 'fours'],
+            roleConfirmations: [''],
         }
         if (this.categories.killCount.includes(role) || this.categories.collectionLog.includes(role) || this.categories.vanity.includes(role) || this.categories.enrage.includes(role)) {
             return 'achievementsAndLogs'
-        } else if (overrides.roleConfirmations.includes(role) || this.categories.combined.includes(role) || this.categories.duo.includes(role) || this.categories.threeSeven.includes(role)) {
+        } else if (overrides.roleConfirmations.includes(role)) {
             return 'roleConfirmations'
         } else {
             return ''
@@ -356,199 +207,6 @@ export default class UtilityHandler {
     public isValidTime = (timeString: string): boolean => {
         const pattern = /^(0?[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9])(\.[0-9])?$/gm;
         return pattern.test(timeString);
-    }
-
-    public isValidDamage = (damageString: string): boolean => {
-        return !isNaN(+damageString);
-    }
-
-    public calcDPMInThousands(damage: string, time: string) {
-        const [minutes, seconds] = time.split(':').map(Number);
-        const secondsAsMinutes = seconds / 60;
-        const totalMinutes = minutes + secondsAsMinutes;
-        return Math.round((+damage) / totalMinutes / 10) / 100;
-    }
-
-    public checkForUserId = (userId: string, objects: APIEmbedField[]): { obj: APIEmbedField, index: number } | undefined => {
-        for (let i = 0; i < objects.length; i++) {
-            if (objects[i].value === userId) {
-                return { obj: objects[i], index: i };
-            }
-        }
-        return undefined;
-    };
-
-    public getEmptyObject(targetName: string, objects: APIEmbedField[]): { obj: APIEmbedField, index: number } | undefined {
-        const index = objects.findIndex(obj => obj.name === targetName && obj.value === '`Empty`');
-        if (index >= 0) {
-            const obj = objects[index];
-            return { obj: obj, index: index };
-        }
-        return undefined;
-    }
-
-    public isTeamFull(players: APIEmbedField[]): boolean {
-        return players.every(player => !player.value.includes('Empty'));
-    }
-
-    public async generateDpmLeaderboardEmbeds(): Promise<EmbedBuilder[]> {
-        const dpmSubmissionRepository = this.client.dataSource.getRepository(DpmSubmission);
-
-        const submissions = await dpmSubmissionRepository.find({
-            where: { status: 'approved' },
-            order: { dpm: "DESC" }
-        });
-
-        const rankEmojis: { [key: number]: string } = {
-            1: this.emojis.gem1,
-            2: this.emojis.gem2,
-            3: this.emojis.gem3,
-        };
-
-        // Only these styles are eligible for the leaderboard
-        // Magic, Ranged, and Melee submissions are accepted but not displayed here
-        const leaderboardEligibleStyles = ['Hybrid', 'Tribrid', 'Necromancy'];
-        const teamSizes = ['Duo', '4 man'];
-
-        // Group submissions by team size first, then by style
-        const groupedSubmissions: { [teamSize: string]: { [style: string]: DpmSubmission[] } } = {};
-
-        // Initialize groups
-        teamSizes.forEach(teamSize => {
-            groupedSubmissions[teamSize] = {};
-            leaderboardEligibleStyles.forEach(style => {
-                groupedSubmissions[teamSize][style] = [];
-            });
-        });
-
-        // Group submissions by team size and style (only leaderboard-eligible ones)
-        submissions.forEach(submission => {
-            if (groupedSubmissions[submission.teamSize] &&
-                groupedSubmissions[submission.teamSize][submission.style]) {
-                groupedSubmissions[submission.teamSize][submission.style].push(submission);
-            }
-        });
-
-        const embeds: EmbedBuilder[] = [];
-
-        teamSizes.forEach(teamSize => {
-            const teamSubmissions = groupedSubmissions[teamSize];
-            let teamHasSubmissions = false;
-
-            // Check if this team size has any submissions
-            for (const style of leaderboardEligibleStyles) {
-                if (teamSubmissions[style].length > 0) {
-                    teamHasSubmissions = true;
-                    break;
-                }
-            }
-
-            const embed = new EmbedBuilder()
-                .setTitle(`\`DPM Leaderboard - ${teamSize}\``)
-                .setColor(this.client.color);
-
-            let description = '';
-
-            if (teamHasSubmissions) {
-                leaderboardEligibleStyles.forEach(style => {
-                    const styleSubmissions = teamSubmissions[style];
-                    if (styleSubmissions.length > 0) {
-                        description += `\n**${style}**\n`;
-                        description += styleSubmissions
-                            .slice(0, 3) // Limit to top 3 per style
-                            .map((submission, index) => {
-                                const rank = index + 1;
-                                const rankDisplay = rankEmojis[rank] || `**${rank}.**`;
-                                return `${rankDisplay} ${submission.rsn} - ${submission.dpm.toFixed(2)}k`;
-                            }).join('\n');
-                        description += '\n';
-                    }
-                });
-            }
-
-            if (description === '') {
-                description = `No ${teamSize} DPM submissions yet.`;
-            }
-
-            embed.setDescription(description.trim());
-            embed.setTimestamp();
-            embed.setFooter({
-                text: "To submit your DPM to the leaderboard use '/dpm-submit'"
-            });
-
-            embeds.push(embed);
-        });
-
-        return embeds;
-    }
-
-    public async generateKillTimeLeaderboardEmbed(): Promise<EmbedBuilder> {
-        const killTimeSubmissionRepository = this.client.dataSource.getRepository(KillTimeSubmission);
-        const submissions = await killTimeSubmissionRepository.find();
-
-        const embed = new EmbedBuilder()
-            .setTitle('`Kill Time Leaderboard`')
-            .setColor(this.client.color)
-            .setTimestamp()
-            .setFooter({
-                text: "To submit your kill time to the leaderboard use '/killtime-submit'"
-            });
-
-        if (submissions.length === 0) {
-            embed.setDescription('No kill time submissions yet.');
-            return embed;
-        }
-
-        const parseTimeToSeconds = (time: string): number => {
-            const parts = time.split(':');
-            const minutes = parseInt(parts[0], 10);
-            const seconds = parseFloat(parts[1]);
-            return (minutes * 60) + seconds;
-        };
-
-        submissions.sort((a, b) => parseTimeToSeconds(a.killTime) - parseTimeToSeconds(b.killTime));
-
-        const rankEmojis: { [key: number]: string } = {
-            1: this.emojis.gem1,
-            2: this.emojis.gem2,
-            3: this.emojis.gem3,
-        };
-
-        const groupedSubmissions: { [key: string]: KillTimeSubmission[] } = {
-            'Duo': [],
-            '4 man': [],
-        };
-
-        submissions.forEach(submission => {
-            if (groupedSubmissions[submission.teamSize]) {
-                groupedSubmissions[submission.teamSize].push(submission);
-            }
-        });
-
-        let description = '';
-
-        for (const teamSize in groupedSubmissions) {
-            const styleSubmissions = groupedSubmissions[teamSize];
-            if (styleSubmissions.length > 0) {
-                description += `\n**${teamSize}**\n`;
-                description += styleSubmissions
-                    .slice(0, 3)
-                    .map((submission, index) => {
-                        const rank = index + 1;
-                        const rankDisplay = rankEmojis[rank] || `**${rank}.**`;
-                        const team = [submission.base, submission.dps1, submission.dps2, submission.dps3].filter(Boolean).join(', ');
-                        return `${rankDisplay} [**${submission.killTime}**](${submission.vodLink}) - ${team}`;
-                    }).join('\n');
-                description += '\n';
-            }
-        }
-
-        if (description === '') {
-            description = 'No kill time submissions yet.';
-        }
-
-        embed.setDescription(description.trim());
-        return embed;
     }
 
     public async reuploadImage(url: string): Promise<string> {

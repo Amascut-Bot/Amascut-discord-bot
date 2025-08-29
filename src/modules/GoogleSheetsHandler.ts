@@ -33,18 +33,18 @@ export default class GoogleSheetsHandler {
         try {
             // Try to load from JSON file first, then environment variables
             let credentials: any;
-            
+
             try {
                 // Try loading from credentials file
                 const fs = require('fs');
                 const path = require('path');
                 const credentialsPath = path.join(process.cwd(), 'google-credentials.json');
-                
+
                 if (fs.existsSync(credentialsPath)) {
                     credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-                    this.client.logger.log({ 
-                        message: 'Loaded Google credentials from file', 
-                        handler: this.constructor.name 
+                    this.client.logger.log({
+                        message: 'Loaded Google credentials from file',
+                        handler: this.constructor.name
                     }, true);
                 }
             } catch (fileError) {
@@ -60,15 +60,15 @@ export default class GoogleSheetsHandler {
 
                 // Clean and format the private key - handle multiple formats
                 let formattedPrivateKey = privateKey;
-                
+
                 // Remove quotes if present
                 if (formattedPrivateKey.startsWith('"') && formattedPrivateKey.endsWith('"')) {
                     formattedPrivateKey = formattedPrivateKey.slice(1, -1);
                 }
-                
+
                 // Replace escaped newlines with actual newlines
                 formattedPrivateKey = formattedPrivateKey.replace(/\\n/g, '\n');
-                
+
                 // Ensure it starts and ends with proper markers
                 if (!formattedPrivateKey.includes('-----BEGIN PRIVATE KEY-----')) {
                     throw new Error('Private key must start with -----BEGIN PRIVATE KEY-----');
@@ -88,9 +88,9 @@ export default class GoogleSheetsHandler {
                     universe_domain: "googleapis.com"
                 };
 
-                this.client.logger.log({ 
-                    message: 'Loaded Google credentials from environment variables', 
-                    handler: this.constructor.name 
+                this.client.logger.log({
+                    message: 'Loaded Google credentials from environment variables',
+                    handler: this.constructor.name
                 }, true);
             }
 
@@ -100,16 +100,16 @@ export default class GoogleSheetsHandler {
             });
 
             this.sheets = google.sheets({ version: 'v4', auth: this.auth });
-            
-            this.client.logger.log({ 
-                message: 'Google Sheets authentication initialized successfully', 
-                handler: this.constructor.name 
+
+            this.client.logger.log({
+                message: 'Google Sheets authentication initialized successfully',
+                handler: this.constructor.name
             }, true);
         } catch (error) {
-            this.client.logger.error({ 
-                message: 'Failed to initialize Google Sheets authentication', 
-                error, 
-                handler: this.constructor.name 
+            this.client.logger.error({
+                message: 'Failed to initialize Google Sheets authentication',
+                error,
+                handler: this.constructor.name
             });
         }
     }
@@ -128,17 +128,17 @@ export default class GoogleSheetsHandler {
             });
 
             const rows = response.data.values || [];
-            this.client.logger.log({ 
-                message: `Successfully read ${rows.length} rows from sheet ${sheetId}`, 
-                handler: this.constructor.name 
+            this.client.logger.log({
+                message: `Successfully read ${rows.length} rows from sheet ${sheetId}`,
+                handler: this.constructor.name
             }, true);
-            
+
             return rows;
         } catch (error) {
-            this.client.logger.error({ 
-                message: `Failed to read sheet ${sheetId}`, 
-                error, 
-                handler: this.constructor.name 
+            this.client.logger.error({
+                message: `Failed to read sheet ${sheetId}`,
+                error,
+                handler: this.constructor.name
             });
             throw error;
         }
@@ -151,9 +151,9 @@ export default class GoogleSheetsHandler {
      */
     public parseEventParticipants(rows: string[][]): EventParticipant[] {
         if (rows.length < 3) {
-            this.client.logger.log({ 
-                message: 'Sheet has insufficient data rows', 
-                handler: this.constructor.name 
+            this.client.logger.log({
+                message: 'Sheet has insufficient data rows',
+                handler: this.constructor.name
             }, true);
             return [];
         }
@@ -182,9 +182,9 @@ export default class GoogleSheetsHandler {
             participants.push(participant);
         }
 
-        this.client.logger.log({ 
-            message: `Parsed ${participants.length} event participants`, 
-            handler: this.constructor.name 
+        this.client.logger.log({
+            message: `Parsed ${participants.length} event participants`,
+            handler: this.constructor.name
         }, true);
 
         return participants;
@@ -200,10 +200,10 @@ export default class GoogleSheetsHandler {
             const rows = await this.readSheet(sheetId, 'A:J');
             return this.parseEventParticipants(rows);
         } catch (error) {
-            this.client.logger.error({ 
-                message: 'Failed to get event participants', 
-                error, 
-                handler: this.constructor.name 
+            this.client.logger.error({
+                message: 'Failed to get event participants',
+                error,
+                handler: this.constructor.name
             });
             return [];
         }
@@ -216,7 +216,7 @@ export default class GoogleSheetsHandler {
      * @returns EventParticipant[] - Filtered participants
      */
     public filterByTeam(participants: EventParticipant[], teamName: string): EventParticipant[] {
-        return participants.filter(p => 
+        return participants.filter(p =>
             p.team.toLowerCase().includes(teamName.toLowerCase())
         );
     }
@@ -227,14 +227,14 @@ export default class GoogleSheetsHandler {
      * @returns EventParticipant[] - Unassigned participants
      */
     public getUnassignedParticipants(participants: EventParticipant[]): EventParticipant[] {
-        return participants.filter(p => 
+        return participants.filter(p =>
             !p.team || p.team.trim() === '' || p.team.toLowerCase() === 'message sent'
         );
     }
 
     /**
      * Write data to a Google Sheet
-     * @param sheetId - The ID of the Google Sheet  
+     * @param sheetId - The ID of the Google Sheet
      * @param range - The range to write to
      * @param values - 2D array of values to write
      * @returns Promise<void>
@@ -250,15 +250,15 @@ export default class GoogleSheetsHandler {
                 },
             });
 
-            this.client.logger.log({ 
-                message: `Successfully wrote ${values.length} rows to sheet ${sheetId}`, 
-                handler: this.constructor.name 
+            this.client.logger.log({
+                message: `Successfully wrote ${values.length} rows to sheet ${sheetId}`,
+                handler: this.constructor.name
             }, true);
         } catch (error) {
-            this.client.logger.error({ 
-                message: `Failed to write to sheet ${sheetId}`, 
-                error, 
-                handler: this.constructor.name 
+            this.client.logger.error({
+                message: `Failed to write to sheet ${sheetId}`,
+                error,
+                handler: this.constructor.name
             });
             throw error;
         }

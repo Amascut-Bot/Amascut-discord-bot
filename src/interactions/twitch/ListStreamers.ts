@@ -34,6 +34,10 @@ export default class ListStreamers extends BotInteraction {
         return 'Lists all Twitch streamers currently being monitored for notifications.';
     }
 
+    get permissions() {
+        return 'ADMIN';
+    }
+
     get slashData() {
         return new SlashCommandBuilder()
             .setName(this.name)

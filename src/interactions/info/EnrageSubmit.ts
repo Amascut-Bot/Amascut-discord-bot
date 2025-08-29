@@ -1,7 +1,6 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, TextChannel, MessageFlags, User, Attachment, ContainerBuilder, SeparatorSpacingSize, MediaGalleryBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, MessageFlags, User, Attachment } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
-import { DpmSubmission } from '../../entity/DpmSubmission';
-import { getChannels, getRoles } from '../../GuildSpecifics';
+import { getChannels } from '../../GuildSpecifics';
 import LeaderboardHandler from '../../modules/LeaderboardHandler';
 
 export default class EnrageSubmit extends BotInteraction {
@@ -55,9 +54,6 @@ export default class EnrageSubmit extends BotInteraction {
 
         const submissionChannelId = getChannels(interaction.guild!.id).leaderboardSubmission;
         const submissionChannel = await interaction.guild!.channels.fetch(submissionChannelId) as TextChannel;
-
-        const adminMention = getRoles(interaction.guild!.id).admin;
-        const ownerMention = getRoles(interaction.guild!.id).owner;
 
         const team: { rsn: string, disc: string }[] = [];
 

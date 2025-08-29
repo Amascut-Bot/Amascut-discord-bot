@@ -25,7 +25,6 @@ export default class Stats extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction): Promise<void> {
-        const pingTime = Date.now();
         await interaction.deferReply();
 
         const embed = new EmbedBuilder()
@@ -36,7 +35,7 @@ export default class Stats extends BotInteraction {
 Guilds      :: ${this.client.guilds.cache.size}
 Users       :: ${this.client.guilds.cache.map((g) => g.memberCount).reduce((a, c) => a + c)}
 Channels    :: ${this.client.channels.cache.size}
-Ping        :: ${Math.round(Date.now() - pingTime)}ms
+Ping        :: ${this.client.ws.ping}ms
 Uptime      :: ${this.client.util.convertMS(this.client.uptime)}
 Commands    :: ${this.client.commandsRun} total
 Memory      :: ${JSON.stringify(this.memory, null, 2)}

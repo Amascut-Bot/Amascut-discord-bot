@@ -1,9 +1,7 @@
-import { report } from 'process';
 import { Warning } from '../../entity/Warning';
 import { getChannels } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
 import { ChannelType, ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, TextChannel, User } from 'discord.js';
-import UtilityHandler from '../../modules/UtilityHandler';
 
 export default class Warn extends BotInteraction {
     get name() {
@@ -15,7 +13,7 @@ export default class Warn extends BotInteraction {
     }
 
     get permissions() {
-        return 'ELEVATED_ROLE';
+        return 'ADMIN';
     }
 
     get actionOptions() {

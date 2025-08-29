@@ -4,7 +4,6 @@ import { getChannels } from '../GuildSpecifics';
 
 export default class URLReactionHandler {
     private client: Bot;
-    private static readonly MUSIC_CHANNEL_ID = getChannels(process.env.GUILD_ID).MUSIC_CHANNEL;
     private static readonly CUTE_PETS_CHANNEL_ID = getChannels(process.env.GUILD_ID).CUTE_PETS_CHANNEL;
     private static readonly achievementsAndLogs = getChannels(process.env.GUILD_ID).achievementsAndLogs;
 
@@ -13,20 +12,16 @@ export default class URLReactionHandler {
     }
 
     async handleURLReactions(message: Message): Promise<boolean> {
-        if (message.channel.id !== URLReactionHandler.MUSIC_CHANNEL_ID && message.channel.id !== URLReactionHandler.CUTE_PETS_CHANNEL_ID && message.channel.id !== URLReactionHandler.achievementsAndLogs) {
+        if (message.channel.id !== URLReactionHandler.CUTE_PETS_CHANNEL_ID && message.channel.id !== URLReactionHandler.achievementsAndLogs) {
             return false;
         }
 
-        if (!this.containsURL(message.content)) {
+        if (!this.containsURL(message.content) && !message.attachments) {
             return false;
         }
 
         try {
-            if (message.channel.id === URLReactionHandler.MUSIC_CHANNEL_ID) {
-                await message.react('👍');
-                await message.react('👎');
-            }
-            else if (message.channel.id === URLReactionHandler.CUTE_PETS_CHANNEL_ID) {
+            if (message.channel.id === URLReactionHandler.CUTE_PETS_CHANNEL_ID) {
                 await message.react('❤️');
 
                 const emojis = ['cute', 'bulbaOWO'];
