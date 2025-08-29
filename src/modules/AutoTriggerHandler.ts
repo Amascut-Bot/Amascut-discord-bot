@@ -247,6 +247,7 @@ export default class AutoTriggerHandler {
 
     public async customAutomod(message: Message): Promise<boolean> {
         if (!message.inGuild()) return false;
+        if (message.guildId !== process.env.GUILD_ID) return false;
 
         const adminChannelId = getChannels(message.guild?.id).ADMIN_CHANNEL;
         const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
