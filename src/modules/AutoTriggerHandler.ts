@@ -1,6 +1,6 @@
-import { Message, MessageFlags, TextChannel } from 'discord.js';
+import { MediaGalleryBuilder, Message, MessageFlags, SeparatorSpacingSize, TextChannel } from 'discord.js';
 import Bot from '../Bot';
-import { getRoles } from '../GuildSpecifics';
+import { getChannels, getRoles } from '../GuildSpecifics';
 import { MessageShortcut } from '../entity/MessageShortcut';
 
 export default class AutoTriggerHandler {
@@ -238,4 +238,89 @@ export default class AutoTriggerHandler {
 
         return false;
     }
+
+    //#region Automod
+
+    private static readonly larryKeywords = [
+        'c8c5f8ae0b965884472f386dd74b7d83',
+    ];
+
+    public async customAutomod(message: Message): Promise<boolean> {
+        if (!message.inGuild()) return false;
+
+        const adminChannelId = getChannels(message.guild?.id).ADMIN_CHANNEL;
+        const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
+        let timeout = false;
+        let evidence = "";
+        let reason = "No reason provided";
+        let duration = "1d";
+
+        // Larry
+        for (const keyword of AutoTriggerHandler.larryKeywords) {
+            if (message.content.includes(keyword)) {
+                evidence = keyword;
+                reason = "Larry";
+                timeout = true;
+                break;
+            }
+
+            for (const [_, attachment] of message.attachments) {
+                if (attachment.url.includes(keyword)) {
+                    evidence = keyword;
+                    reason = "Larry";
+                    timeout = true;
+                    break;
+                }
+            }
+        }
+
+        if (timeout) {
+            const container = this.client.util.getContainerBuilder(false, "Suspicious Account");
+            container.addTextDisplayComponents(builder => builder.setContent(`${message.member?.user.tag} (<@${message.member?.id}>) was automatically timeouted.\n\n**Evidence:** \`${evidence}\`\n\n**Reason:** \`${reason}\`\n\n**Reference:** ${message.url}`));
+
+            if (message.content) {
+                container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+                container.addTextDisplayComponents(builder => builder.setContent('Message Content:'));
+                container.addTextDisplayComponents(builder => builder.setContent(message.content));
+            }
+
+            if (message.attachments?.size > 0) {
+                container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+                container.addTextDisplayComponents(builder => builder.setContent('Message Attachments:'));
+
+                const mediaGalleryBuilder = new MediaGalleryBuilder();
+
+                for (const [_, attachment] of message.attachments) {
+                    mediaGalleryBuilder.addItems(item => item.setURL(attachment.proxyURL));
+                }
+
+                container.addMediaGalleryComponents(mediaGalleryBuilder);
+            }
+
+            await adminChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
+
+            const { timeout } = this.client.util;
+            const timeoutUser = timeout.bind(this.client.util);
+
+            if (await timeoutUser(null, message.member!, duration, reason)) {
+                this.client.logger.log({ message: `Automatically timeouted user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}` }, true);
+            } else {
+                this.client.logger.error({ message: `Automatically timeouted user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}`, error: null });
+            }
+
+            try {
+                // Delete the channel after a short delay
+                setTimeout(async () => {
+                    await message.delete();
+                }, 2500);
+            } catch (error) {
+                //do nothing, message was already deleted
+            }
+
+        }
+
+        return false;
+    }
+
+    //#endregion
 }

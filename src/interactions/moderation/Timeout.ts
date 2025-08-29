@@ -80,27 +80,19 @@ export default class TimeoutCommand extends BotInteraction {
                     });
                 }
 
-                try {
-                    const expiresAt = new Date(Date.now() + duration);
-                    await member.timeout(duration, reason);
+                const { timeout } = this.client.util;
+                const timeoutUser = timeout.bind(this.client.util);
 
-                    const timeoutRecord = repository.create({
-                        user: user.id,
-                        reason,
-                        issuedBy: interaction.user.id,
-                        expiresAt,
-                        isActive: true
-                    });
-                    await repository.save(timeoutRecord);
-
+                if (await timeoutUser((await interaction.guild.members.fetch(interaction.user.id)), member, durationInput, reason)) {
                     await interaction.editReply({
                         content: `${user.tag} has been timed out for ${durationInput}.\nReason: ${reason}`
                     });
-                } catch (error) {
+                } else {
                     await interaction.editReply({
                         content: 'Failed to timeout user. Check bot permissions or if user is already timed out.'
                     });
                 }
+
                 break;
 
             case 1:
