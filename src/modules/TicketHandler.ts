@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, TextChannel, TextInputBuilder, TextInputStyle, User } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, Collection, EmbedBuilder, FetchMessagesOptions, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, TextChannel, TextInputBuilder, TextInputStyle, User } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -464,7 +464,21 @@ export default class TicketHandler {
 
     //#region SUPPORT TEAM CONTROLS
     private async logTicketToForum(channel: TextChannel, user: any, logReason: string): Promise<string | null> {
-        const messages = await channel.messages.fetch({ limit: 100 });
+        let messages = new Collection<string, Message<true>>();
+        let lastId: string | undefined;
+
+        while (true) {
+            const options: FetchMessagesOptions = { limit: 100 };
+            if (lastId) options.before = lastId;
+
+            const fetched = await channel.messages.fetch(options);
+            if (fetched.size === 0) break;
+
+
+            messages = messages.concat(fetched);
+            lastId = fetched.last()?.id;
+        }
+
         const messageArray = Array.from(messages.values()).reverse();
 
         const transcriptBuffer = await TranscriptGenerator.createTranscript(messages, channel.name);
