@@ -85,14 +85,17 @@ export default class HostHandler {
             return await interaction.editReply('This slot is already taken!');
         }
 
+        let reply = '';
         // unassign
         if (data.get(key) === userMention) {
             containerJson = containerJson.replace(`${keyLabel}: ${userMention}`, `${keyLabel}: \`empty\``);
+            reply = `Successfully removed signup as \`${keyLabel}\``;
         } else {
             // assign
             const roleError = this.checkRole(data, userMention, key);
             if (roleError === null) {
                 containerJson = containerJson.replace(`${keyLabel}: \`empty\``, `${keyLabel}: ${userMention}`);
+                reply = `Successfully signed up as \`${keyLabel}\``;
             } else {
                 return await interaction.editReply(`\`${keyLabel}\` is not combineable with \`${roleError}\``);
             }
@@ -100,7 +103,7 @@ export default class HostHandler {
 
         const newContainer = JSON.parse(containerJson);
         await interaction.message!.edit({ components: [newContainer], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] }});
-        return await interaction.editReply('done');
+        return await interaction.editReply(reply);
     }
 
     private async handleHostPost(interaction: Interaction, id: string) {
@@ -111,7 +114,7 @@ export default class HostHandler {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             await HostHandler.postHost(interaction.channel! as TextChannel, id, null);
 
-            return await interaction.editReply('done');
+            return await interaction.editReply('Host card successfully created');
     }
 
     //#endregion
@@ -125,11 +128,12 @@ export default class HostHandler {
             "westout": ["base", "westin", "eastin", "eastout"],
             "eastin": ["base", "westin", "westout", "eastout"],
             "eastout": ["base", "westin", "westout", "eastin"],
-            "solocharge": ["southcharge", "green1", "green2", "dogs"],
-            "southcharge": ["solocharge", "green1", "green2", "dogs"],
-            "green1": ["southcharge", "solocharge", "green2", "dogs"],
-            "green2": ["southcharge", "solocharge", "green1", "dogs"],
-            "dogs": ["southcharge", "solocharge", "green1", "green2"],
+            "solocharge1": ["southcharge", "solocharge2", "green1", "green2", "dogs"],
+            "solocharge2": ["southcharge", "solocharge1", "green1", "green2", "dogs"],
+            "southcharge": ["solocharge1", "solocharge2", "green1", "green2"],
+            "green1": ["southcharge", "solocharge1", "solocharge2", "green2", "dogs"],
+            "green2": ["southcharge", "solocharge1", "solocharge2", "green1", "dogs"],
+            "dogs": ["solocharge1", "solocharge2", "green1", "green2"],
             "jumper": ["glyphs"],
             "glyphs": ["jumper", "backupglyphs"],
             "backupglyphs": ["glyphs"]
@@ -160,8 +164,10 @@ export default class HostHandler {
                 return "East in";
             case "eastout":
                 return "East out";
-            case "solocharge":
-                return "Solo charge";
+            case "solocharge1":
+                return "Solo charge 1";
+            case "solocharge2":
+                return "Solo charge 2";
             case "southcharge":
                 return "South charge";
             case "green1":
