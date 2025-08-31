@@ -1,0 +1,174 @@
+{
+  "type": 17,
+  "accent_color": 10454367,
+  "components": [
+    {
+      "type": 10,
+      "content": "## <:amascut:1400049464001167490> Amascut - Enrage Mode - <enrage_placeholder>% Enrage <:amascut:1400049464001167490>"
+    },
+    {
+      "type": 14,
+      "spacing": 1
+    },
+    {
+      "type": 10,
+      "content": "Base: `empty`"
+    },
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_base",
+          "emoji": {
+            "name": "disrupt",
+            "id": "535614336207552523"
+          }
+        }
+      ]
+    },
+    {
+      "type": 14,
+      "spacing": 1
+    },
+    {
+      "type": 10,
+      "content": "West in: `empty` (P7 NW <:apmeken:1400599699689574452>)\nWest out: `empty` (P7 SW <:het:1400599919768764547>)\nEast in: `empty` (P7 NE <:scabaras:1400599450753433713>)\nEast out: `empty` (P7 SE <:crondis:1400599575382982686>)"
+    },
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_westin",
+          "label": "↖️",
+          "emoji": {
+            "name": "chain_2",
+            "id": "1405997605053403276"
+          }
+        },
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_westout",
+          "label": "↙️",
+          "emoji": {
+            "name": "scarab_1",
+            "id": "1405997506479001741"
+          }
+        },
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_eastin",
+          "label": "↗️",
+          "emoji": {
+            "name": "chain_1",
+            "id": "1405997592655040514"
+          }
+        },
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_eastout",
+          "label": "↘️",
+          "emoji": {
+            "name": "scarab_2",
+            "id": "1405997508059988139"
+          }
+        }
+      ]
+    },
+    {
+      "type": 14,
+      "spacing": 1
+    },
+    {
+      "type": 10,
+      "content": "Green 1: `empty`\nGreen 2: `empty`\nSouth charge: `empty`\nSolo charge: `empty`\nDogs: `empty`"
+    },
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_green1",
+          "label": "1",
+          "emoji": {
+            "name": "cept",
+            "id": "543478434509357098"
+          }
+        },
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_green2",
+          "label": "2",
+          "emoji": {
+            "name": "cept",
+            "id": "543478434509357098"
+          }
+        },
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_southcharge",
+          "label": "South",
+          "emoji": {
+            "name": "🟡"
+          }
+        },
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_solocharge",
+          "label": "Solo",
+          "emoji": {
+            "name": "🟡"
+          }
+        },
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_dogs",
+          "emoji": {
+            "name": "salawaakh",
+            "id": "1004107297791938631"
+          }
+        }
+      ]
+    },
+    {
+      "type": 14,
+      "spacing": 1
+    },
+    {
+      "type": 10,
+      "content": "Glyphs: `empty`\nJumper: `empty`"
+    },
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_glyphs",
+          "emoji": {
+            "name": "💠"
+          }
+        },
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_jumper",
+          "emoji": {
+	          "name": "🪂"
+		      }
+        }
+      ]
+    }
+  ]
+}

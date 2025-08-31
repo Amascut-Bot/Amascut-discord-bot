@@ -3,6 +3,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, Attachme
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { getChannels } from '../../GuildSpecifics';
+import UtilityHandler from '../../modules/UtilityHandler';
 
 export default class Download extends BotInteraction {
     get name() {
@@ -136,9 +137,7 @@ export default class Download extends BotInteraction {
 
                 //for componentsV2 you can just parse the whole container
                 if (message.components.length > 0) {
-                    const { cleanContainer } = this.client.util;
-                    const cleanUp = cleanContainer.bind(this.client.util)
-                    const container = cleanUp(message.components[0]);
+                    const container = UtilityHandler.cleanContainer(message.components[0]);
                     const containerJson = JSON.stringify(container, null, 2);
                     currentBlock += `\n${containerJson}\n.componentsV2:json`;
                 }

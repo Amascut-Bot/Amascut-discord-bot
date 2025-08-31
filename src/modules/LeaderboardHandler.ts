@@ -3,6 +3,7 @@ import Bot from '../Bot';
 import { getRoles, getChannels } from '../GuildSpecifics';
 import { EnrageLeaderboard } from '../entity/EnrageLeaderboard';
 import { LessThanOrEqual } from 'typeorm';
+import UtilityHandler from './UtilityHandler';
 
 export default interface LeaderboardHandler { client: Bot; id: string; interaction: Interaction }
 
@@ -26,10 +27,7 @@ export default class LeaderboardHandler {
     private async handleLeaderboardReject(interaction: ButtonInteraction<'cached'>) {
         await interaction.deferReply( { flags: MessageFlags.Ephemeral });
 
-        const { cleanContainer } = this.client.util;
-        const cleanUp = cleanContainer.bind(this.client.util)
-
-        const container = cleanUp(interaction.message.components[0]);
+        const container = UtilityHandler.cleanContainer(interaction.message.components[0]);
 
         // Disable Buttons:
         const approveButton = new ButtonBuilder()
@@ -60,11 +58,8 @@ export default class LeaderboardHandler {
     private async handleLeaderboardApprove(interaction: ButtonInteraction<'cached'>) {
         await interaction.deferReply( { flags: MessageFlags.Ephemeral });
 
-        const { cleanContainer } = this.client.util;
-        const cleanUp = cleanContainer.bind(this.client.util)
-
         const messageComponents = (interaction.message.components[0] as ContainerComponent).components;
-        const container = cleanUp(interaction.message.components[0]);
+        const container = UtilityHandler.cleanContainer(interaction.message.components[0]);
 
         // Extract Data
         const rawData: string = (messageComponents[0] as TextDisplayComponent).content;
@@ -162,10 +157,7 @@ export default class LeaderboardHandler {
     private async handleLeaderboardCreateSubmit(interaction: ButtonInteraction<'cached'>) {
         //await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const { cleanContainer } = this.client.util;
-        const cleanUp = cleanContainer.bind(this.client.util);
-
-        const container = cleanUp(interaction.message.components[0]);
+        const container = UtilityHandler.cleanContainer(interaction.message.components[0]);
 
         // Read Message-Information
         const userIdSubmit: string = interaction.user.id;

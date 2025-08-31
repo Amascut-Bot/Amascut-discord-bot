@@ -262,7 +262,7 @@ export default class UtilityHandler {
     //#region componentsV2
 
     //cleans up a componentsV2-container
-    public cleanContainer(containerData: any) :any {
+    public static cleanContainer(containerData: any) :any {
         const newContainer: any = {};
 
         if (containerData.type) newContainer.type = containerData.type;
@@ -278,7 +278,7 @@ export default class UtilityHandler {
         return newContainer;
     }
 
-    private cleanComponent(node: any) :any {
+    private static cleanComponent(node: any) :any {
         let result: any = {};
 
         //ActionRow

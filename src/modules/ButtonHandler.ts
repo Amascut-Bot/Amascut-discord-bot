@@ -1,8 +1,9 @@
-import { ButtonInteraction, EmbedBuilder, InteractionResponse, Message, TextChannel, MessageFlags, ContainerComponent, TextDisplayComponent, SectionComponent, SectionBuilder, TextDisplayBuilder } from 'discord.js';
+import { ButtonInteraction, EmbedBuilder, InteractionResponse, Message, TextChannel, MessageFlags } from 'discord.js';
 import Bot from '../Bot';
 import TicketHandler from './TicketHandler';
 import { getRoles } from '../GuildSpecifics';
 import LeaderboardHandler from './LeaderboardHandler';
+import HostHandler from './HostHandler';
 
 // ===============================
 // MAIN CLASS
@@ -33,7 +34,7 @@ export default class ButtonHandler {
         }
 
         if (id.startsWith('host_')) {
-            this.handleHost(interaction, id.slice(11));
+            new HostHandler(this.client, interaction.customId, interaction);
             return;
         }
 
@@ -241,144 +242,4 @@ export default class ButtonHandler {
 
     //#endregion
 
-    //#region HOSTING
-
-    private async handleHost(interaction: ButtonInteraction<'cached'>, id: string) : Promise<Message<true> | InteractionResponse<true> | void> {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-        const { colours, cleanContainer } = this.client.util;
-        const cleanUp = cleanContainer.bind(this.client.util)
-
-        let roleName = id;
-        let targetSlot = '';
-
-        switch (id) {
-            case 'Base':
-                roleName = 'Base';
-                targetSlot = '**Base:**';
-                break;
-            case '11':
-                roleName = 'Role 1';
-                targetSlot = '**Role 1:**';
-                break;
-            case '12':
-                roleName = 'Role 1';
-                targetSlot = '**Role 1:**';
-                break;
-            case '21':
-                roleName = 'Role 2';
-                targetSlot = '**Role 2:**';
-                break;
-            case '22':
-                roleName = 'Role 2';
-                targetSlot = '**Role 2:**';
-                break;
-        }
-
-        const messageComponents = (interaction.message.components[0] as ContainerComponent).components;
-        const container = cleanUp(interaction.message.components[0]);
-        const replyEmbed = new EmbedBuilder();
-
-        // Find all section components that match our target role
-        const getSectionIndices = (rolePattern: string) => {
-            const indices: number[] = [];
-            for (let i = 0; i < messageComponents.length; i++) {
-                const component = messageComponents[i];
-                if (component.type === 9 &&
-                    (component as SectionComponent).components?.[0]?.type === 10) {
-                    const content = ((component as SectionComponent).components[0] as TextDisplayComponent).content;
-                    if (content.includes(rolePattern)) {
-                        indices.push(i);
-                    }
-                }
-            }
-            return indices;
-        };
-
-        const getSignedUpIndex = (userid: string) => {
-            for (let i = 0; i < messageComponents.length; i++) {
-                const component = messageComponents[i];
-                if (component.type === 9 &&
-                    (component as SectionComponent).components?.[0]?.type === 10) {
-                    const content = ((component as SectionComponent).components[0] as TextDisplayComponent).content;
-                    if (content.includes(userid)) {
-                        return i;
-                    }
-                }
-            }
-            return -1;
-        };
-
-        const isSlotTaken = (index: number) => {
-            if (index < 0 || index >= messageComponents.length) return true;
-
-            const component = messageComponents[index];
-            if (component.type !== 9 ||
-                !(component as SectionComponent).components?.[0] ||
-                (component as SectionComponent).components[0].type !== 10) {
-                return true;
-            }
-
-            const content = ((component as SectionComponent).components[0] as TextDisplayComponent).content;
-            return !content.includes('`Empty`');
-        };
-
-        // Find the specific slot index for this button press
-        const sectionIndices = getSectionIndices(targetSlot);
-        let componentIndex = -1;
-
-        if (targetSlot === '**Base:**') {
-            componentIndex = sectionIndices[0] ?? -1;
-        } else if (targetSlot === '**Role 1:**') {
-            if (id === '11') {
-                componentIndex = sectionIndices[0] ?? -1;
-            } else if (id === '12') {
-                componentIndex = sectionIndices[1] ?? -1;
-            }
-        } else if (targetSlot === '**Role 2:**') {
-            if (id === '21') {
-                componentIndex = sectionIndices[0] ?? -1;
-            } else if (id === '22') {
-                componentIndex = sectionIndices[1] ?? -1;
-            }
-        }
-
-        // Check if we found a valid component index
-        if (componentIndex === -1) {
-            replyEmbed.setColor(colours.discord.red).setDescription('Unable to find the requested slot. The host card may be malformed.');
-            return await interaction.editReply({ embeds: [replyEmbed] });
-        }
-
-        //check if user is already signed up somewhere
-        const signedUpIndex = getSignedUpIndex(interaction.user.id);
-
-        if (signedUpIndex >= 0 && signedUpIndex === componentIndex) {
-            // user is signed up - unassign
-            const value = (((messageComponents[componentIndex] as SectionComponent).components[0] as TextDisplayComponent).content).replace(`<@${interaction.user.id}>`, '`Empty`');
-            (container.components[componentIndex] as SectionBuilder).components[0] = new TextDisplayBuilder().setContent(value);
-            await interaction.message.edit( { components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
-
-            replyEmbed.setColor(colours.discord.green).setDescription(`Successfully unassigned from **${roleName}**.`);
-        } else if (signedUpIndex >= 0) {
-            // user is signed up elsewhere
-            replyEmbed.setColor(colours.discord.red).setDescription('You are signed up as a different role. Unassign from that role first.');
-        } else {
-            // check if signup is possible
-            if (isSlotTaken(componentIndex)) {
-                //error
-                replyEmbed.setColor(colours.discord.red).setDescription(`**${roleName}** is already taken.`);
-            } else {
-                // signup
-                const value = (((messageComponents[componentIndex] as SectionComponent).components[0] as TextDisplayComponent).content).replace('`Empty`', `<@${interaction.user.id}>`);
-                (container.components[componentIndex] as SectionBuilder).components[0] = new TextDisplayBuilder().setContent(value);
-                await interaction.message.edit( { components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
-
-                replyEmbed.setColor(colours.discord.green).setDescription(`Successfully assigned to **${roleName}**.`);
-            }
-        }
-
-        return await interaction.editReply({ embeds: [replyEmbed] });
-    }
-
-    //#endregion
 }
