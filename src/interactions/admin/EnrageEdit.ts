@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, MessageFlags, ContainerComponent, TextDisplayBuilder, TextDisplayComponent } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
 import { getChannels } from '../../GuildSpecifics';
+import UtilityHandler from '../../modules/UtilityHandler';
 
 export default class EnrageEdit extends BotInteraction {
     get name() {
@@ -46,12 +47,9 @@ export default class EnrageEdit extends BotInteraction {
         const submissionChannelId = getChannels(interaction.guild!.id).leaderboardSubmission;
         const submissionChannel = await interaction.guild!.channels.fetch(submissionChannelId) as TextChannel;
 
-        const { cleanContainer } = this.client.util;
-        const cleanUp = cleanContainer.bind(this.client.util)
-
         const message = await submissionChannel.messages.fetch(messageid);
         const messageComponents = (message.components[0] as ContainerComponent).components;
-        const container = cleanUp(message.components[0]);
+        const container = UtilityHandler.cleanContainer(message.components[0]);
 
         let value = (messageComponents[0] as TextDisplayComponent).content;
 
