@@ -94,11 +94,6 @@ export default class Upload extends BotInteraction {
             return await interaction.editReply({ content: 'The channel you selected has no parent category.' })
         }
 
-        // Check if the user has the editor role in the guild.
-        if (!memberEditorRole && !isAdmin) {
-            return await interaction.editReply({ content: 'You do not have permission to use this command.' })
-        }
-
         // -- START check attachments --
         if (!attachment) {
             return await interaction.editReply({ content: 'No file was provided.' });
@@ -124,10 +119,6 @@ export default class Upload extends BotInteraction {
         // -- END check attachments --
 
         // (bypass for admins)The editor role can only use /upload to the staging guide category
-        if (!isAdmin && parentCategory === stagingCategory && !memberEditorRole) {
-            return await interaction.editReply({ content: 'You do not have permissions to post guides here.' })
-        }
-
         if (!isAdmin && parentCategory !== stagingCategory && memberEditorRole) {
             return await interaction.editReply({ content: 'You do not have permissions to post guides here.' })
         }
