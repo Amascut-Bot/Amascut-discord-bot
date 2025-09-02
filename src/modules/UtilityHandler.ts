@@ -464,7 +464,7 @@ export default class UtilityHandler {
         return ms <= maxTimeout ? ms : null;
     }
 
-    public async timeout(issuedBy: GuildMember | null, member: GuildMember, duration: string, reason: string): Promise<boolean> {
+    public async timeout(issuedBy: GuildMember | null, member: GuildMember, duration: string, reason: string, type: number = 0): Promise<boolean> {
         try {
             const { dataSource } = this.client;
             const repository = dataSource.getRepository(Timeout);
@@ -473,14 +473,20 @@ export default class UtilityHandler {
             const expiresAt = new Date(Date.now() + duration);
             const issuer = issuedBy?.id ?? this.client.user!.id
 
-            await member.timeout(durationValue, reason);
+            if (type === 0) {
+                await member.timeout(durationValue, reason);
+            } else if (type === 1) {
+                const timeoutRoleId = getRoles(issuedBy?.guild.id, true).teamformingTimeout
+                await member.roles.add(timeoutRoleId).catch();
+            }
 
             const timeoutRecord = repository.create({
                 user: member.id,
                 reason,
                 issuedBy: issuer,
                 expiresAt,
-                isActive: true
+                isActive: true,
+                type
             });
             await repository.save(timeoutRecord);
 

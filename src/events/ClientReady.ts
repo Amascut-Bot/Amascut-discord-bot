@@ -2,8 +2,10 @@ import { ActivityType } from 'discord.js';
 import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import TempChannelManager from '../modules/TempVCHandler';
-import { getChannels } from '../GuildSpecifics';
+import { getChannels, getRoles } from '../GuildSpecifics';
 import BossRevenue from '../interactions/admin/BossRevenue';
+import { Timeout } from '../entity/Timeout';
+import { LessThanOrEqual } from 'typeorm';
 
 export default class ClientReady extends BotEvent {
     get name(): string {
@@ -60,5 +62,29 @@ export default class ClientReady extends BotEvent {
 
         // Start Voice Channel Reminders
         this.client.reminderHandler.startReminders();
+
+        // check elapsed timeouts
+        setInterval(async (): Promise<void> => {
+            const timeoutRepository = this.client.dataSource.getRepository(Timeout);
+            const activeTimeouts = await timeoutRepository.find({
+                where: {
+                    isActive: true,
+                    expiresAt: LessThanOrEqual(new Date())
+                }
+            });
+
+            const guild = this.client.guilds.cache.find(guild => guild.id === process.env.GUILD_ID);
+            const timeoutRoleId = getRoles(guild?.id, true).teamformingTimeout;
+
+            for (const activeTimeout of activeTimeouts) {
+                const member = await guild?.members.fetch(activeTimeout.user);
+
+                if (activeTimeout.type === 0) {
+                    // nothing to do since discord handles this, should never come here
+                } else if (activeTimeout.type === 1) {
+                    await member?.roles.remove(timeoutRoleId).catch();
+                }
+            }
+        }, 300000);
     }
 }

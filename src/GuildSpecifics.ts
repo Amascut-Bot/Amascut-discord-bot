@@ -177,6 +177,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             goodMorning: '000000000000000000',
             member: '1391860635406700566',
             verified: '1391860635435798724',
+            teamformingTimeout: '1405236128294109224',
             devourerFirstWeek: '1401274911594647626',
             devourerDayOne: '1401274865113370685',
 
@@ -233,6 +234,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             goodMorning: '000000000000000000',
             member: '1389655724946100345',
             verified: '1390353573216387072',
+            teamformingTimeout: '1404882562190413824',
 
             // KC Roles
             catBoundInitiate: '1401429471692722292',
