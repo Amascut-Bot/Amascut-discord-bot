@@ -101,7 +101,13 @@ export default class GuildMemberAdd extends BotEvent {
 
             if (activeTimeout && activeTimeout.expiresAt > new Date()) {
                 const remainingTime = activeTimeout.expiresAt.getTime() - Date.now();
-                await member.timeout(remainingTime, `Reapplying timeout - ${activeTimeout.reason}`);
+
+                if (activeTimeout.type === 0) {
+                    await member.timeout(remainingTime, `Reapplying timeout - ${activeTimeout.reason}`);
+                } else if (activeTimeout.type === 1) {
+                    const timeoutRoleId = getRoles(member?.guild.id, true).teamformingTimeout
+                    await member.roles.add(timeoutRoleId).catch();
+                }
 
                 this.client.logger.log({
                     message: `Reapplied timeout to rejoining member ${member.user.tag} (${remainingTime}ms remaining)`,

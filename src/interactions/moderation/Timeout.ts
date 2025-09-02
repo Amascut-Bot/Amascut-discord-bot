@@ -1,5 +1,5 @@
 import { Timeout } from '../../entity/Timeout';
-import { getChannels } from '../../GuildSpecifics';
+import { getChannels, getRoles } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, User, GuildMember } from 'discord.js';
 
@@ -29,6 +29,18 @@ export default class TimeoutCommand extends BotInteraction {
         return options;
     }
 
+    get typeOptions() {
+        const types = ['global', 'teamforming'];
+        const options: { name: string; value: number }[] = [];
+        types.forEach((action, index) => {
+            options.push({
+                name: action,
+                value: index
+            })
+        });
+        return options;
+    }
+
     get slashData() {
         return new SlashCommandBuilder()
             .setName(this.name)
@@ -36,7 +48,8 @@ export default class TimeoutCommand extends BotInteraction {
             .addNumberOption((option) => option.setName('action').setDescription('Action to perform').addChoices([...this.actionOptions]).setRequired(true))
             .addUserOption((option) => option.setName('user').setDescription('User to timeout').setRequired(true))
             .addStringOption((option) => option.setName('duration').setDescription('Timeout duration (e.g. 10m, 1h, 1d) - required for add action').setRequired(false))
-            .addStringOption((option) => option.setName('reason').setDescription('Reason for timeout').setRequired(false));
+            .addStringOption((option) => option.setName('reason').setDescription('Reason for timeout').setRequired(false))
+            .addNumberOption((option) => option.setName('type').setDescription('Type of timeout').addChoices([...this.typeOptions]).setRequired(false));
     }
 
     async run(interaction: ChatInputCommandInteraction) {
@@ -49,6 +62,7 @@ export default class TimeoutCommand extends BotInteraction {
         }
 
         const action: number = interaction.options.getNumber('action', true);
+        const type: number = interaction.options.getNumber('type', false) ?? 0;
         const user: User = interaction.options.getUser('user', true);
         const durationInput: string | null = interaction.options.getString('duration', false);
         const reason: string = interaction.options.getString('reason', false) || 'No reason provided';
@@ -83,7 +97,7 @@ export default class TimeoutCommand extends BotInteraction {
                 const { timeout } = this.client.util;
                 const timeoutUser = timeout.bind(this.client.util);
 
-                if (await timeoutUser((await interaction.guild.members.fetch(interaction.user.id)), member, durationInput, reason)) {
+                if (await timeoutUser((await interaction.guild.members.fetch(interaction.user.id)), member, durationInput, reason, type)) {
                     await interaction.editReply({
                         content: `${user.tag} has been timed out for ${durationInput}.\nReason: ${reason}`
                     });
@@ -97,7 +111,12 @@ export default class TimeoutCommand extends BotInteraction {
 
             case 1:
                 try {
-                    await member.timeout(null, `Timeout removed by ${interaction.user.tag}`);
+                    if (type === 0) {
+                        await member.timeout(null, `Timeout removed by ${interaction.user.tag}`);
+                    } else if (type === 1) {
+                        const timeoutRoleId = getRoles(interaction?.guild.id, true).teamformingTimeout
+                        await member.roles.remove(timeoutRoleId).catch();
+                    }
 
                     await repository.update(
                         { user: user.id, isActive: true },

@@ -21,6 +21,9 @@ export class Timeout {
     @Column({ default: true })
     isActive: boolean
 
+    @Column({ default: 0})
+    type: number
+
     @CreateDateColumn({ name: 'created_at'})
     createdAt: Date
 }
