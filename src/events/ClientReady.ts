@@ -88,6 +88,6 @@ export default class ClientReady extends BotEvent {
                 }
                 await timeoutRepository.save(activeTimeout);
             }
-        }, 300000);
+        }, 120000);
     }
 }
