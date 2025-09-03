@@ -77,13 +77,13 @@ export default class ClientReady extends BotEvent {
             const timeoutRoleId = getRoles(guild?.id, true).teamformingTimeout;
 
             for (let activeTimeout of activeTimeouts) {
-                const member = await guild?.members.fetch(activeTimeout.user).catch();
+                const member = await guild?.members.fetch(activeTimeout.user).catch(() => {});
 
                 if (activeTimeout.type === 0) {
                     // nothing to do since discord handles this, should never come here
                     activeTimeout.isActive = false;
                 } else if (activeTimeout.type === 1) {
-                    await member?.roles.remove(timeoutRoleId).catch();
+                    await member?.roles.remove(timeoutRoleId).catch(() => {});
                     activeTimeout.isActive = false;
                 }
                 await timeoutRepository.save(activeTimeout);

@@ -115,7 +115,7 @@ export default class TimeoutCommand extends BotInteraction {
                         await member.timeout(null, `Timeout removed by ${interaction.user.tag}`);
                     } else if (type === 1) {
                         const timeoutRoleId = getRoles(interaction?.guild.id, true).teamformingTimeout
-                        await member.roles.remove(timeoutRoleId).catch();
+                        await member.roles.remove(timeoutRoleId).catch(() => {});
                     }
 
                     await repository.update(
