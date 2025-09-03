@@ -69,21 +69,24 @@ export default class ClientReady extends BotEvent {
             const activeTimeouts = await timeoutRepository.find({
                 where: {
                     isActive: true,
-                    expiresAt: LessThanOrEqual(new Date())
+                    expiresAt: LessThanOrEqual(new Date(Date.now()))
                 }
             });
 
             const guild = this.client.guilds.cache.find(guild => guild.id === process.env.GUILD_ID);
             const timeoutRoleId = getRoles(guild?.id, true).teamformingTimeout;
 
-            for (const activeTimeout of activeTimeouts) {
-                const member = await guild?.members.fetch(activeTimeout.user);
+            for (let activeTimeout of activeTimeouts) {
+                const member = await guild?.members.fetch(activeTimeout.user).catch();
 
                 if (activeTimeout.type === 0) {
                     // nothing to do since discord handles this, should never come here
+                    activeTimeout.isActive = false;
                 } else if (activeTimeout.type === 1) {
                     await member?.roles.remove(timeoutRoleId).catch();
+                    activeTimeout.isActive = false;
                 }
+                await timeoutRepository.save(activeTimeout);
             }
         }, 300000);
     }
