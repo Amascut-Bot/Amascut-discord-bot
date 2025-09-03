@@ -3,7 +3,6 @@ import { Attachment, ChatInputCommandInteraction, SlashCommandBuilder, TextChann
 import { parseTree, getNodeValue, ParseError, } from 'jsonc-parser';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { getChannels, getRoles } from '../../GuildSpecifics';
 
 type ParsedMessage = {
     content: string;
@@ -81,10 +80,9 @@ export default class Upload extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction<'cached'>) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const member: GuildMember = await interaction.member.fetch(true);
-        const roles = getRoles(interaction.guild?.id, true);
-        const memberEditorRole = member.roles.cache.get(roles?.editor);
-        const isAdmin = member.roles.cache.some(role => role.id === roles.owner || role.id === roles.admin);
-        const stagingCategory: string = getChannels(interaction.guild?.id)?.stagingEditorHub!;
+        const memberEditorRole = member.roles.cache.get(this.client.roleIds?.editor);
+        const isAdmin = member.roles.cache.some(role => role.id === this.client.roleIds.owner || role.id === this.client.roleIds.admin);
+        const stagingCategory: string = this.client.channelIds?.stagingEditorHub!;
         const attachment: Attachment | null = interaction.options.getAttachment('file', true);
         const targetChannel = (interaction.options.getChannel('channel', false) || interaction.channel) as TextChannel;
 
@@ -191,7 +189,7 @@ export default class Upload extends BotInteraction {
                 content: `Successfully parsed your file. Sending ${sentMessageCount} message(s) to ${targetChannel === interaction.channel ? 'this channel' : `<#${targetChannel.id}>`}. This may take a moment...`
             });
 
-            const logChannelId = getChannels(interaction.guild?.id).uploadLogChannel;
+            const logChannelId = this.client.channelIds.uploadLogChannel;
             if (logChannelId && logChannelId !== 'YOUR_CHANNEL_ID_HERE') {
                 const logChannel = await this.client.channels.fetch(logChannelId) as TextChannel;
                 if (logChannel) {

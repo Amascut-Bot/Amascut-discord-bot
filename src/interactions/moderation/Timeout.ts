@@ -1,5 +1,4 @@
 import { Timeout } from '../../entity/Timeout';
-import { getChannels, getRoles } from '../../GuildSpecifics';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, User, GuildMember } from 'discord.js';
 
@@ -53,7 +52,7 @@ export default class TimeoutCommand extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        const adminChannelId = getChannels(interaction.guild?.id).ADMIN_CHANNEL;
+        const adminChannelId = this.client.channelIds.ADMIN_CHANNEL;
 
         if (interaction.channel?.id === adminChannelId) {
             await interaction.deferReply();
@@ -114,7 +113,7 @@ export default class TimeoutCommand extends BotInteraction {
                     if (type === 0) {
                         await member.timeout(null, `Timeout removed by ${interaction.user.tag}`);
                     } else if (type === 1) {
-                        const timeoutRoleId = getRoles(interaction?.guild.id, true).teamformingTimeout
+                        const timeoutRoleId = this.client.roleIds.teamformingTimeout
                         await member.roles.remove(timeoutRoleId).catch(() => {});
                     }
 

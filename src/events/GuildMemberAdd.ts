@@ -1,6 +1,5 @@
 import { GuildMember, Role, EmbedBuilder, TextChannel } from 'discord.js';
 import BotEvent from '../types/BotEvent';
-import { getChannels, getRoles } from '../GuildSpecifics';
 import { Timeout } from '../entity/Timeout';
 
 export default class GuildMemberAdd extends BotEvent {
@@ -39,8 +38,7 @@ export default class GuildMemberAdd extends BotEvent {
         const oneWeek = 7 * 24 * 60 * 60 * 1000;
 
         if (accountAge < oneWeek) {
-            const adminChannelId = getChannels(member.guild.id).ADMIN_CHANNEL;
-            const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
+            const adminChannel = await this.client.channels.fetch(this.client.channelIds.ADMIN_CHANNEL) as TextChannel;
 
             if (adminChannel) {
                 const embed = new EmbedBuilder()
@@ -58,7 +56,7 @@ export default class GuildMemberAdd extends BotEvent {
             }
         }
 
-        const roleId = this.client.util.stripRole(getRoles(member.guild.id).member);
+        const roleId = this.client.roleIds.member;
         let role: Role | null | undefined;
 
         try {
@@ -105,8 +103,7 @@ export default class GuildMemberAdd extends BotEvent {
                 if (activeTimeout.type === 0) {
                     await member.timeout(remainingTime, `Reapplying timeout - ${activeTimeout.reason}`);
                 } else if (activeTimeout.type === 1) {
-                    const timeoutRoleId = getRoles(member?.guild.id, true).teamformingTimeout
-                    await member.roles.add(timeoutRoleId).catch(() => {});
+                    await member.roles.add(this.client.roleIds.teamformingTimeout).catch(() => {});
                 }
 
                 this.client.logger.log({

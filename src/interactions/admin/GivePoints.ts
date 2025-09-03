@@ -22,6 +22,7 @@ export default class GivePoints extends BotInteraction {
         const assignOptions: any = {
             'Trial Team': 'trial',
             'Reaper': 'reaper',
+            'Teacher': 'teacher',
         }
         const options: any = [];
         Object.keys(assignOptions).forEach((key: string) => {

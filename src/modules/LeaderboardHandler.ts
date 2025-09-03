@@ -1,6 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ContainerBuilder, ContainerComponent, Interaction, MediaGalleryBuilder, MediaGalleryComponent, MessageFlags, ModalBuilder, ModalSubmitInteraction, SectionBuilder, SeparatorSpacingSize, TextChannel, TextDisplayBuilder, TextDisplayComponent, TextInputBuilder, TextInputStyle, User, UserSelectMenuInteraction } from 'discord.js';
 import Bot from '../Bot';
-import { getRoles, getChannels } from '../GuildSpecifics';
 import { EnrageLeaderboard } from '../entity/EnrageLeaderboard';
 import { LessThanOrEqual } from 'typeorm';
 import UtilityHandler from './UtilityHandler';
@@ -106,7 +105,7 @@ export default class LeaderboardHandler {
         await this.saveLeaderboardApproval(team, screenshot, enrage, createdAt, interaction.user.id);
 
         // Repost Leaderboard
-        const leaderboardChannelId = getChannels(interaction.guild!.id).leaderboards;
+        const leaderboardChannelId = this.client.channelIds.leaderboards;
         const leaderboardChannel = await interaction.guild!.channels.fetch(leaderboardChannelId) as TextChannel;
         await LeaderboardHandler.postLeaderboard(leaderboardChannel, this.client, interaction.guild!.id);
 
@@ -217,7 +216,7 @@ export default class LeaderboardHandler {
     private async handleLeaderboardSubmit(interaction: ModalSubmitInteraction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const submissionChannelId = getChannels(interaction.guild!.id).leaderboardSubmission;
+        const submissionChannelId = this.client.channelIds.leaderboardSubmission;
         const submissionChannel = await interaction.guild!.channels.fetch(submissionChannelId) as TextChannel;
 
         // Read Message-Information
@@ -237,7 +236,7 @@ export default class LeaderboardHandler {
             return await interaction.editReply(`Your Screenshot-URL '${screenshot}' is not a valid URL!`);
         }
 
-        LeaderboardHandler.postLeaderboardSubmission(submissionChannel, this.client, interaction.guild!.id, interaction.user, [], userIds, enrage, screenshot, information);
+        LeaderboardHandler.postLeaderboardSubmission(submissionChannel, this.client, interaction.user, [], userIds, enrage, screenshot, information);
 
         // Reset Userids
         this.client.tempSubmissionData?.set(`leaderboardsubmission_${userIdSubmit}`, []);
@@ -452,10 +451,10 @@ export default class LeaderboardHandler {
         return result;
     }
 
-    public static async postLeaderboardSubmission(channel: TextChannel, client: Bot, guild: string, user: User, teamRSN: string[], teamDisc: string[], enrage: number, screenshot: string, information: string) {
+    public static async postLeaderboardSubmission(channel: TextChannel, client: Bot, user: User, teamRSN: string[], teamDisc: string[], enrage: number, screenshot: string, information: string) {
 
-        const adminMention = getRoles(guild).admin;
-        const ownerMention = getRoles(guild).owner;
+        const adminMention = client.roleIds.admin;
+        const ownerMention = client.roleIds.owner;
 
         const container = new ContainerBuilder().setAccentColor(client.color);
 

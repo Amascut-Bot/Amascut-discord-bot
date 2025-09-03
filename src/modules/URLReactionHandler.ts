@@ -1,18 +1,15 @@
 import { Message } from 'discord.js';
 import Bot from '../Bot';
-import { getChannels } from '../GuildSpecifics';
 
 export default class URLReactionHandler {
     private client: Bot;
-    private static readonly CUTE_PETS_CHANNEL_ID = getChannels(process.env.GUILD_ID).CUTE_PETS_CHANNEL;
-    private static readonly achievementsAndLogs = getChannels(process.env.GUILD_ID).achievementsAndLogs;
 
     constructor(client: Bot) {
         this.client = client;
     }
 
     async handleURLReactions(message: Message): Promise<boolean> {
-        if (message.channel.id !== URLReactionHandler.CUTE_PETS_CHANNEL_ID && message.channel.id !== URLReactionHandler.achievementsAndLogs) {
+        if (message.channel.id !== this.client.channelIds.CUTE_PETS_CHANNEL && message.channel.id !== this.client.channelIds.achievementsAndLogs) {
             return false;
         }
 
@@ -21,7 +18,7 @@ export default class URLReactionHandler {
         }
 
         try {
-            if (message.channel.id === URLReactionHandler.CUTE_PETS_CHANNEL_ID) {
+            if (message.channel.id === this.client.channelIds.CUTE_PETS_CHANNEL) {
                 await message.react('❤️');
 
                 const emojis = ['cute', 'bulbaOWO'];
@@ -34,7 +31,7 @@ export default class URLReactionHandler {
                     }
                 }
             }
-            else if (message.channel.id === URLReactionHandler.achievementsAndLogs) {
+            else if (message.channel.id === this.client.channelIds.achievementsAndLogs) {
                 const emojis = ['POGSLIDECOG', 'hypers'];
 
                 for (let index = 0; index < emojis.length; index++) {

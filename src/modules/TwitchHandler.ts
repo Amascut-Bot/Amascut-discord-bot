@@ -5,14 +5,10 @@ import * as path from 'path';
 import * as cron from 'node-cron';
 import { EmbedBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize, TextDisplayBuilder, MessageFlags, SectionBuilder, ThumbnailBuilder, MediaGalleryBuilder } from 'discord.js';
 import 'dotenv/config';
-import { getRoles, getChannels } from '../GuildSpecifics';
 
 const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
 const dashboardDataFilePath = path.join(process.cwd(), 'dashboard-data.json');
 const notificationsFilePath = path.join(process.cwd(), 'notifications.json');
-const contentCreatorRoleId = getRoles(process.env.GUILD_ID).CONTENT_CREATOR_ROLE;
-const liveRoleId = getRoles(process.env.GUILD_ID).LIVE_ROLE;
-const contentCreatorChannelId = getChannels(process.env.GUILD_ID).TWITCH_NOTIFICATION_CHANNEL;
 
 interface MonitoredStreamer {
     id: string;
@@ -113,18 +109,18 @@ export default class TwitchHandler {
 
     private async sendLiveNotification(streamData: any, streamerInfo: MonitoredStreamer) {
         console.log(`--- DEBUG: Attempting to send notification for ${streamerInfo.displayName} ---`);
-        if (!contentCreatorChannelId) {
+        if (!this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL) {
             this.client.logger.error({ message: 'TWITCH_NOTIFICATION_CHANNEL is not set in the environment variables.', error: new Error('TWITCH_NOTIFICATION_CHANNEL not set'), handler: this.constructor.name });
             return;
         }
 
         try {
-            const channel = this.client.channels.cache.get(contentCreatorChannelId);
+            const channel = this.client.channels.cache.get(this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL);
             if (!channel) {
-                console.error(`--- DEBUG: Could not find channel with ID: ${contentCreatorChannelId} ---`);
+                console.error(`--- DEBUG: Could not find channel with ID: ${this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL} ---`);
                 this.client.logger.error({
                     message: 'Twitch notifications channel not found.',
-                    error: new Error(`Channel ID: ${contentCreatorChannelId}`),
+                    error: new Error(`Channel ID: ${this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL}`),
                     handler: 'TwitchHandler'
                 });
                 return;
@@ -194,7 +190,7 @@ export default class TwitchHandler {
             console.log(`--- DEBUG: About to send embed to channel ---`);
             try {
                 const sentMessage = await (channel as TextChannel).send({
-                    content: `${getRoles((channel as TextChannel).guild.id).TWITCH_NOTIFICATION_ROLE} https://twitch.tv/${streamData.user_name}`,
+                    content: `${this.client.roles.TWITCH_NOTIFICATION_ROLE} https://twitch.tv/${streamData.user_name}`,
                     embeds: [embed]
                 });
                 console.log(`--- DEBUG: Successfully sent message with ID: ${sentMessage.id} ---`);
@@ -224,7 +220,7 @@ export default class TwitchHandler {
                 return;
             }
 
-            const channel = this.client.channels.cache.get(contentCreatorChannelId) as TextChannel;
+            const channel = this.client.channels.cache.get(this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL) as TextChannel;
             if (!channel) {
                 console.error(`--- DEBUG: Could not find notification channel ---`);
                 return;
@@ -254,10 +250,10 @@ export default class TwitchHandler {
             const member = await guild.members.fetch(userId);
 
             if (isLive) {
-                await member.roles.add(this.client.util.stripRole(liveRoleId));
+                await member.roles.add(this.client.roleIds.LIVE_ROLE);
                 this.client.logger.log({ message: `Added 'Live on Twitch' role to ${member.user.tag}`, handler: this.constructor.name }, true);
             } else {
-                await member.roles.remove(this.client.util.stripRole(liveRoleId));
+                await member.roles.remove(this.client.roleIds.LIVE_ROLE);
                 this.client.logger.log({ message: `Removed 'Live on Twitch' role from ${member.user.tag}`, handler: this.constructor.name }, true);
             }
         } catch (error) {
@@ -446,7 +442,7 @@ export default class TwitchHandler {
 
             // Get all members with the content creator role
             const contentCreators = guild.members.cache.filter(member =>
-                member.roles.cache.has(this.client.util.stripRole(contentCreatorRoleId))
+                member.roles.cache.has(this.client.roleIds.CONTENT_CREATOR_ROLE)
             );
 
             console.log(`--- DEBUG: Found ${contentCreators.size} content creators ---`);
@@ -468,11 +464,11 @@ export default class TwitchHandler {
 
             // Separate live streamers from offline content creators
             const liveStreamers = contentCreators.filter(member =>
-                member.roles.cache.has(this.client.util.stripRole(liveRoleId))
+                member.roles.cache.has(this.client.roleIds.LIVE_ROLE)
             );
 
             const offlineCreators = contentCreators.filter(member =>
-                !member.roles.cache.has(this.client.util.stripRole(liveRoleId))
+                !member.roles.cache.has(this.client.roleIds.LIVE_ROLE)
             );
 
             console.log(`--- DEBUG: ${liveStreamers.size} live streamers, ${offlineCreators.size} offline creators ---`);
@@ -515,7 +511,7 @@ export default class TwitchHandler {
 
             container.addMediaGalleryComponents(footerThumbnail);
 
-            const channel = this.client.channels.cache.get(contentCreatorChannelId) as TextChannel;
+            const channel = this.client.channels.cache.get(this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL) as TextChannel;
             if (!channel) return;
 
             // Update or create the dashboard message

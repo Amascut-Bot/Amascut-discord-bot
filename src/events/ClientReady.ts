@@ -2,7 +2,6 @@ import { ActivityType } from 'discord.js';
 import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import TempChannelManager from '../modules/TempVCHandler';
-import { getChannels, getRoles } from '../GuildSpecifics';
 import BossRevenue from '../interactions/admin/BossRevenue';
 import { Timeout } from '../entity/Timeout';
 import { LessThanOrEqual } from 'typeorm';
@@ -39,7 +38,7 @@ export default class ClientReady extends BotEvent {
         this.client.logger.log({ message: `Built global cache with ${this.client.emojiCache.size} emojis.` }, true);
 
         this.client.tempManager = new TempChannelManager(this.client);
-        this.client.tempManager.__initParentListener(getChannels(process.env.GUILD_ID).tempVCCreate);
+        this.client.tempManager.__initParentListener(this.client.channelIds.tempVCCreate);
         this.client.logger.log({ message: `Running on the ${process.env.ENVIRONMENT} environment` }, true);
         this.client.user?.setPresence({
             activities: [{ name: `Meowdy!`, type: ActivityType.Watching }]
@@ -65,6 +64,7 @@ export default class ClientReady extends BotEvent {
 
         // check elapsed timeouts
         setInterval(async (): Promise<void> => {
+            this.client.logger.log({ message: 'Checking for elapsed timeouts...', handler: this.constructor.name }, true);
             const timeoutRepository = this.client.dataSource.getRepository(Timeout);
             const activeTimeouts = await timeoutRepository.find({
                 where: {
@@ -74,7 +74,6 @@ export default class ClientReady extends BotEvent {
             });
 
             const guild = this.client.guilds.cache.find(guild => guild.id === process.env.GUILD_ID);
-            const timeoutRoleId = getRoles(guild?.id, true).teamformingTimeout;
 
             for (let activeTimeout of activeTimeouts) {
                 const member = await guild?.members.fetch(activeTimeout.user).catch(() => {});
@@ -83,11 +82,11 @@ export default class ClientReady extends BotEvent {
                     // nothing to do since discord handles this, should never come here
                     activeTimeout.isActive = false;
                 } else if (activeTimeout.type === 1) {
-                    await member?.roles.remove(timeoutRoleId).catch(() => {});
+                    await member?.roles.remove(this.client.roleIds.teamformingTimeout).catch(() => {});
                     activeTimeout.isActive = false;
                 }
                 await timeoutRepository.save(activeTimeout);
             }
-        }, 120000);
+        }, 300000);
     }
 }

@@ -23,7 +23,8 @@ export default class TicketStatistics extends BotInteraction {
             'Report': 1,
             'Content Creator': 2,
             'Other': 3,
-            'Clearance': 4
+            'Clearance': 4,
+            'Learner': 5
         }
         const options: any = [];
         Object.keys(ticketTypes).forEach((key: string) => {
@@ -115,9 +116,9 @@ export default class TicketStatistics extends BotInteraction {
             const ticketType = ticket.type;
 
             if (detailed) {
-                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : 'Other' )} | Opened by: <@${ticket.userOpen}> | Closed by: <@${ticket.userClose}> | Archive: <#${ticket.forumPostId}>\n`;
+                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : ticketType === 5 ? 'Learner' : 'Other' )} | Opened by: <@${ticket.userOpen}> | Closed by: <@${ticket.userClose}> | Archive: <#${ticket.forumPostId}>\n`;
             } else {
-                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : 'Other')} | Ticket Count: ${ticket.count}\n`;
+                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : ticketType === 5 ? 'Learner' : 'Other')} | Ticket Count: ${ticket.count}\n`;
             }
         });
 
@@ -135,7 +136,7 @@ export default class TicketStatistics extends BotInteraction {
                 `> Ticket Stats from <t:${Math.round(dateFrom.getTime() / 1000)}:f> to <t:${Math.round(dateTo.getTime() / 1000)}:f>.`,
                 userOpen ? `> Opening User: <@${userOpen.id}>` : '',
                 userClose ? `> Closing User: <@${userClose.id}>` : '',
-                type != null ? '> Ticket-Type: ' + (type === 0 ? 'Suggestion' : type === 1 ? 'Report' : type === 2 ? 'Content Creator' : type === 4 ? 'Clearance' : 'Other') : '',
+                type != null ? '> Ticket-Type: ' + (type === 0 ? 'Suggestion' : type === 1 ? 'Report' : type === 2 ? 'Content Creator' : type === 4 ? 'Clearance' : type === 5 ? 'Learner' : 'Other') : '',
                 !userOpen && !userClose && type == null ? '> No additional Filter specified' : '',
             ].filter(str => str.trim() !== '').join('\n').trim()));
         container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));

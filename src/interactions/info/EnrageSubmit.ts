@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, MessageFlags, User, Attachment } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
-import { getChannels } from '../../GuildSpecifics';
 import LeaderboardHandler from '../../modules/LeaderboardHandler';
 
 export default class EnrageSubmit extends BotInteraction {
@@ -52,7 +51,7 @@ export default class EnrageSubmit extends BotInteraction {
 
         if (!attachment.contentType?.includes('image')) return interaction.editReply('U need to attach an Image!');
 
-        const submissionChannelId = getChannels(interaction.guild!.id).leaderboardSubmission;
+        const submissionChannelId = this.client.channelIds.leaderboardSubmission;
         const submissionChannel = await interaction.guild!.channels.fetch(submissionChannelId) as TextChannel;
 
         const team: { rsn: string, disc: string }[] = [];

@@ -1,8 +1,8 @@
-interface Channels {
+export interface Channels {
     [channelName: string]: string;
 }
 
-interface Roles {
+export interface Roles {
     [roleName: string]: string;
 }
 
@@ -64,6 +64,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             learnerTempVCCreate: '1405664879075004596',
             learnerWaiting: '1405671688514965615',
             learnerTeaching: '1405671729959014460',
+            learnerTicketsCategory: '1412871767932010547',
         }
     }
 
@@ -98,6 +99,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             learnerTempVCCreate: '1405678891565187112',
             learnerWaiting: '1405668159922503810',
             learnerTeaching: '1405338959063814227',
+            learnerTicketsCategory: '1412878315395481782',
             // Staging Guide Category
             stagingEditorHub: '1389394110686953472',
             // Prod Guide Category
@@ -165,10 +167,13 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
     //AGOD Bot Testing (Patze)
     if (guildId === '1391860635347849367') {
         result = {
+            // Staff Roles
             owner: '1391860635507363886',
             admin: '1391860635507363883',
             trialTeam: '1391860635347849375',
             reaper: '1391860635347849374',
+            teacher: '1412871872374116463',
+
             CONTENT_CREATOR_ROLE: '1391860635456901393',
             LIVE_ROLE: '1391860635456901398',
             TWITCH_NOTIFICATION_ROLE: '1391860635347849376',
@@ -221,11 +226,14 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
     //Amascut, Goddess of Destruction
     if (guildId === '885457551397912596') {
         result = {
+            // Staff Roles
             owner: '1389387255386341386',
             admin: '1389526658167603230',
             trialTeam: '1390444778738684065',
-            nitroBooster: '000000000000000000',
             reaper: '1390444833537130568',
+            teacher: '1412881470673916077',
+
+            nitroBooster: '000000000000000000',
             CONTENT_CREATOR_ROLE: '1390007451482587216',
             LIVE_ROLE: '1390396115148476426',
             TWITCH_NOTIFICATION_ROLE: '1390408053114933381',

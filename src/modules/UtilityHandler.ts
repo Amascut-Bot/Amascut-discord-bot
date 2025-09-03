@@ -3,7 +3,6 @@ import Bot from '../Bot';
 import * as config from '../../config.json';
 import { Override } from '../entity/Override';
 import axios from 'axios';
-import { getRoles, getChannels } from '../GuildSpecifics';
 import { Timeout } from '../entity/Timeout';
 
 export default interface UtilityHandler {
@@ -143,7 +142,7 @@ export default class UtilityHandler {
     public hasRolePermissions = async (client: Bot, roleList: string[], interaction: Interaction) => {
         if (this.config.owners.includes(interaction.user.id)) return true;
         if (!interaction.inCachedGuild()) return;
-        const validRoleIds = roleList.map((key) => this.stripRole(getRoles(interaction.guild.id)[key]));
+        const validRoleIds = roleList.map((key) => client.roleIds[key]);
         const user = await interaction.guild.members.fetch(interaction.user.id);
         const userRoles = user.roles.cache.map((role) => role.id);
         const intersection = validRoleIds.filter((roleId) => userRoles.includes(roleId));
@@ -213,7 +212,7 @@ export default class UtilityHandler {
     public async reuploadImage(url: string): Promise<string> {
         console.log(`--- DEBUG: Entered reuploadImage function for URL: ${url}`);
 
-        const assetChannelId = getChannels(process.env.GUILD_ID).botAssetChannel;
+        const assetChannelId = this.client.channelIds.botAssetChannel;
         console.log(`--- DEBUG: Read assetChannelId from this.channels. It is: ${assetChannelId}`);
 
         if (!assetChannelId || assetChannelId === 'YOUR_CHANNEL_ID_HERE') {
@@ -476,8 +475,7 @@ export default class UtilityHandler {
             if (type === 0) {
                 await member.timeout(durationValue, reason);
             } else if (type === 1) {
-                const timeoutRoleId = getRoles(issuedBy?.guild.id, true).teamformingTimeout
-                await member.roles.add(timeoutRoleId).catch(() => {});
+                await member.roles.add(this.client.roleIds.teamformingTimeout).catch(() => {});
             }
 
             const timeoutRecord = repository.create({
