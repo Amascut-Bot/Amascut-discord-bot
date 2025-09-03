@@ -39,6 +39,7 @@ export default class TicketHandler {
             case 'ticket:create_report': this.handleTicketReport(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_contentcreator': this.handleTicketContentCreator(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_other': this.handleTicketOther(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_learner': this.handleTicketLearner(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close': this.handleTicketClose(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_confirm': this.handleTicketCloseConfirm(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction as ButtonInteraction<'cached'>); break;
@@ -184,6 +185,32 @@ export default class TicketHandler {
         await interaction.showModal(modal);
     }
 
+    private async handleTicketLearner(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_learner_${interaction.user.id}`)
+            .setTitle('Learner Request');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('Your RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const assistanceInput = new TextInputBuilder()
+            .setCustomId('experience')
+            .setLabel('Whats your experience already?')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(assistanceInput);
+
+        modal.addComponents(firstRow, secondRow);
+        await interaction.showModal(modal);
+    }
+
     private async handleTicketModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
         if (!interaction.inCachedGuild()) return;
 
@@ -218,6 +245,9 @@ export default class TicketHandler {
                     break;
                 case 'other':
                     formData.assistance = interaction.fields.getTextInputValue('assistance');
+                    break;
+                case 'learner':
+                    formData.experience = interaction.fields.getTextInputValue('experience');
                     break;
             }
 
@@ -1136,11 +1166,13 @@ export default class TicketHandler {
     public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number): Promise<TextChannel | null> {
         try {
             const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
-            const categoryId = this.client.channelIds.ticketCategory;
+            const categoryId = ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory : this.client.channelIds.ticketCategory;
+
 
             // Get admin and owner role IDs
             const adminRoleId = this.client.roleIds.admin;
             const ownerRoleId = this.client.roleIds.owner;
+            const teacherRoleId = this.client.roleIds.teacher;
 
             // Create the channel with proper permissions
             const channel = await guild.channels.create({
@@ -1189,6 +1221,21 @@ export default class TicketHandler {
                 ]
             });
 
+            if (ticketType === 'learner') {
+                await channel.permissionOverwrites.create(
+                    teacherRoleId,
+                    {
+                        ViewChannel: true,
+                        SendMessages: true,
+                        ReadMessageHistory: true,
+                        AttachFiles: true,
+                        EmbedLinks: true,
+                        ManageMessages: true,
+                        ManageChannels: true,
+                    }
+                );
+            }
+
             this.client.logger.log({
                 message: `Created ticket channel: ${channelName} for user ${userId}`,
                 handler: 'UtilityHandler'
@@ -1208,11 +1255,17 @@ export default class TicketHandler {
     public async sendTicketWelcomeMessage(channel: TextChannel, userId: string, ticketType: string, formData: any): Promise<void> {
         try {
             const { capitalizeFirstLetter } = this.client.util
-            const adminRole = this.client.roleIds.admin;
-            const ownerRole = this.client.roleIds.owner;
+            const adminRole = this.client.roles.admin;
+            const ownerRole = this.client.roles.owner;
+            const teacherRole = this.client.roles.teacher;
 
             // Create welcome message
             let welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
+
+            if (ticketType === 'learner') {
+                welcomeMessage = `<@${userId}>, your ticket has been created. An ${teacherRole} will be with you shortly.`;
+            }
+
 
             if (ticketType === 'clearance') {
                 welcomeMessage = 'Your clearance ticket has been created.';
@@ -1281,6 +1334,14 @@ export default class TicketHandler {
 
                     urls = urls.concat(formData.description.match(urlRegex) || []);
                     break;
+                case 'learner':
+                    embed.addFields(
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Whats your experience already?', value: `\`\`\`${formData.experience}\`\`\``, inline: false }
+                    );
+
+                    urls = urls.concat(formData.experience.match(urlRegex) || []);
+                    break;
             }
 
             // Create close button
@@ -1296,6 +1357,10 @@ export default class TicketHandler {
 
             if (ticketType === 'report') {
                 await channel.send('## To help us assist you faster, please provide any supporting evidence such as screenshots, recordings, or messages.');
+            }
+
+            if (ticketType === 'learner') {
+                await channel.send('### To help us assist you faster, please provide a screenshot of your preset already.');
             }
 
             if (urls.length > 0) {
@@ -1343,6 +1408,8 @@ export default class TicketHandler {
             case 'clearance':
                 ticketObject.ticketType = 4;
                 break;
+            case 'learner':
+                ticketObject.ticketType = 5;
         }
 
         await ticketRepository.save(ticketObject);
