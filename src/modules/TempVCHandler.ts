@@ -207,6 +207,7 @@ export default class TempChannelManager {
                     type: ChannelType.GuildVoice,
                     parent: categoryId,
                     bitrate: 64000,
+                    userLimit: categoryType === 'learner' ? 5 : 0,
                     permissionOverwrites: [
                         {
                             id: member.id,
@@ -248,7 +249,7 @@ export default class TempChannelManager {
                         {
                             ViewChannel: null
                         }
-                    )
+                    );
                 }
 
                 return channel;
