@@ -106,7 +106,7 @@ export default class GuildMemberAdd extends BotEvent {
                     await member.timeout(remainingTime, `Reapplying timeout - ${activeTimeout.reason}`);
                 } else if (activeTimeout.type === 1) {
                     const timeoutRoleId = getRoles(member?.guild.id, true).teamformingTimeout
-                    await member.roles.add(timeoutRoleId).catch();
+                    await member.roles.add(timeoutRoleId).catch(() => {});
                 }
 
                 this.client.logger.log({

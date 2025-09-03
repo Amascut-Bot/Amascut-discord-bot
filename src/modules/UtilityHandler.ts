@@ -477,7 +477,7 @@ export default class UtilityHandler {
                 await member.timeout(durationValue, reason);
             } else if (type === 1) {
                 const timeoutRoleId = getRoles(issuedBy?.guild.id, true).teamformingTimeout
-                await member.roles.add(timeoutRoleId).catch();
+                await member.roles.add(timeoutRoleId).catch(() => {});
             }
 
             const timeoutRecord = repository.create({
