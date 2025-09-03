@@ -1,6 +1,5 @@
 
 import Bot from '../Bot';
-import { getChannels } from '../GuildSpecifics';
 import { DiscordAPIError, VoiceState, ChannelType, PermissionFlagsBits, GuildMember, ButtonInteraction, MessageFlags, ContainerBuilder, SeparatorSpacingSize, ButtonBuilder, ButtonStyle, VoiceChannel, OverwriteType, ContainerComponent, TextDisplayComponent, Guild } from 'discord.js';
 
 export default interface TempChannelManager {
@@ -26,7 +25,7 @@ export default class TempChannelManager {
     }
 
     private async loadTempChannelIds(): Promise<void> {
-        const channels = getChannels(process.env.GUILD_ID);
+        const channels = this.client.channelIds;
         const excludedChannels = [channels.tempVCCreate, channels.afkVC, channels.learnerWaiting, channels.learnerTempVCCreate, channels.learnerTeaching]; // join to create and afk, learner join to create, waiting room, drop in room
 
         try {
@@ -77,7 +76,7 @@ export default class TempChannelManager {
 
     private setupVoiceStateListener(): void {
         this.client.on('voiceStateUpdate', async (oldState: VoiceState, newState: VoiceState) => {
-            const channels = getChannels(process.env.GUILD_ID);
+            const channels = this.client.channelIds;
 
             // User joins the "create" channel
             if ((newState.channelId === channels.tempVCCreate || newState.channelId === channels.learnerTempVCCreate) && newState.member) {
@@ -92,7 +91,7 @@ export default class TempChannelManager {
     }
 
     private async handleTempVCCreation(voiceState: VoiceState): Promise<void> {
-        const channels = getChannels(process.env.GUILD_ID);
+        const channels = this.client.channelIds;
         const member = voiceState.member as GuildMember;
         const guild = voiceState.guild;
         const category = voiceState.channelId === channels.tempVCCreate ? 'main' : voiceState.channelId === channels.learnerTempVCCreate ? 'learner' : '';
@@ -135,7 +134,7 @@ export default class TempChannelManager {
     }
 
     private async createTempVCWithFallback(member: GuildMember, category: string): Promise<any> {
-        const channels = getChannels(process.env.GUILD_ID);
+        const channels = this.client.channelIds;
         const guild = member.guild;
 
         try {
@@ -226,8 +225,8 @@ export default class TempChannelManager {
                     message: `Created temp VC "${channelName}" in ${categoryType} category for ${member.user.tag}`
                 }, true);
 
-                const tempVCCreate = categoryType === 'learner' ? await guild.channels.fetch(getChannels(process.env.GUILD_ID).learnerTempVCCreate) as VoiceChannel
-                    : await guild.channels.fetch(getChannels(process.env.GUILD_ID).tempVCCreate) as VoiceChannel;
+                const tempVCCreate = categoryType === 'learner' ? await guild.channels.fetch(this.client.channelIds.learnerTempVCCreate) as VoiceChannel
+                    : await guild.channels.fetch(this.client.channelIds.tempVCCreate) as VoiceChannel;
                 const overwrites = tempVCCreate.permissionOverwrites.cache.map(overwrite => ({
                     id: overwrite.id,
                     allow: overwrite.allow.bitfield,

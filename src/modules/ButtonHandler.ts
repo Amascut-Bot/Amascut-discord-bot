@@ -1,7 +1,6 @@
 import { ButtonInteraction, EmbedBuilder, InteractionResponse, Message, TextChannel, MessageFlags } from 'discord.js';
 import Bot from '../Bot';
 import TicketHandler from './TicketHandler';
-import { getRoles } from '../GuildSpecifics';
 import LeaderboardHandler from './LeaderboardHandler';
 import HostHandler from './HostHandler';
 
@@ -173,7 +172,7 @@ export default class ButtonHandler {
                     //special logic for enrage roles
                     if (categorize(role) === 'enrage') {
                         const whitelist = enrageHierarchy[role];
-                        const whitelistIds = whitelist.map((item: string) => getRoles(interaction.guild.id, true)[item]);
+                        const whitelistIds = whitelist.map((item: string) => this.client.roleIds[item]);
                         const intersection = whitelistIds.filter((roleId: string) => userRoles.includes(roleId));
                         if (intersection.length === 0) {
                             return false;
@@ -183,7 +182,7 @@ export default class ButtonHandler {
                         const categorizedHierarchy = hierarchy[categorize(role)];
                         const sliceFromIndex: number = categorizedHierarchy.indexOf(role);
                         const hierarchyList = categorizedHierarchy.slice(sliceFromIndex);
-                        const hierarchyIdList = hierarchyList.map((item: string) => getRoles(interaction.guild?.id, true)[item]);
+                        const hierarchyIdList = hierarchyList.map((item: string) => this.client.roleIds[item]);
                         const intersection = hierarchyIdList.filter((roleId: string) => userRoles.includes(roleId));
                         if (intersection.length === 0) {
                             return false
@@ -205,7 +204,7 @@ export default class ButtonHandler {
                         // go through whitelist
                         if (categorize(roleIds[i]) === 'enrage') {
                             const whitelist = enrageHierarchy[roleIds[i]];
-                            const whitelistMentions = whitelist.map((item: string) => getRoles(interaction.guild.id, false)[item]);
+                            const whitelistMentions = whitelist.map((item: string) => this.client.roles[item]);
 
                             roleReqError += whitelistMentions.join(', ');
                             continue;
@@ -215,7 +214,7 @@ export default class ButtonHandler {
                             roleReqError += ", ";
                         }
 
-                        roleReqError += getRoles(interaction.guild?.id)[roleIds[i]];
+                        roleReqError += this.client.roles[roleIds[i]];
                     }
                 } else {
                     if (userRoles.includes(roleIds[i])) {

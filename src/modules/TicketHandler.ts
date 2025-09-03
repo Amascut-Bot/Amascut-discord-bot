@@ -5,9 +5,6 @@ import TranscriptGenerator from './TranscriptGenerator';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { Ticket } from '../entity/Ticket';
-import { getRoles, getChannels } from '../GuildSpecifics';
-
-const ticketTranscriptChannelId = getChannels(process.env.GUILD_ID).TICKET_TRANSCRIPT_CHANNEL;
 
 export default interface TicketHandler { client: Bot; id: string; interaction: Interaction }
 
@@ -388,8 +385,8 @@ export default class TicketHandler {
             if (!ticketUserId) {
                 for (const [id, overwrite] of channel.permissionOverwrites.cache) {
                     if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
-                        const adminRoleId = this.client.util.stripRole(getRoles(interaction.guild?.id).admin);
-                        const ownerRoleId = this.client.util.stripRole(getRoles(interaction.guild?.id).owner);
+                        const adminRoleId = this.client.roleIds.admin;
+                        const ownerRoleId = this.client.roleIds.owner;
 
                         if (id !== adminRoleId && id !== ownerRoleId && id !== this.client.user?.id) {
                             ticketUserId = id;
@@ -554,7 +551,7 @@ export default class TicketHandler {
                 { name: 'Message Count', value: messageArray.length.toString(), inline: false }
             );
 
-        const forumChannel = await channel.guild.channels.fetch(ticketTranscriptChannelId);
+        const forumChannel = await channel.guild.channels.fetch(this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL);
         if (!forumChannel || !forumChannel.isThreadOnly()) {
             throw new Error('Could not find or access the forum channel.');
         }
@@ -911,8 +908,8 @@ export default class TicketHandler {
 
         for (const [id, overwrite] of channel.permissionOverwrites.cache) {
             if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
-                const isAdmin = id === this.client.util.stripRole(getRoles(channel.guild?.id).admin);
-                const isOwner = id === this.client.util.stripRole(getRoles(channel.guild?.id).owner);
+                const isAdmin = id === this.client.roleIds.admin;
+                const isOwner = id === this.client.roleIds.owner;
                 const isBot = id === this.client.user?.id;
 
                 if (!isAdmin && !isOwner && !isBot) {
@@ -952,8 +949,8 @@ export default class TicketHandler {
         client.logger.log({ message: `[Transcript] Received download request for post ${forumPostId}.`, handler: 'ButtonHandler' }, true);
 
         try {
-            client.logger.log({ message: `[Transcript] Fetching forum channel ${ticketTranscriptChannelId}...`, handler: 'ButtonHandler' }, true);
-            const forumChannel = await client.channels.fetch(ticketTranscriptChannelId);
+            client.logger.log({ message: `[Transcript] Fetching forum channel ${client.channelIds.TICKET_TRANSCRIPT_CHANNEL}...`, handler: 'ButtonHandler' }, true);
+            const forumChannel = await client.channels.fetch(client.channelIds.TICKET_TRANSCRIPT_CHANNEL);
             if (!forumChannel || !forumChannel.isThreadOnly()) {
                 await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
                 return;
@@ -1039,8 +1036,8 @@ export default class TicketHandler {
         this.client.logger.log({ message: `[Transcript] Received download request for post ${forumPostId}.`, handler: this.constructor.name }, true);
 
         try {
-            this.client.logger.log({ message: `[Transcript] Fetching forum channel ${ticketTranscriptChannelId}...`, handler: this.constructor.name }, true);
-            const forumChannel = await this.client.channels.fetch(ticketTranscriptChannelId);
+            this.client.logger.log({ message: `[Transcript] Fetching forum channel ${this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL}...`, handler: this.constructor.name }, true);
+            const forumChannel = await this.client.channels.fetch(this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL);
             if (!forumChannel || !forumChannel.isThreadOnly()) {
                 await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
                 return;
@@ -1139,12 +1136,11 @@ export default class TicketHandler {
     public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number): Promise<TextChannel | null> {
         try {
             const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
-            const { stripRole } = this.client.util
-            const categoryId = getChannels(guild.id).ticketCategory;
+            const categoryId = this.client.channelIds.ticketCategory;
 
             // Get admin and owner role IDs
-            const adminRoleId = stripRole(getRoles(guild?.id).admin);
-            const ownerRoleId = stripRole(getRoles(guild?.id).owner);
+            const adminRoleId = this.client.roleIds.admin;
+            const ownerRoleId = this.client.roleIds.owner;
 
             // Create the channel with proper permissions
             const channel = await guild.channels.create({
@@ -1212,8 +1208,8 @@ export default class TicketHandler {
     public async sendTicketWelcomeMessage(channel: TextChannel, userId: string, ticketType: string, formData: any): Promise<void> {
         try {
             const { capitalizeFirstLetter } = this.client.util
-            const adminRole = getRoles(channel.guild?.id).admin;
-            const ownerRole = getRoles(channel.guild?.id).owner;
+            const adminRole = this.client.roleIds.admin;
+            const ownerRole = this.client.roleIds.owner;
 
             // Create welcome message
             let welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;

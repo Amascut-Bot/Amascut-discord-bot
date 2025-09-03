@@ -13,10 +13,7 @@ import ReminderHandler from './modules/ReminderHandler';
 import GoogleSheetsHandler from './modules/GoogleSheetsHandler';
 import { DataSource } from "typeorm"
 import { AppDataSource } from './DataSource';
-import { getChannels } from './GuildSpecifics';
-
-// Interfaces and helpers for Reaction Roles
-const LOG_CHANNEL_ID = getChannels(process.env.GUILD_ID).LOG_CHANNEL_ID;
+import { Roles, Channels, getRoles, getChannels } from './GuildSpecifics';
 
 export default interface Bot extends Client {
     color: number;
@@ -37,6 +34,9 @@ export default interface Bot extends Client {
     tempManager?: TempChannelManager;
     emojiCache: Map<string, GuildEmoji>;
     tempSubmissionData?: Map<string, any>;
+    roles: Roles,
+    roleIds: Roles,
+    channelIds: Channels
 }
 
 export default class Bot extends Client {
@@ -60,6 +60,9 @@ export default class Bot extends Client {
         this.events = new EventHandler(this);
         this.emojiCache = new Map<string, GuildEmoji>();
         this.tempSubmissionData = new Map<string, any>(); // temp storage for multi-step processes
+        this.roles = getRoles(process.env.GUILD_ID, false);
+        this.roleIds = getRoles(process.env.GUILD_ID, true);
+        this.channelIds = getChannels(process.env.GUILD_ID);
 
         // TODO: might want to move this reaction role stuff to its own handler
         // Direct Reaction Role Listeners
@@ -112,7 +115,7 @@ export default class Bot extends Client {
 
     async logReactionRoleChange(member: GuildMember, role: Role, action: 'added' | 'removed') {
         try {
-            const logChannel = await this.channels.fetch(LOG_CHANNEL_ID) as TextChannel;
+            const logChannel = await this.channels.fetch(this.channelIds.LOG_CHANNEL_ID) as TextChannel;
             if (!logChannel) return;
 
             const preposition = action === 'added' ? 'to' : 'from';

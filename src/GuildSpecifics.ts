@@ -1,8 +1,8 @@
-interface Channels {
+export interface Channels {
     [channelName: string]: string;
 }
 
-interface Roles {
+export interface Roles {
     [roleName: string]: string;
 }
 

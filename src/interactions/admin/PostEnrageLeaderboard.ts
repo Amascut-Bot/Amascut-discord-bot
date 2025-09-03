@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, MessageFlags } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
-import { getChannels } from '../../GuildSpecifics';
 import LeaderboardHandler from '../../modules/LeaderboardHandler';
 
 export default class PostEnrageLeaderboard extends BotInteraction {
@@ -28,7 +27,7 @@ export default class PostEnrageLeaderboard extends BotInteraction {
         if (!interaction.inCachedGuild()) return interaction.editReply('Command only available in guilds!');
 
         // Repost Leaderboard
-        const leaderboardChannelId = getChannels(interaction.guild!.id).leaderboards;
+        const leaderboardChannelId = this.client.channelIds.leaderboards;
         const leaderboardChannel = await interaction.guild!.channels.fetch(leaderboardChannelId) as TextChannel;
         await LeaderboardHandler.postLeaderboard(leaderboardChannel, this.client, interaction.guild!.id);
 

@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, MessageFlags, ContainerComponent, TextDisplayBuilder, TextDisplayComponent } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
-import { getChannels } from '../../GuildSpecifics';
 import UtilityHandler from '../../modules/UtilityHandler';
 
 export default class EnrageEdit extends BotInteraction {
@@ -44,7 +43,7 @@ export default class EnrageEdit extends BotInteraction {
 
         const messageid: string = interaction.options.getString('messageid', true);
 
-        const submissionChannelId = getChannels(interaction.guild!.id).leaderboardSubmission;
+        const submissionChannelId = this.client.channelIds.leaderboardSubmission;
         const submissionChannel = await interaction.guild!.channels.fetch(submissionChannelId) as TextChannel;
 
         const message = await submissionChannel.messages.fetch(messageid);

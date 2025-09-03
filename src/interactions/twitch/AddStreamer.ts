@@ -2,10 +2,8 @@ import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
 import BotInteraction from "../../types/BotInteraction";
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { getRoles } from '../../GuildSpecifics';
 
 const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
-const contentCreatorRoleId = getRoles(process.env.GUILD_ID).CONTENT_CREATOR_ROLE;
 
 interface MonitoredStreamer {
     id: string;
@@ -86,8 +84,8 @@ export default class AddStreamer extends BotInteraction {
             return interaction.editReply({ content: `**${streamerInfo.display_name}** is already on the notification list.` });
         }
 
-        if (!userRoles.includes(this.client.util.stripRole(contentCreatorRoleId))) {
-            user?.roles.add(this.client.util.stripRole(contentCreatorRoleId));
+        if (!userRoles.includes(this.client.roleIds.CONTENT_CREATOR_ROLE)) {
+            user?.roles.add(this.client.roleIds.CONTENT_CREATOR_ROLE);
         }
 
         const newStreamer: MonitoredStreamer = {

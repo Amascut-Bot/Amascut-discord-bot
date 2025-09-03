@@ -1,6 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, ChannelType, Message, MessageFlags, GuildMember, Collection, FetchMessagesOptions } from 'discord.js';
-import { getChannels, getRoles } from '../../GuildSpecifics';
 
 export default class Purge extends BotInteraction {
     get name() {
@@ -31,10 +30,9 @@ export default class Purge extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction<'cached'>) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const member: GuildMember = await interaction.member.fetch(true);
-        const roles = getRoles(interaction.guild?.id, true);
-        const memberEditorRole = member.roles.cache.get(roles?.editor);
-        const isAdmin = member.roles.cache.some(role => role.id === roles.owner || role.id === roles.admin);
-        const stagingCategory: string = getChannels(interaction.guild?.id)?.stagingEditorHub!;
+        const memberEditorRole = member.roles.cache.get(this.client.roleIds?.editor);
+        const isAdmin = member.roles.cache.some(role => role.id === this.client.roleIds.owner || role.id === this.client.roleIds.admin);
+        const stagingCategory: string = this.client.channelIds.stagingEditorHub!;
         const targetChannel = (interaction.options.getChannel('channel', false) || interaction.channel) as TextChannel;
 
         // check if the channel has a parent, if not then crash :)

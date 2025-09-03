@@ -1,6 +1,5 @@
 import { MediaGalleryBuilder, Message, MessageFlags, SeparatorSpacingSize, TextChannel } from 'discord.js';
 import Bot from '../Bot';
-import { getChannels, getRoles } from '../GuildSpecifics';
 import { MessageShortcut } from '../entity/MessageShortcut';
 
 export default class AutoTriggerHandler {
@@ -90,7 +89,7 @@ export default class AutoTriggerHandler {
 
         if (Math.floor(Math.random() * AutoTriggerHandler.MEOW_REPLY_CHANCE) === 0) {
             const emoji = this.client.emojiCache.get('meow');
-            const roleId = this.client.util.stripRole(getRoles(message.guild?.id).MEOW_ROLE);
+            const roleId = this.client.roleIds.MEOW_ROLE;
             const role = await message.guild!.roles.fetch(roleId);
 
             if (emoji && role && message.member && !message.member.roles.cache.has(roleId)) {
@@ -249,7 +248,7 @@ export default class AutoTriggerHandler {
         if (!message.inGuild()) return false;
         if (message.guildId !== process.env.GUILD_ID) return false;
 
-        const adminChannelId = getChannels(message.guild?.id).ADMIN_CHANNEL;
+        const adminChannelId = this.client.channelIds.ADMIN_CHANNEL;
         const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
         let timeout = false;
         let evidence = "";
