@@ -37,7 +37,8 @@ export default class ReminderHandler {
             channels.reminderChannel1,
             channels.reminderChannel2,
             channels.reminderChannel3,
-            channels.reminderChannel4
+            channels.reminderChannel4,
+            channels.reminderChannel5,
         ].filter(Boolean);
 
         for (const channelId of targetChannels) {
@@ -143,7 +144,7 @@ export default class ReminderHandler {
                 container.setAccentColor(this.client.color);
 
                 const reminderText = new TextDisplayBuilder()
-                    .setContent('# Important\nAll hours are splits (Ironmen keeps) unless specified otherwise as per our <#1389379617915408445>.\nKeeps must be stated whilst team forming to avoid confusion (e.g. +2 500s KEEPS).\nConfirm **each hour** with a screenshot of the whole team agreeing!');
+                    .setContent('# Important\nAll hours are splits (Ironmen keeps) unless specified otherwise as per our <#1389379617915408445>.\nKeeps must be hosted in <#1413114658541539410> to avoid confusion.');
 
                 container.addTextDisplayComponents(reminderText);
 
