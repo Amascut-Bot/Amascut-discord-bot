@@ -243,7 +243,7 @@ export default class AutoTriggerHandler {
     private async handleKeeps(message: Message): Promise<boolean> {
         const teamformingChannels = [this.client.channelIds.reminderChannel1, this.client.channelIds.reminderChannel2, this.client.channelIds.reminderChannel3, this.client.channelIds.reminderChannel4];
 
-        if (teamformingChannels.includes(message.channelId) && (message.content.includes('keeps') || message.content.includes('keeps'))) {
+        if (teamformingChannels.includes(message.channelId) && (message.content.toLowerCase().includes('keep') || message.content.toLowerCase().includes('keeps'))) {
             await message.reply('Use <#1413114658541539410> for keeps!');
             //await message.delete();
             return true;
