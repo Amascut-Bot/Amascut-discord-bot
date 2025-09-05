@@ -13,7 +13,7 @@ export default class URLReactionHandler {
             return false;
         }
 
-        if (!this.containsURL(message.content) && !message.attachments) {
+        if (!this.containsURL(message.content) && !(message.attachments?.size > 0)) {
             return false;
         }
 

@@ -43,6 +43,8 @@ export default class AutoTriggerHandler {
 
         if (message.guild?.id !== process.env.GUILD_ID) return false;
 
+        if (await this.handleKeeps(message)) return true;
+
         if (!await this.handleYoink(message)) return true;
 
         // only taunt in specific channels if prod guild
@@ -235,6 +237,17 @@ export default class AutoTriggerHandler {
             }
         }
 
+        return false;
+    }
+
+    private async handleKeeps(message: Message): Promise<boolean> {
+        const teamformingChannels = [this.client.channelIds.reminderChannel1, this.client.channelIds.reminderChannel2, this.client.channelIds.reminderChannel3, this.client.channelIds.reminderChannel4];
+
+        if (teamformingChannels.includes(message.channelId) && (message.content.includes('keeps') || message.content.includes('keeps'))) {
+            await message.reply('Use <#1413114658541539410> for keeps!');
+            //await message.delete();
+            return true;
+        }
         return false;
     }
 
