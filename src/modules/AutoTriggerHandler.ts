@@ -240,10 +240,16 @@ export default class AutoTriggerHandler {
         return false;
     }
 
+    private static readonly keepsKeywords = [
+        'keeps',
+        'keep',
+        'kep',
+    ];
+
     private async handleKeeps(message: Message): Promise<boolean> {
         const teamformingChannels = [this.client.channelIds.reminderChannel1, this.client.channelIds.reminderChannel2, this.client.channelIds.reminderChannel3, this.client.channelIds.reminderChannel4];
 
-        if (teamformingChannels.includes(message.channelId) && (message.content.toLowerCase().includes('keep') || message.content.toLowerCase().includes('keeps')) && 'send' in message.channel) {
+        if (teamformingChannels.includes(message.channelId) && (AutoTriggerHandler.keepsKeywords.some((keyword) => { return message.content.toLowerCase().includes(keyword)})) && 'send' in message.channel) {
             await message.channel.send(`<@${message.member?.id}> use <#1413114658541539410> for keeps!`);
             await message.delete();
             return true;
