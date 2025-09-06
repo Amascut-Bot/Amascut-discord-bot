@@ -7,6 +7,7 @@ import StringSelectHandler from './StringSelectHandler';
 import EventEmitter = require('events');
 import TicketHandler from './TicketHandler';
 import LeaderboardHandler from './LeaderboardHandler';
+import HostHandler from './HostHandler';
 
 export default interface InteractionHandler {
     client: Bot;
@@ -174,12 +175,18 @@ export default class InteractionHandler extends EventEmitter {
         }
 
         if (interaction.isStringSelectMenu() && interaction.inCachedGuild()) {
+            if (interaction.customId.startsWith('host_learner_')) {
+                return new HostHandler(this.client, interaction.customId, interaction);
+            }
+
             return new StringSelectHandler(this.client, interaction.customId, interaction);
         }
 
         if (interaction.isUserSelectMenu() && interaction.inCachedGuild()) {
             if (interaction.customId.startsWith('leaderboard_')) {
                 return new LeaderboardHandler(this.client, interaction.customId, interaction);
+            } else if (interaction.customId.startsWith('host_learner_')) {
+                return new HostHandler(this.client, interaction.customId, interaction);
             }
         }
     }

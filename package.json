@@ -8,12 +8,12 @@
         "start": "ts-node --transpile-only index.ts",
         "start-js": "node ./dist/index.js"
     },
-    "author": "Fate",
+    "author": "Alex & Patze",
     "license": "MIT",
     "dependencies": {
         "@types/node-cron": "^3.0.11",
         "axios": "^1.10.0",
-        "discord-api-types": "^0.37.8",
+        "discord-api-types": "^0.38.1",
         "discord.js": "^14.22.1",
         "dotenv": "^16.6.1",
         "googleapis": "^155.0.1",

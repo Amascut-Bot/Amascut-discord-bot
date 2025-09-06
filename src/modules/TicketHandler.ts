@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, Collection, EmbedBuilder, FetchMessagesOptions, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, TextChannel, TextInputBuilder, TextInputStyle, User } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, Collection, EmbedBuilder, FetchMessagesOptions, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, SeparatorSpacingSize, TextChannel, TextInputBuilder, TextInputStyle, User } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -197,17 +197,38 @@ export default class TicketHandler {
             .setRequired(true)
             .setMaxLength(12);
 
+        const timezoneInput = new TextInputBuilder()
+            .setCustomId('timezone')
+            .setLabel('Timezone and Game Times Active')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const confirmInput = new TextInputBuilder()
+            .setCustomId('confirm')
+            .setLabel('Confirm you\'ve read & understand requirements')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
         const assistanceInput = new TextInputBuilder()
-            .setCustomId('experience')
-            .setLabel('Whats your experience already?')
+            .setCustomId('goals')
+            .setLabel('What are you hoping to get out of this ticket')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(assistanceInput);
+        const secretWordInput = new TextInputBuilder()
+            .setCustomId('secretWord')
+            .setLabel('Provide secret word')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
 
-        modal.addComponents(firstRow, secondRow);
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(confirmInput);
+        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(assistanceInput);
+        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(secretWordInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
         await interaction.showModal(modal);
     }
 
@@ -247,7 +268,10 @@ export default class TicketHandler {
                     formData.assistance = interaction.fields.getTextInputValue('assistance');
                     break;
                 case 'learner':
-                    formData.experience = interaction.fields.getTextInputValue('experience');
+                    formData.timezone = interaction.fields.getTextInputValue('timezone');
+                    formData.confirm = interaction.fields.getTextInputValue('confirm');
+                    formData.goals = interaction.fields.getTextInputValue('goals');
+                    formData.secretWord = interaction.fields.getTextInputValue('secretWord');
                     break;
             }
 
@@ -832,7 +856,7 @@ export default class TicketHandler {
             }
 
             // New: Attempt to find the ticket opener and send them a DM with a download button
-            const ticketOpenerId = await this.findTicketOpener(channel);
+            const ticketOpenerId = await TicketHandler.findTicketOpener(channel, this.client);
             this.client.logger.log({
                 message: `[Transcript] Found ticket opener ID: ${ticketOpenerId} for channel ${channel.name}`,
                 handler: this.constructor.name
@@ -923,10 +947,10 @@ export default class TicketHandler {
     //#endregion
 
     //#region TRANSCRIPT SYSTEM
-    private async findTicketOpener(channel: TextChannel): Promise<string | null> {
+    public static async findTicketOpener(channel: TextChannel, client: Bot): Promise<string | null> {
         const messages = await channel.messages.fetch({ limit: 20 });
         const welcomeMessage = messages.find(msg =>
-            msg.author.id === this.client.user?.id &&
+            msg.author.id === client.user?.id &&
             msg.content &&
             msg.content.includes('ticket has been created') &&
             msg.mentions.users.first()
@@ -938,9 +962,9 @@ export default class TicketHandler {
 
         for (const [id, overwrite] of channel.permissionOverwrites.cache) {
             if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
-                const isAdmin = id === this.client.roleIds.admin;
-                const isOwner = id === this.client.roleIds.owner;
-                const isBot = id === this.client.user?.id;
+                const isAdmin = id === client.roleIds.admin;
+                const isOwner = id === client.roleIds.owner;
+                const isBot = id === client.user?.id;
 
                 if (!isAdmin && !isOwner && !isBot) {
                     return id;
@@ -1337,10 +1361,13 @@ export default class TicketHandler {
                 case 'learner':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
-                        { name: 'Whats your experience already?', value: `\`\`\`${formData.experience}\`\`\``, inline: false }
+                        { name: 'Timezone and Game Times Active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'Confirm you\'ve read & understand requirements', value: `\`\`\`${formData.confirm}\`\`\``, inline: false },
+                        { name: 'What are you hoping to get out of this ticket?', value: `\`\`\`${formData.goals}\`\`\``, inline: false },
+                        { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
                     );
 
-                    urls = urls.concat(formData.experience.match(urlRegex) || []);
+                    urls = urls.concat(formData.goals.match(urlRegex) || []);
                     break;
             }
 
@@ -1360,7 +1387,54 @@ export default class TicketHandler {
             }
 
             if (ticketType === 'learner') {
-                await channel.send('### To help us assist you faster, please provide a screenshot of your preset already.');
+                const container = this.client.util.getContainerBuilder(null, '## Additional information required');
+                container.addTextDisplayComponents(builder => builder.setContent([
+                    '- Your overall PvM experience',
+                    '- A screenshot of your Amascut preset to provide feedback',
+                    '- A screenshot of your kill count and current PR (please include your RSN in screenshot)',
+                    '- Please change your discord nickname to your RSN if you haven\'t already'
+                ].join('\n')));
+
+                container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+                container.addTextDisplayComponents(builder => builder.setContent('### Teacher Controls'));
+                container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    [
+                        new ButtonBuilder()
+                            .setCustomId('host_learner_post_nm')
+                            .setLabel('Host Normal Mode')
+                            .setStyle(ButtonStyle.Secondary)
+                    ]
+                ));
+                container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    [
+                        new ButtonBuilder()
+                            .setCustomId('host_learner_post_100')
+                            .setLabel('Host 100%')
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId('host_learner_post_500')
+                            .setLabel('Host 500%')
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId('host_learner_post_750')
+                            .setLabel('Host 750%')
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId('host_learner_post_1000')
+                            .setLabel('Host 1000%')
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId('host_learner_post_2000')
+                            .setLabel('Host 2000%')
+                            .setStyle(ButtonStyle.Secondary),
+                    ]
+                ));
+
+                await channel.send({
+                    components: [container],
+                    flags: MessageFlags.IsComponentsV2,
+                    allowedMentions: { 'parse': [] }
+                });
             }
 
             if (urls.length > 0) {

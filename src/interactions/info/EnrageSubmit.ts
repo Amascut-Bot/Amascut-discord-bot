@@ -63,7 +63,7 @@ export default class EnrageSubmit extends BotInteraction {
         if (rsn4 && disc4) team.push( { rsn: rsn4, disc: disc4.id });
         if (rsn5 && disc5) team.push( { rsn: rsn5, disc: disc5.id });
 
-        LeaderboardHandler.postLeaderboardSubmission(submissionChannel, this.client, interaction.guild.id, interaction.user, team.map(x => x.rsn), team.map(x => x.disc), enrage, attachment.url, '');
+        LeaderboardHandler.postLeaderboardSubmission(submissionChannel, this.client, interaction.user, team.map(x => x.rsn), team.map(x => x.disc), enrage, attachment.url, '');
 
         await interaction.editReply('You Enrage Submission was successfully created. Please wait for an Admin or Owner to review and approve / reject it.');
     }
