@@ -261,7 +261,7 @@ export default class UtilityHandler {
     //#region componentsV2
 
     //cleans up a componentsV2-container
-    public static cleanContainer(containerData: any) :any {
+    public static cleanContainer(containerData: any, disableControls: boolean = false) :any {
         const newContainer: any = {};
 
         if (containerData.type) newContainer.type = containerData.type;
@@ -270,14 +270,14 @@ export default class UtilityHandler {
         if (containerData.components?.length > 0) {
             //depending on component type...
             newContainer.components = containerData.components.map((component: any) => {
-                return this.cleanComponent(component);
+                return this.cleanComponent(component, disableControls);
             });
         }
 
         return newContainer;
     }
 
-    private static cleanComponent(node: any) :any {
+    private static cleanComponent(node: any, disableControls: boolean = false) :any {
         let result: any = {};
 
         //ActionRow
@@ -287,7 +287,7 @@ export default class UtilityHandler {
             };
 
             result.components = node.components.map((component: any) => {
-                return this.cleanComponent(component);
+                return this.cleanComponent(component, disableControls);
             });
         }
 
@@ -296,7 +296,8 @@ export default class UtilityHandler {
             result = {
                 type: node.type,
                 style: node.style,
-                custom_id: node.customId
+                custom_id: node.customId,
+                disabled: disableControls
             };
 
             if (node.label) result.label = node.label;
@@ -308,7 +309,8 @@ export default class UtilityHandler {
         if (node.type == 3) {
             result = {
                 type: node.type,
-                custom_id: node.customId
+                custom_id: node.customId,
+                disabled: disableControls
             };
 
             if (node.placeholder) result.placeholder = node.placeholder;
@@ -340,7 +342,8 @@ export default class UtilityHandler {
         if (node.type == 5) {
             result = {
                 type: node.type,
-                custom_id: node.customId
+                custom_id: node.customId,
+                disabled: disableControls
             };
 
             if (node.placeholder) result.placeholder = node.placeholder;
@@ -355,10 +358,10 @@ export default class UtilityHandler {
             };
 
             result.components = node.components.map((component: any) => {
-                return this.cleanComponent(component);
+                return this.cleanComponent(component, disableControls);
             });
 
-            result.accessory = this.cleanComponent(node.accessory);
+            result.accessory = this.cleanComponent(node.accessory, disableControls);
         }
 
         //Text Display
@@ -417,7 +420,7 @@ export default class UtilityHandler {
             if (node.accentColor) result.accent_color = node.accentColor;
 
             result.components = node.components.map((component: any) => {
-                return this.cleanComponent(component);
+                return this.cleanComponent(component, disableControls);
             });
         }
 

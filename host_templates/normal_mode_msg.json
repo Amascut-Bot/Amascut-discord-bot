@@ -124,9 +124,10 @@
           "type": 2,
           "style": 2,
           "custom_id": "host_assign_southcharge",
-          "label": "South",
+          "label": "⬇️ South",
           "emoji": {
-            "name": "🟡"
+            "name": "tumeken_fragment2",
+            "id": "1411802358865858598"
           }
         },
         {
@@ -135,7 +136,8 @@
           "custom_id": "host_assign_solocharge1",
           "label": "⬅️ Solo 1",
           "emoji": {
-            "name": "🟡"
+            "name": "tumeken_fragment2",
+            "id": "1411802358865858598"
           }
         },
         {
@@ -144,7 +146,8 @@
           "custom_id": "host_assign_solocharge2",
           "label": "➡️ Solo 2",
           "emoji": {
-            "name": "🟡"
+            "name": "tumeken_fragment2",
+            "id": "1411802358865858598"
           }
         }
       ]
@@ -157,8 +160,8 @@
           "style": 2,
           "custom_id": "host_assign_dogs",
           "emoji": {
-            "name": "salawaakh",
-            "id": "1004107297791938631"
+            "name": "lightstealersalawa",
+            "id": "1411801255575158875"
           }
         }
       ]
