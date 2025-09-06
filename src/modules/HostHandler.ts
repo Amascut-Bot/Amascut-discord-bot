@@ -366,7 +366,7 @@ export default class HostHandler {
                 { components: [hostContainer], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } }
             );
 
-            if (user !== null && host !== null) {
+            if (host !== null) {
                 const teacherContainer = new ContainerBuilder()
                     .setAccentColor(10454367)
                     .addTextDisplayComponents(builder => builder.setContent('Learner Hour Control Panel'))
@@ -375,7 +375,7 @@ export default class HostHandler {
                 let text = '';
 
                 if (time) text += `**Time:** <t:${time}:F>\n`;
-                text += `**Learner:** <@${user}>\n`;
+                if (user) text += `**Learner:** <@${user}>\n`;
                 text += `**Host:** <@${host}>`;
 
                 teacherContainer.addTextDisplayComponents(builder => builder.setContent(text)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
