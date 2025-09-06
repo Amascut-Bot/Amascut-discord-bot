@@ -1,10 +1,12 @@
-import { ActivityType } from 'discord.js';
+import { ActivityType, SlashCommandBuilder } from 'discord.js';
 import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import TempChannelManager from '../modules/TempVCHandler';
 import BossRevenue from '../interactions/admin/BossRevenue';
 import { Timeout } from '../entity/Timeout';
 import { LessThanOrEqual } from 'typeorm';
+import { readdirSync } from 'fs';
+import BotInteraction from '../types/BotInteraction';
 
 export default class ClientReady extends BotEvent {
     get name(): string {
@@ -88,5 +90,79 @@ export default class ClientReady extends BotEvent {
                 await timeoutRepository.save(activeTimeout);
             }
         }, 300000);
+
+        this.buildCommands();
     }
+
+    //#region Command Building
+
+    private async buildCommands() {
+        let data: SlashCommandBuilder[] = [];
+        await this.getCommands(data);
+
+        // guild commands
+        const guild = this.client.guilds.cache.find(guild => guild.id === process.env.GUILD_ID);
+        const logChannel = await guild?.channels.fetch(this.client.channelIds.uploadLogChannel);
+        let res = await guild!.commands.set(data).catch((e) => e);
+        if (res instanceof Error) return this.client.logger.error({ error: res.stack, handler: this.constructor.name });
+        const header = `Deploying (**${data.length.toLocaleString()}**) guild slash commands.`;
+        const outputLines = data.map((command) => `${command.default_member_permissions === '0' ? '-' : '+'} ${command.name} - '${command.description}'`);
+        return await this.sendSplitResponse(logChannel, header, outputLines);
+    }
+
+    private async sendSplitResponse(channel: any, header: string, lines: string[]) {
+        await channel.send({ content: header });
+        const messages = [];
+        let currentMessage = '';
+        for (const line of lines) {
+            // 2000 limit - ```diff\n (7) - ``` (3) = 1990
+            if (currentMessage.length + line.length + 1 > 1990) {
+                messages.push(`\`\`\`diff\n${currentMessage}\`\`\``);
+                currentMessage = '';
+            }
+            currentMessage += line + '\n';
+        }
+        if (currentMessage) {
+            messages.push(`\`\`\`diff\n${currentMessage}\`\`\``);
+        }
+        for (const msg of messages) {
+            await channel.send({ content: msg }).catch((err: Error) => {
+                this.client.logger.error({ error: err.stack, handler: this.constructor.name });
+            });
+        }
+    }
+
+    private async getCommands(data: any[]) {
+        const commandPromises = [];
+        const directories = readdirSync(`${this.client.location}/src/interactions`, { withFileTypes: true });
+
+        for (const directory of directories) {
+            if (!directory.isDirectory()) continue;
+            const commandFiles = readdirSync(`${this.client.location}/src/interactions/${directory.name}`, { withFileTypes: true });
+
+            for (const commandFile of commandFiles) {
+                if (!commandFile.isFile() || !commandFile.name.endsWith('.ts')) continue;
+
+                commandPromises.push(
+                    import(`${this.client.location}/src/interactions/${directory.name}/${commandFile.name}`)
+                        .then(interactionModule => {
+                            const Command: BotInteraction = new interactionModule.default(this.client);
+                            if (Command.slashData) {
+                                data.push(Command.slashData);
+                            }
+                        })
+                        .catch(err => {
+                            this.client.logger.error({
+                                handler: this.constructor.name,
+                                message: `Failed to load command: ${commandFile.name}`,
+                                error: err.stack
+                            });
+                        })
+                );
+            }
+        }
+        await Promise.all(commandPromises);
+    }
+
+    //#endregion
 }

@@ -105,7 +105,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             // Staging Guide Category
             stagingEditorHub: '1389394110686953472',
             // Prod Guide Category
-            editorHub: '1389410242210693212'
+            editorHub: '1389410242210693212',
         }
     }
 
