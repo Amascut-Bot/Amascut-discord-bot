@@ -1,4 +1,4 @@
-import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize, GuildMember } from 'discord.js';
+import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize, GuildMember, Message } from 'discord.js';
 import Bot from '../Bot';
 import * as config from '../../config.json';
 import { Override } from '../entity/Override';
@@ -144,6 +144,16 @@ export default class UtilityHandler {
         if (!interaction.inCachedGuild()) return;
         const validRoleIds = roleList.map((key) => client.roleIds[key]);
         const user = await interaction.guild.members.fetch(interaction.user.id);
+        const userRoles = user.roles.cache.map((role) => role.id);
+        const intersection = validRoleIds.filter((roleId) => userRoles.includes(roleId));
+        return intersection.length > 0;
+    }
+
+    public hasRolePermissionsMessage = async (client: Bot, roleList: string[], message: Message) => {
+        if (this.config.owners.includes(message.member!.id)) return true;
+        if (!message.inGuild()) return;
+        const validRoleIds = roleList.map((key) => client.roleIds[key]);
+        const user = await message.member!;
         const userRoles = user.roles.cache.map((role) => role.id);
         const intersection = validRoleIds.filter((roleId) => userRoles.includes(roleId));
         return intersection.length > 0;
