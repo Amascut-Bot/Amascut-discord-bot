@@ -389,6 +389,41 @@ export default class TempChannelManager {
 
         container.addActionRowComponents(builder => builder.addComponents(setLimitButton, resetLimitButton));
 
+        container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+        container.addTextDisplayComponents(builder => builder.setContent('### Post a hosting card'));
+        container.addActionRowComponents(builder => builder.addComponents(
+            [
+                new ButtonBuilder()
+                    .setCustomId('host_post_nm')
+                    .setLabel('Normal Mode')
+                    .setStyle(ButtonStyle.Secondary)
+            ]
+        ));
+        container.addActionRowComponents(builder => builder.addComponents(
+            [
+                new ButtonBuilder()
+                    .setCustomId('host_post_100')
+                    .setLabel('100%')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('host_post_500')
+                    .setLabel('500%')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('host_post_750')
+                    .setLabel('750%')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('host_post_1000')
+                    .setLabel('1000%')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('host_post_2000')
+                    .setLabel('2000%')
+                    .setStyle(ButtonStyle.Secondary),
+            ]
+        ));
+
         try {
             await channel.send({
                 components: [container],
