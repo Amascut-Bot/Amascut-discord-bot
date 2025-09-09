@@ -36,7 +36,7 @@ export default class Warn extends BotInteraction {
             .addNumberOption((option) => option.setName('action').setDescription('Action').addChoices([...this.actionOptions]).setRequired(true))
             .addUserOption((option) => option.setName('user').setDescription('User').setRequired(false))
             .addStringOption((option) => option.setName('reason').setDescription('Reason of the warning').setRequired(false))
-            .addChannelOption((option) => option.setName('reportref').setDescription('Any ticket reference').setRequired(false).addChannelTypes(ChannelType.PublicThread, ChannelType.PrivateThread))
+            .addChannelOption((option) => option.setName('reportref').setDescription('Any ticket reference').setRequired(false).addChannelTypes(ChannelType.PublicThread, ChannelType.PrivateThread, ChannelType.GuildText))
             .addNumberOption((option) => option.setName('id').setDescription('Id of the warning (when removing)').setRequired(false));
     }
 
@@ -58,7 +58,7 @@ export default class Warn extends BotInteraction {
 
         const { dataSource } = this.client;
         const repository = dataSource.getRepository(Warning);
-        if (reportRef !== null && reportRef?.parentId !== this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL) {
+        if (reportRef !== null && reportRef?.parentId !== this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL && reportRef?.parentId !== this.client.channelIds.ticketCategory && reportRef?.parentId !== this.client.channelIds.wipTicketCategory) {
             const response = this.client.util.getContainerBuilder(false, this.name)
                 .addTextDisplayComponents(builder => builder.setContent('You can only use the report reference option in the ticket channel!'));
             return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });

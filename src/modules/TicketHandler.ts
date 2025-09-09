@@ -5,6 +5,7 @@ import TranscriptGenerator from './TranscriptGenerator';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { Ticket } from '../entity/Ticket';
+import { Warning } from '../entity/Warning';
 
 export default interface TicketHandler { client: Bot; id: string; interaction: Interaction }
 
@@ -855,6 +856,9 @@ export default class TicketHandler {
                 return;
             }
 
+            // if warnings for that ticket existed, update them to the archive
+            await this.updateReportrefs(channel.id, forumPostId);
+
             // New: Attempt to find the ticket opener and send them a DM with a download button
             const ticketOpenerId = await TicketHandler.findTicketOpener(channel, this.client);
             this.client.logger.log({
@@ -1506,6 +1510,23 @@ export default class TicketHandler {
         } else {
             this.client.logger.log({ message: `[Ticket System] Ticket with Channel-Id ${channelId} could not be found.`, handler: this.constructor.name }, true);
         }
+    }
+
+    private async updateReportrefs(channelId: string, forumPostId: string): Promise<void> {
+        const { dataSource } = this.client;
+        const warningRepository = dataSource.getRepository(Warning);
+
+        const existingEntries = await warningRepository.find({
+            where: {
+                reportRef: channelId
+            }
+        });
+
+        for (const warning of existingEntries) {
+            warning.reportRef = forumPostId;
+        }
+
+        await warningRepository.save(existingEntries);
     }
 
     //#endregion

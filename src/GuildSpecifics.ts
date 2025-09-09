@@ -61,6 +61,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             reminderChannel4: '1391860639584096316',
             reminderChannel5: '1391860639584096316',
             ticketCategory: '1404433490266816632',
+            wipTicketCategory: '1415020430867304480',
             learnerCategory: '1405663718875861052',
             learnerTempVCCreate: '1405664879075004596',
             learnerWaiting: '1405671688514965615',
@@ -98,6 +99,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             reminderChannel4: '1401385848993222866',
             reminderChannel5: '1413114658541539410',
             ticketCategory: '1404278113784823849',
+            wipTicketCategory: '1404834663339528362',
             // Learner Section Channels
             learnerCategory: '1404510300715356232',
             learnerTempVCCreate: '1405678891565187112',
