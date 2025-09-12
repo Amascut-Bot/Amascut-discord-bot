@@ -142,7 +142,8 @@ export default class TicketStatistics extends BotInteraction {
                 `> Ticket Stats from <t:${Math.round(dateFrom.getTime() / 1000)}:f> to <t:${Math.round(dateTo.getTime() / 1000)}:f>.`,
                 userOpen ? `> Opening User: <@${userOpen.id}>` : '',
                 userClose ? `> Closing User: <@${userClose.id}>` : '',
-                type != null ? '> Ticket-Type: ' + (type === 0 ? 'Suggestion' : type === 1 ? 'Report' : type === 2 ? 'Content Creator' : type === 4 ? 'Clearance' : type === 5 ? 'Learner' : 'Other') : '',
+                type != null ? '> Ticket-Type: ' + (type === 0 ? 'Suggestion' : type === 1 ? 'Report' : type === 2 ? 'Content Creator' : type === 4 ? 'Clearance' : type === 5 ? 'Learner' : type === 6 ? 'Librarian' :
+                    type === 7 ? 'Fill' : type === 8 ? 'Teacher' : type === 9 ? 'Verified' : 'Other') : '',
                 !userOpen && !userClose && type == null ? '> No additional Filter specified' : '',
             ].filter(str => str.trim() !== '').join('\n').trim()));
         container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Large));
