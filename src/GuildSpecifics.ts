@@ -109,6 +109,11 @@ export function getChannels(guildId: string | undefined) : Channels {
             learnerTeaching: '1405338959063814227',
             learnerTicketsCategory: '1412878315395481782',
             learnerHosts: '1411429884571422922',
+            // Trial Team Channels
+            trialCategory: '1416026683659780148',
+            trialTickets: '1416027382892068970',
+            trialLounge: '1416026842753798276',
+            vodReview: '1416027312369172481',
             // Staging Guide Category
             stagingEditorHub: '1389394110686953472',
             // Prod Guide Category
