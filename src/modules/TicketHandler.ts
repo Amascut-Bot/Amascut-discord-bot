@@ -42,9 +42,9 @@ export default class TicketHandler {
             case 'ticket:create_other': this.handleTicketOther(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_learner': this.handleTicketLearner(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_librarian': this.handleTicketLibrarian(interaction as ButtonInteraction<'cached'>); break;
-            case 'ticket:create_fill': this.handleTicketFill(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_support': this.handleTicketSupport(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_teacher': this.handleTicketTeacher(interaction as ButtonInteraction<'cached'>); break;
-            case 'ticket:create_verified': this.handleTicketVerified(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_trialteam': this.handleTicketTrialTeam(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close': this.handleTicketClose(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_confirm': this.handleTicketCloseConfirm(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction as ButtonInteraction<'cached'>); break;
@@ -255,12 +255,6 @@ export default class TicketHandler {
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
-        const roleInput = new TextInputBuilder()
-            .setCustomId('role')
-            .setLabel('What role are you applying for?')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
         const reasonsInput = new TextInputBuilder()
             .setCustomId('reasons')
             .setLabel('Why are you applying for this role?')
@@ -271,16 +265,15 @@ export default class TicketHandler {
 
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
-        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
+        modal.addComponents(firstRow, secondRow, thirdRow);
         await interaction.showModal(modal);
     }
 
-        private async handleTicketFill(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        private async handleTicketSupport(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
-            .setCustomId(`ticket:create_fill_${interaction.user.id}`)
+            .setCustomId(`ticket:create_support_${interaction.user.id}`)
             .setTitle('Support team staff application');
 
         const rsnInput = new TextInputBuilder()
@@ -296,12 +289,6 @@ export default class TicketHandler {
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
-        const roleInput = new TextInputBuilder()
-            .setCustomId('role')
-            .setLabel('What role are you applying for?')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
         const reasonsInput = new TextInputBuilder()
             .setCustomId('reasons')
             .setLabel('Why are you applying for this role?')
@@ -311,10 +298,9 @@ export default class TicketHandler {
 
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
-        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
+        modal.addComponents(firstRow, secondRow, thirdRow);
         await interaction.showModal(modal);
     }
 
@@ -336,12 +322,6 @@ export default class TicketHandler {
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
-        const roleInput = new TextInputBuilder()
-            .setCustomId('role')
-            .setLabel('What role are you applying for?')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
         const reasonsInput = new TextInputBuilder()
             .setCustomId('reasons')
             .setLabel('Why are you applying for this role?')
@@ -351,16 +331,15 @@ export default class TicketHandler {
 
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
-        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
+        modal.addComponents(firstRow, secondRow, thirdRow);
         await interaction.showModal(modal);
     }
 
-        private async handleTicketVerified(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        private async handleTicketTrialTeam(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
-            .setCustomId(`ticket:create_verified_${interaction.user.id}`)
+            .setCustomId(`ticket:create_trialteam_${interaction.user.id}`)
             .setTitle('Trial Team staff application');
 
         const rsnInput = new TextInputBuilder()
@@ -376,12 +355,6 @@ export default class TicketHandler {
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
-        const roleInput = new TextInputBuilder()
-            .setCustomId('role')
-            .setLabel('What role are you applying for?')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
         const reasonsInput = new TextInputBuilder()
             .setCustomId('reasons')
             .setLabel('Why are you applying for this role?')
@@ -391,10 +364,9 @@ export default class TicketHandler {
 
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
-        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
+        modal.addComponents(firstRow, secondRow, thirdRow);
         await interaction.showModal(modal);
     }
 
@@ -441,22 +413,18 @@ export default class TicketHandler {
                     break;
                 case 'librarian':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
-                    formData.role = interaction.fields.getTextInputValue('role');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
                     break;
-                case 'fill':
+                case 'support':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
-                    formData.role = interaction.fields.getTextInputValue('role');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
                     break;    
                 case 'teacher':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
-                    formData.role = interaction.fields.getTextInputValue('role');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
                     break;
-                case 'verified':
+                case 'trialteam':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
-                    formData.role = interaction.fields.getTextInputValue('role');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
                     break;
             }
@@ -1380,7 +1348,7 @@ export default class TicketHandler {
         try {
             const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
             const parentCategoryId = ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory :
-            ticketType === 'librarian' || ticketType === 'fill' || ticketType === 'teacher' || ticketType === 'verified'  ? this.client.channelIds.staffTicketsCategory : this.client.channelIds.ticketCategory;
+            ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam'  ? this.client.channelIds.staffTicketsCategory : this.client.channelIds.ticketCategory;
 
 
             // Get admin and owner role IDs
@@ -1480,7 +1448,7 @@ export default class TicketHandler {
             let welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
 
             if (ticketType === 'learner') {
-                welcomeMessage = `<@${userId}>, your ticket has been created. An ${teacherRole} will be with you shortly.`;
+                welcomeMessage = `<@${userId}>, your ticket has been created. A ${teacherRole} will be with you shortly.`;
             }
 
 
@@ -1565,16 +1533,14 @@ export default class TicketHandler {
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
-                        { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     ); 
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break; 
-                case 'fill':
+                case 'support':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
-                        { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
@@ -1583,16 +1549,14 @@ export default class TicketHandler {
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
-                        { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break; 
-                case 'verified':
+                case 'trialteam':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
-                        { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
@@ -1714,11 +1678,11 @@ export default class TicketHandler {
                 ticketObject.ticketType = 5;
             case 'librarian':
                 ticketObject.ticketType = 6;
-            case 'fill':
+            case 'support':
                 ticketObject.ticketType = 7;
             case 'teacher':
                 ticketObject.ticketType = 8;
-            case 'verified':
+            case 'trialteam':
                 ticketObject.ticketType = 9;
         }
 
