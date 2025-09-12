@@ -120,9 +120,11 @@ export default class TicketStatistics extends BotInteraction {
             const ticketType = ticket.type;
 
             if (detailed) {
-                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : ticketType === 5 ? 'Learner' : 'Other' )} | Opened by: <@${ticket.userOpen}> | Closed by: <@${ticket.userClose}> | Archive: <#${ticket.forumPostId}>\n`;
+                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : ticketType === 5 ? 'Learner' : ticketType === 6 ? 'Librarian' :
+                    ticketType === 7 ? 'Fill' : ticketType === 8 ? 'Teacher' : ticketType === 9 ? 'Verified' : 'Other' )} | Opened by: <@${ticket.userOpen}> | Closed by: <@${ticket.userClose}> | Archive: <#${ticket.forumPostId}>\n`;
             } else {
-                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : ticketType === 5 ? 'Learner' : 'Other')} | Ticket Count: ${ticket.count}\n`;
+                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : ticketType === 5 ? 'Learner' : ticketType === 6 ? 'Librarian' :
+                    ticketType === 7 ? 'Fill' : ticketType === 8 ? 'Teacher' : ticketType === 9 ? 'Verified' : 'Other' )} | Ticket Count: ${ticket.count}\n`;
             }
         });
 
