@@ -101,7 +101,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             reminderChannel5: '1413114658541539410',
             ticketCategory: '1404278113784823849',
             wipTicketCategory: '1404834663339528362',
-            staffTicketsCategory: '1412878315395481782',
+            staffTicketsCategory: '1416098705127375068',
             // Learner Section Channels
             learnerCategory: '1404510300715356232',
             learnerTempVCCreate: '1405678891565187112',
