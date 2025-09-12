@@ -68,6 +68,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             learnerTeaching: '1405671729959014460',
             learnerTicketsCategory: '1412871767932010547',
             learnerHosts: '1411662134756118569',
+            staffTicketsCategory: '1415817949868068976',
         }
     }
 
@@ -100,6 +101,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             reminderChannel5: '1413114658541539410',
             ticketCategory: '1404278113784823849',
             wipTicketCategory: '1404834663339528362',
+            staffTicketsCategory: '1412878315395481782',
             // Learner Section Channels
             learnerCategory: '1404510300715356232',
             learnerTempVCCreate: '1405678891565187112',
@@ -107,6 +109,11 @@ export function getChannels(guildId: string | undefined) : Channels {
             learnerTeaching: '1405338959063814227',
             learnerTicketsCategory: '1412878315395481782',
             learnerHosts: '1411429884571422922',
+            // Trial Team Channels
+            trialCategory: '1416026683659780148',
+            trialApplications: '1389392070820630611',
+            trialLounge: '1416026842753798276',
+            vodReview: '1416027312369172481',
             // Staging Guide Category
             stagingEditorHub: '1389394110686953472',
             // Prod Guide Category

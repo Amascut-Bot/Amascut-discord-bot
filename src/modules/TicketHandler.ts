@@ -41,6 +41,10 @@ export default class TicketHandler {
             case 'ticket:create_contentcreator': this.handleTicketContentCreator(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_other': this.handleTicketOther(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_learner': this.handleTicketLearner(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_librarian': this.handleTicketLibrarian(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_fill': this.handleTicketFill(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_teacher': this.handleTicketTeacher(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_verified': this.handleTicketVerified(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close': this.handleTicketClose(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_confirm': this.handleTicketCloseConfirm(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction as ButtonInteraction<'cached'>); break;
@@ -233,6 +237,194 @@ export default class TicketHandler {
         await interaction.showModal(modal);
     }
 
+    private async handleTicketLibrarian(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_librarian_${interaction.user.id}`)
+            .setTitle('Librarian Staff application');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('Your RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const timezoneInput = new TextInputBuilder()
+            .setCustomId('timezone')
+            .setLabel('Timezone and Game Times active')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const roleInput = new TextInputBuilder()
+            .setCustomId('role')
+            .setLabel('What role are you applying for?')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const reasonsInput = new TextInputBuilder()
+            .setCustomId('reasons')
+            .setLabel('Why are you applying for this role?')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const secretWordInput = new TextInputBuilder()
+            .setCustomId('secretWord')
+            .setLabel('Provide secret word')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
+        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(secretWordInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        await interaction.showModal(modal);
+    }
+
+        private async handleTicketFill(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_fill_${interaction.user.id}`)
+            .setTitle('Fill Staff application');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('Your RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const timezoneInput = new TextInputBuilder()
+            .setCustomId('timezone')
+            .setLabel('Timezone and Game Times active')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const roleInput = new TextInputBuilder()
+            .setCustomId('role')
+            .setLabel('What role are you applying for?')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const reasonsInput = new TextInputBuilder()
+            .setCustomId('reasons')
+            .setLabel('Why are you applying for this role?')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const secretWordInput = new TextInputBuilder()
+            .setCustomId('secretWord')
+            .setLabel('Provide secret word')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
+        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(secretWordInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        await interaction.showModal(modal);
+    }
+
+        private async handleTicketTeacher(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_teacher_${interaction.user.id}`)
+            .setTitle('Teacher Staff application');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('Your RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const timezoneInput = new TextInputBuilder()
+            .setCustomId('timezone')
+            .setLabel('Timezone and Game Times active')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const roleInput = new TextInputBuilder()
+            .setCustomId('role')
+            .setLabel('What role are you applying for?')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const reasonsInput = new TextInputBuilder()
+            .setCustomId('reasons')
+            .setLabel('Why are you applying for this role?')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const secretWordInput = new TextInputBuilder()
+            .setCustomId('secretWord')
+            .setLabel('Provide secret word')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
+        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(secretWordInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        await interaction.showModal(modal);
+    }
+
+        private async handleTicketVerified(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_verified_${interaction.user.id}`)
+            .setTitle('Verified Staff application');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('Your RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const timezoneInput = new TextInputBuilder()
+            .setCustomId('timezone')
+            .setLabel('Timezone and Game Times active')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const roleInput = new TextInputBuilder()
+            .setCustomId('role')
+            .setLabel('What role are you applying for?')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const reasonsInput = new TextInputBuilder()
+            .setCustomId('reasons')
+            .setLabel('Why are you applying for this role?')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        const secretWordInput = new TextInputBuilder()
+            .setCustomId('secretWord')
+            .setLabel('Provide secret word')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
+        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(secretWordInput);
+
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        await interaction.showModal(modal);
+    }
+
     private async handleTicketModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
         if (!interaction.inCachedGuild()) return;
 
@@ -272,6 +464,30 @@ export default class TicketHandler {
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.confirm = interaction.fields.getTextInputValue('confirm');
                     formData.goals = interaction.fields.getTextInputValue('goals');
+                    formData.secretWord = interaction.fields.getTextInputValue('secretWord');
+                    break;
+                case 'librarian':
+                    formData.timezone = interaction.fields.getTextInputValue('timezone');
+                    formData.role = interaction.fields.getTextInputValue('role');
+                    formData.reasons = interaction.fields.getTextInputValue('reasons');
+                    formData.secretWord = interaction.fields.getTextInputValue('secretWord');
+                    break;
+                case 'fill':
+                    formData.timezone = interaction.fields.getTextInputValue('timezone');
+                    formData.role = interaction.fields.getTextInputValue('role');
+                    formData.reasons = interaction.fields.getTextInputValue('reasons');
+                    formData.secretWord = interaction.fields.getTextInputValue('secretWord');
+                    break;    
+                case 'teacher':
+                    formData.timezone = interaction.fields.getTextInputValue('timezone');
+                    formData.role = interaction.fields.getTextInputValue('role');
+                    formData.reasons = interaction.fields.getTextInputValue('reasons');
+                    formData.secretWord = interaction.fields.getTextInputValue('secretWord');
+                    break;
+                case 'verified':
+                    formData.timezone = interaction.fields.getTextInputValue('timezone');
+                    formData.role = interaction.fields.getTextInputValue('role');
+                    formData.reasons = interaction.fields.getTextInputValue('reasons');
                     formData.secretWord = interaction.fields.getTextInputValue('secretWord');
                     break;
             }
@@ -921,7 +1137,7 @@ export default class TicketHandler {
                 handler: this.constructor.name
             }, true);
 
-            await interaction.followUp({ content: 'Ticket archived. The channel will be deleted in 5 seconds...' });
+            await interaction.followUp({ content: 'Ticket archived. This channel will be deleted in 5 seconds...' });
 
             // Delete the channel after a short delay
             setTimeout(async () => {
@@ -1194,7 +1410,8 @@ export default class TicketHandler {
     public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number): Promise<TextChannel | null> {
         try {
             const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
-            const categoryId = ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory : this.client.channelIds.ticketCategory;
+            const parentCategoryId = ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory :
+            ticketType === 'librarian' || ticketType === 'fill' || ticketType === 'teacher' || ticketType === 'verified'  ? this.client.channelIds.staffTicketsCategory : this.client.channelIds.ticketCategory;
 
 
             // Get admin and owner role IDs
@@ -1203,10 +1420,11 @@ export default class TicketHandler {
             const teacherRoleId = this.client.roleIds.teacher;
 
             // Create the channel with proper permissions
+            
             const channel = await guild.channels.create({
                 name: channelName,
                 type: ChannelType.GuildText,
-                parent: categoryId,
+                parent: parentCategoryId,
                 permissionOverwrites: [
                     {
                         id: guild.roles.everyone.id,
@@ -1279,6 +1497,8 @@ export default class TicketHandler {
             return null;
         }
     }
+
+    
 
     public async sendTicketWelcomeMessage(channel: TextChannel, userId: string, ticketType: string, formData: any): Promise<void> {
         try {
@@ -1370,9 +1590,48 @@ export default class TicketHandler {
                         { name: 'What are you hoping to get out of this ticket?', value: `\`\`\`${formData.goals}\`\`\``, inline: false },
                         { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
                     );
-
                     urls = urls.concat(formData.goals.match(urlRegex) || []);
                     break;
+                case 'librarian':
+                    embed.addFields(
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
+                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false },
+                        { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
+                    ); 
+                    urls = urls.concat(formData.reasons.match(urlRegex) || []);
+                    break; 
+                case 'fill':
+                    embed.addFields(
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
+                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false },
+                        { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
+                    );
+                    urls = urls.concat(formData.reasons.match(urlRegex) || []);
+                    break; 
+                case 'teacher':
+                    embed.addFields(
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
+                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false },
+                        { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
+                    );
+                    urls = urls.concat(formData.reasons.match(urlRegex) || []);
+                    break; 
+                case 'verified':
+                    embed.addFields(
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
+                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false },
+                        { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
+                    );
+                    urls = urls.concat(formData.reasons.match(urlRegex) || []);
+                    break;  
             }
 
             // Create close button
@@ -1488,6 +1747,14 @@ export default class TicketHandler {
                 break;
             case 'learner':
                 ticketObject.ticketType = 5;
+            case 'librarian':
+                ticketObject.ticketType = 6;
+            case 'fill':
+                ticketObject.ticketType = 7;
+            case 'teacher':
+                ticketObject.ticketType = 8;
+            case 'verified':
+                ticketObject.ticketType = 9;
         }
 
         await ticketRepository.save(ticketObject);
