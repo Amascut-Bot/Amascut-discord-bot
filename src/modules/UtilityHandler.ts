@@ -482,7 +482,7 @@ export default class UtilityHandler {
             const repository = dataSource.getRepository(Timeout);
 
             const durationValue = this.parseDuration(duration);
-            const expiresAt = new Date(Date.now() + duration);
+            const expiresAt = new Date(Date.now() + (durationValue ?? 0));
             const issuer = issuedBy?.id ?? this.client.user!.id
 
             if (type === 0) {
