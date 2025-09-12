@@ -268,19 +268,13 @@ export default class TicketHandler {
             .setRequired(true)
             .setMaxLength(1000);
 
-        const secretWordInput = new TextInputBuilder()
-            .setCustomId('secretWord')
-            .setLabel('Provide secret word')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
 
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
         const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
         const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
-        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(secretWordInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
         await interaction.showModal(modal);
     }
 
@@ -315,19 +309,12 @@ export default class TicketHandler {
             .setRequired(true)
             .setMaxLength(1000);
 
-        const secretWordInput = new TextInputBuilder()
-            .setCustomId('secretWord')
-            .setLabel('Provide secret word')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
         const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
         const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
-        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(secretWordInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
         await interaction.showModal(modal);
     }
 
@@ -362,19 +349,12 @@ export default class TicketHandler {
             .setRequired(true)
             .setMaxLength(1000);
 
-        const secretWordInput = new TextInputBuilder()
-            .setCustomId('secretWord')
-            .setLabel('Provide secret word')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
         const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
         const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
-        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(secretWordInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
         await interaction.showModal(modal);
     }
 
@@ -409,19 +389,12 @@ export default class TicketHandler {
             .setRequired(true)
             .setMaxLength(1000);
 
-        const secretWordInput = new TextInputBuilder()
-            .setCustomId('secretWord')
-            .setLabel('Provide secret word')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
         const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput);
         const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
-        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(secretWordInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
         await interaction.showModal(modal);
     }
 
@@ -470,25 +443,21 @@ export default class TicketHandler {
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.role = interaction.fields.getTextInputValue('role');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
-                    formData.secretWord = interaction.fields.getTextInputValue('secretWord');
                     break;
                 case 'fill':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.role = interaction.fields.getTextInputValue('role');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
-                    formData.secretWord = interaction.fields.getTextInputValue('secretWord');
                     break;    
                 case 'teacher':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.role = interaction.fields.getTextInputValue('role');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
-                    formData.secretWord = interaction.fields.getTextInputValue('secretWord');
                     break;
                 case 'verified':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.role = interaction.fields.getTextInputValue('role');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
-                    formData.secretWord = interaction.fields.getTextInputValue('secretWord');
                     break;
             }
 
@@ -1597,8 +1566,7 @@ export default class TicketHandler {
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
-                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false },
-                        { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
+                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     ); 
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break; 
@@ -1607,8 +1575,7 @@ export default class TicketHandler {
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
-                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false },
-                        { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
+                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break; 
@@ -1617,8 +1584,7 @@ export default class TicketHandler {
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
-                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false },
-                        { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
+                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break; 
@@ -1627,8 +1593,7 @@ export default class TicketHandler {
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'What role are you applying for', value: `\`\`\`${formData.role}\`\`\``, inline: false },
-                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false },
-                        { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
+                        { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break;  
