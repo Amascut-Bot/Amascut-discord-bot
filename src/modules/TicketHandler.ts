@@ -240,7 +240,7 @@ export default class TicketHandler {
     private async handleTicketLibrarian(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
             .setCustomId(`ticket:create_librarian_${interaction.user.id}`)
-            .setTitle('Librarian Staff application');
+            .setTitle('Librarian staff application');
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
@@ -281,7 +281,7 @@ export default class TicketHandler {
         private async handleTicketFill(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
             .setCustomId(`ticket:create_fill_${interaction.user.id}`)
-            .setTitle('Fill Staff application');
+            .setTitle('Support team staff application');
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
@@ -321,7 +321,7 @@ export default class TicketHandler {
         private async handleTicketTeacher(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
             .setCustomId(`ticket:create_teacher_${interaction.user.id}`)
-            .setTitle('Teacher Staff application');
+            .setTitle('Teacher staff application');
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
@@ -361,7 +361,7 @@ export default class TicketHandler {
         private async handleTicketVerified(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
             .setCustomId(`ticket:create_verified_${interaction.user.id}`)
-            .setTitle('Verified Staff application');
+            .setTitle('Trial Team staff application');
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
