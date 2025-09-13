@@ -88,7 +88,7 @@ export default class Upload extends BotInteraction {
 
         // check if the channel has a parent, if not then crash :)
         const parentCategory: string | null = targetChannel.parentId;
-        if (!parentCategory) {
+        if (!parentCategory && !isAdmin) {
             return await interaction.editReply({ content: 'The channel you selected has no parent category.' })
         }
 
