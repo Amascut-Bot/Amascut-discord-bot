@@ -271,7 +271,7 @@ export default class TicketHandler {
         await interaction.showModal(modal);
     }
 
-        private async handleTicketSupport(interaction: ButtonInteraction<'cached'>): Promise<void> {
+    private async handleTicketSupport(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
             .setCustomId(`ticket:create_support_${interaction.user.id}`)
             .setTitle('Support team staff application');
@@ -304,7 +304,7 @@ export default class TicketHandler {
         await interaction.showModal(modal);
     }
 
-        private async handleTicketTeacher(interaction: ButtonInteraction<'cached'>): Promise<void> {
+    private async handleTicketTeacher(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
             .setCustomId(`ticket:create_teacher_${interaction.user.id}`)
             .setTitle('Teacher staff application');
@@ -322,6 +322,18 @@ export default class TicketHandler {
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
+        const enrageInput = new TextInputBuilder()
+            .setCustomId('enrage')
+            .setLabel('Which enrage do you want to teach people')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const presetKcInput = new TextInputBuilder()
+            .setCustomId('presetkc')
+            .setLabel('Please provide your preset and kc')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
         const reasonsInput = new TextInputBuilder()
             .setCustomId('reasons')
             .setLabel('Why are you applying for this role?')
@@ -331,13 +343,15 @@ export default class TicketHandler {
 
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(enrageInput);
+        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(presetKcInput);
+        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow);
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
         await interaction.showModal(modal);
     }
 
-        private async handleTicketTrialTeam(interaction: ButtonInteraction<'cached'>): Promise<void> {
+    private async handleTicketTrialTeam(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
             .setCustomId(`ticket:create_trialteam_${interaction.user.id}`)
             .setTitle('Trial Team staff application');
@@ -355,6 +369,18 @@ export default class TicketHandler {
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
+        const enrageInput = new TextInputBuilder()
+            .setCustomId('enrage')
+            .setLabel('Which enrage do you want to trial people')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const presetKcInput = new TextInputBuilder()
+            .setCustomId('presetkc')
+            .setLabel('Please provide your preset and kc')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
         const reasonsInput = new TextInputBuilder()
             .setCustomId('reasons')
             .setLabel('Why are you applying for this role?')
@@ -364,9 +390,11 @@ export default class TicketHandler {
 
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(enrageInput);
+        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(presetKcInput);
+        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow);
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
         await interaction.showModal(modal);
     }
 
@@ -418,14 +446,18 @@ export default class TicketHandler {
                 case 'support':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
-                    break;    
+                    break;
                 case 'teacher':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
+                    formData.presetkc = interaction.fields.getTextInputValue('presetkc');
+                    formData.enrage = interaction.fields.getTextInputValue('enrage');
                     break;
                 case 'trialteam':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
+                    formData.presetkc = interaction.fields.getTextInputValue('presetkc');
+                    formData.enrage = interaction.fields.getTextInputValue('enrage');
                     break;
             }
 
@@ -1357,7 +1389,7 @@ export default class TicketHandler {
             const teacherRoleId = this.client.roleIds.teacher;
 
             // Create the channel with proper permissions
-            
+
             const channel = await guild.channels.create({
                 name: channelName,
                 type: ChannelType.GuildText,
@@ -1435,7 +1467,7 @@ export default class TicketHandler {
         }
     }
 
-    
+
 
     public async sendTicketWelcomeMessage(channel: TextChannel, userId: string, ticketType: string, formData: any): Promise<void> {
         try {
@@ -1458,7 +1490,7 @@ export default class TicketHandler {
 
             // Create embed with form data using fields for better organization
             const embed = new EmbedBuilder()
-                .setTitle(`${capitalizeFirstLetter(ticketType)} Ticket`)
+                .setTitle(`${ticketType === 'trialteam' ? 'Trial Team' : capitalizeFirstLetter(ticketType)} Ticket`)
                 .setColor(this.client.color)
                 .setTimestamp()
                 .setAuthor({
@@ -1534,9 +1566,9 @@ export default class TicketHandler {
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
-                    ); 
+                    );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
-                    break; 
+                    break;
                 case 'support':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
@@ -1544,23 +1576,27 @@ export default class TicketHandler {
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
-                    break; 
+                    break;
                 case 'teacher':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'Which enrage do you want to teach people', value: `\`\`\`${formData.enrage}\`\`\``, inline: false },
+                        { name: 'Please provide your preset and kc', value: `\`\`\`${formData.presetkc}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
-                    break; 
+                    break;
                 case 'trialteam':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'Which enrage do you want to trial people', value: `\`\`\`${formData.enrage}\`\`\``, inline: false },
+                        { name: 'Please provide your preset and kc', value: `\`\`\`${formData.presetkc}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
-                    break;  
+                    break;
             }
 
             // Create close button
