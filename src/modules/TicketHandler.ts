@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, Collection, EmbedBuilder, FetchMessagesOptions, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, SeparatorSpacingSize, TextChannel, TextInputBuilder, TextInputStyle, User } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, SeparatorSpacingSize, TextChannel, TextInputBuilder, TextInputStyle, User } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { Ticket } from '../entity/Ticket';
 import { Warning } from '../entity/Warning';
+import UtilityHandler from './UtilityHandler';
 
 export default interface TicketHandler { client: Bot; id: string; interaction: Interaction }
 
@@ -607,7 +608,7 @@ export default class TicketHandler {
 
             let ticketUserId: string | null = null;
 
-            const messages = await channel.messages.fetch({ limit: 20 });
+            const messages = await UtilityHandler.readAllMessages(channel);
             const welcomeMessage = messages.find(msg =>
                 msg.content && (
                     msg.content.includes('your ticket has been created') ||
@@ -701,22 +702,8 @@ export default class TicketHandler {
 
     //#region SUPPORT TEAM CONTROLS
     private async logTicketToForum(channel: TextChannel, user: any, logReason: string): Promise<string | null> {
-        let messages = new Collection<string, Message<true>>();
-        let lastId: string | undefined;
-
-        while (true) {
-            const options: FetchMessagesOptions = { limit: 100 };
-            if (lastId) options.before = lastId;
-
-            const fetched = await channel.messages.fetch(options);
-            if (fetched.size === 0) break;
-
-
-            messages = messages.concat(fetched);
-            lastId = fetched.last()?.id;
-        }
-
-        const messageArray = Array.from(messages.values()).reverse();
+        const messages = await UtilityHandler.readAllMessages(channel);
+        const messageArray = Array.from(messages.values());
 
         const transcriptBuffer = await TranscriptGenerator.createTranscript(messages, channel.name);
         const transcriptAttachment = new AttachmentBuilder(transcriptBuffer, { name: `${channel.name}-transcript.html` });
@@ -917,7 +904,7 @@ export default class TicketHandler {
             let ticketUserId: string | null = null;
 
             // Method 1: Look for welcome message
-            const messages = await channel.messages.fetch({ limit: 20 });
+            const messages = await UtilityHandler.readAllMessages(channel);
             const welcomeMessage = messages.find(msg =>
                 msg.content && (
                     msg.content.includes('your ticket has been created') ||
@@ -1137,7 +1124,7 @@ export default class TicketHandler {
 
     //#region TRANSCRIPT SYSTEM
     public static async findTicketOpener(channel: TextChannel, client: Bot): Promise<string | null> {
-        const messages = await channel.messages.fetch({ limit: 20 });
+        const messages = await UtilityHandler.readAllMessages(channel);
         const welcomeMessage = messages.find(msg =>
             msg.author.id === client.user?.id &&
             msg.content &&

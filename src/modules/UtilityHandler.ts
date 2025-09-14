@@ -1,4 +1,4 @@
-import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize, GuildMember, Message } from 'discord.js';
+import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize, GuildMember, Message, Collection, FetchMessagesOptions } from 'discord.js';
 import Bot from '../Bot';
 import * as config from '../../config.json';
 import { Override } from '../entity/Override';
@@ -435,6 +435,27 @@ export default class UtilityHandler {
         }
 
         return result;
+    }
+
+    public static async readAllMessages(channel: TextChannel): Promise<Collection<string, Message<true>>> {
+        let messages = new Collection<string, Message<true>>();
+        let lastId: string | undefined;
+
+        while (true) {
+            const options: FetchMessagesOptions = { limit: 100 };
+            if (lastId) options.before = lastId;
+
+            const fetched = await channel.messages.fetch(options);
+            if (fetched.size === 0) break;
+
+
+            messages = messages.concat(fetched);
+            lastId = fetched.last()?.id;
+        }
+
+        messages = messages.reverse();
+
+        return messages;
     }
 
     //#endregion
