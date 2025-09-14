@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, SlashCommandBuilder, User, Role, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, User, Role, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AutocompleteInteraction } from 'discord.js';
 
 interface Hierarchy {
     [key: string]: string[];
@@ -33,7 +33,7 @@ export default class Pass extends BotInteraction {
         }
     }
 
-    get options() {
+    get options(): { name: string, value: string } [] {
         const assignOptions: any = {
             '500% Enrage': 'enr500',
             '1000% Enrage': 'enr1000',
@@ -42,20 +42,27 @@ export default class Pass extends BotInteraction {
             'the Lightbearer (Release week 2000%)': 'rw2000',
             'the Sunforged (Release week 4000%)': 'rw4000',
             'Release day 4k': 'rd4000',
-            'Cat-Bound Initiate (100KC)': 'catBoundInitiate',
-            'Scarab-Marked Disciple (250KC)': 'scarabMarkedDisciple',
-            'Whisperer of the Wanderer (500KC)': 'whispererOfTheWanderer',
-            'Bearer of the Unholy Sigil (750KC)': 'bearerOfTheUnholySigil',
-            'Fang of the Devourer (1000KC)': 'fangOfTheDevourer',
+            'Cat-Bound Initiate (100KC)': 'kc100',
+            'Scarab-Marked Disciple (250KC)': 'kc250',
+            'Whisperer of the Wanderer (500KC)': 'kc500',
+            'Bearer of the Unholy Sigil (750KC)': 'kc750',
+            'Fang of the Devourer (1000KC)': 'kc1000',
+            'Seeker of the Kharid-ib (1500KC)': 'kc1500',
+            'Echo of Mah\'s Madness (2000KC)': 'kc2000',
+            'Oracle of the Hollow Sun (3000KC)': 'kc3000',
+            'Herald of the Scarab Paraoh (5000KC)': 'kc5000',
+            'Soul-Eater Ascendant (7500KC)': 'kc7500',
+            'Eternal Fang of the Devourer (10000KC)': 'kc10000',
             'Visionmaker (Full Log)': 'visionmaker',
-            'Tumeken mask (5)': 'tumekenMask',
-            'Tumeken robe top (5)': 'tumekenRobeTop',
-            'Tumeken robe bottom (5)': 'tumekenRobeBottom',
-            'Tumeken gloves (5)': 'tumekenGloves',
-            'Tumeken boots (5)': 'tumekenBoots',
-            'Devourers guard (5)': 'devourersGuard',
-            'Tumekenslight (5)': 'tumekensLight',
-            'Amaskitty': 'amaskitty',
+            'Tumeken mask (5)': 'mask5',
+            'Tumeken robe top (5)': 'top5',
+            'Tumeken robe bottom (5)': 'bottom5',
+            'Tumeken gloves (5)': 'gloves5',
+            'Tumeken boots (5)': 'boots5',
+            'Devourers guard (5)': 'guard5',
+            'Tumekenslight (5)': 'light5',
+            'Amaskitty': 'pet',
+            'Nexus (5)': 'nexus5',
         }
         const options: any = [];
         Object.keys(assignOptions).forEach((key: string) => {
@@ -77,9 +84,13 @@ export default class Pass extends BotInteraction {
             .setName(this.name)
             .setDescription(this.description)
             .addUserOption((option) => option.setName('user').setDescription('User').setRequired(true))
-            .addStringOption((option) => option.setName('role').setDescription('Role').addChoices(
-                ...this.options
-            ).setRequired(true))
+            .addStringOption((option) => option.setName('role').setDescription('Role').setAutocomplete(true).setRequired(true))
+    }
+
+    async autocomplete(interaction: AutocompleteInteraction): Promise<any> {
+        const focusedValue = interaction.options.getFocused();
+        const filtered = this.options.filter(choice => choice.name.toLowerCase().includes(focusedValue.toLowerCase()));
+        await interaction.respond(filtered.slice(0, 25));
     }
 
     async run(interaction: ChatInputCommandInteraction) {
