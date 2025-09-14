@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, MessageFlags, ContainerComponent, TextDisplayBuilder, TextDisplayComponent } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
-import UtilityHandler from '../../modules/UtilityHandler';
+import ComponentsV2Utils from '../../modules/ComponentsV2Utils';
 
 export default class EnrageEdit extends BotInteraction {
     get name() {
@@ -48,7 +48,7 @@ export default class EnrageEdit extends BotInteraction {
 
         const message = await submissionChannel.messages.fetch(messageid);
         const messageComponents = (message.components[0] as ContainerComponent).components;
-        const container = UtilityHandler.cleanContainer(message.components[0]);
+        const container = ComponentsV2Utils.cleanContainer(message.components[0]);
 
         let value = (messageComponents[0] as TextDisplayComponent).content;
 

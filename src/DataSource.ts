@@ -13,6 +13,8 @@ import { MessageShortcut } from "./entity/MessageShortcut"
 import { EnrageLeaderboard } from "./entity/EnrageLeaderboard"
 import { Warning } from "./entity/Warning"
 import { Timeout } from "./entity/Timeout"
+import { LearnerHour } from "./entity/LearnerHour"
+import { LearnerHourParticipation } from "./entity/LearnerHourParticipation"
 
 export const AppDataSource = new DataSource({
     type: "sqlite",
@@ -32,7 +34,9 @@ export const AppDataSource = new DataSource({
         MessageShortcut,
         EnrageLeaderboard,
         Warning,
-        Timeout
+        Timeout,
+        LearnerHour,
+        LearnerHourParticipation
     ],
     migrations: [],
     subscribers: [],

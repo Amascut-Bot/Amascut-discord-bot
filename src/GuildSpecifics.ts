@@ -69,6 +69,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             learnerTicketsCategory: '1412871767932010547',
             learnerHosts: '1411662134756118569',
             staffTicketsCategory: '1415817949868068976',
+            teachersChat: '1405664850469847122',
         }
     }
 
@@ -109,6 +110,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             learnerTeaching: '1405338959063814227',
             learnerTicketsCategory: '1412878315395481782',
             learnerHosts: '1411429884571422922',
+            teachersChat: '1404510586536202453',
             // Trial Team Channels
             trialCategory: '1416026683659780148',
             trialApplications: '1389392070820630611',

@@ -1602,7 +1602,7 @@ export default class TicketHandler {
             }
 
             if (ticketType === 'learner') {
-                const container = this.client.util.getContainerBuilder(null, '## Additional information required');
+                const container = this.client.cv2.getContainerBuilder(null, '## Additional information required');
                 container.addTextDisplayComponents(builder => builder.setContent([
                     '- Your overall PvM experience',
                     '- A screenshot of your Amascut preset to provide feedback',

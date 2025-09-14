@@ -298,7 +298,7 @@ export default class AutoTriggerHandler {
         }
 
         if (timeout) {
-            const container = this.client.util.getContainerBuilder(false, "Suspicious Account");
+            const container = this.client.cv2.getContainerBuilder(false, "Suspicious Account");
             container.addTextDisplayComponents(builder => builder.setContent(`${message.member?.user.tag} (<@${message.member?.id}>) was automatically timeouted.\n\n**Evidence:** \`${evidence}\`\n\n**Reason:** \`${reason}\`\n\n**Reference:** ${message.url}`));
 
             if (message.content) {

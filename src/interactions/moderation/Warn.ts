@@ -59,7 +59,7 @@ export default class Warn extends BotInteraction {
         const { dataSource } = this.client;
         const repository = dataSource.getRepository(Warning);
         if (reportRef !== null && reportRef?.parentId !== this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL && reportRef?.parentId !== this.client.channelIds.ticketCategory && reportRef?.parentId !== this.client.channelIds.wipTicketCategory) {
-            const response = this.client.util.getContainerBuilder(false, this.name)
+            const response = this.client.cv2.getContainerBuilder(false, this.name)
                 .addTextDisplayComponents(builder => builder.setContent('You can only use the report reference option in the ticket channel!'));
             return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
         }
@@ -78,11 +78,11 @@ export default class Warn extends BotInteraction {
 
                     const savedWarning: Warning = await repository.save(newWarning);
 
-                    const response = this.client.util.getContainerBuilder(true, 'Add warning')
+                    const response = this.client.cv2.getContainerBuilder(true, 'Add warning')
                         .addTextDisplayComponents(builder => builder.setContent(`### Warned <@${user.id}>:\n**Reason:** \`${reason}\`\n**Issued by:** <@${interaction.user.id}>\n**Warning ID**: \`${savedWarning.id}\``));
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
                 } else {
-                    const response = this.client.util.getContainerBuilder(false, 'Add warning')
+                    const response = this.client.cv2.getContainerBuilder(false, 'Add warning')
                         .addTextDisplayComponents(builder => builder.setContent('You have to provide an User and a Reason to warn someone!'));
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
                 }
@@ -99,16 +99,16 @@ export default class Warn extends BotInteraction {
                     if (foundWarning) {
                         await repository.remove(foundWarning);
 
-                        const response = this.client.util.getContainerBuilder(true, 'Remove warning')
+                        const response = this.client.cv2.getContainerBuilder(true, 'Remove warning')
                             .addTextDisplayComponents(builder => builder.setContent(`Successfully removed warning with ID \`${id}\` from User <@${foundWarning.user}>\nThe reason of the warning was: \`${foundWarning.reason}\``));
                         return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
                     } else {
-                        const response = this.client.util.getContainerBuilder(false, 'Remove warning')
+                        const response = this.client.cv2.getContainerBuilder(false, 'Remove warning')
                             .addTextDisplayComponents(builder => builder.setContent(`Could not find a warning with ID \`${id}\``));
                         return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
                     }
                 } else {
-                    const response = this.client.util.getContainerBuilder(false, 'Remove warning')
+                    const response = this.client.cv2.getContainerBuilder(false, 'Remove warning')
                         .addTextDisplayComponents(builder => builder.setContent('You have to provide an ID to delete a warning!'));
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
                 }
@@ -138,7 +138,7 @@ export default class Warn extends BotInteraction {
                 }
 
                 if (foundWarnings.length > 0 && foundWarnings.length < 25) {
-                    const response = this.client.util.getContainerBuilder(null, `List warnings - \`${foundWarnings.length}\` found`);
+                    const response = this.client.cv2.getContainerBuilder(null, `List warnings - \`${foundWarnings.length}\` found`);
 
                     let content: string = '';
 
@@ -176,11 +176,11 @@ export default class Warn extends BotInteraction {
 
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
                 } else if (foundWarnings.length >= 25) {
-                    const response = this.client.util.getContainerBuilder(false, 'List warnings')
+                    const response = this.client.cv2.getContainerBuilder(false, 'List warnings')
                         .addTextDisplayComponents(builder => builder.setContent(`Found too many warnings (\`${foundWarnings.length}\`), please specify your search until a proper pagination system is implemented.`));
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
                 } else {
-                    const response = this.client.util.getContainerBuilder(false, 'List warnings')
+                    const response = this.client.cv2.getContainerBuilder(false, 'List warnings')
                         .addTextDisplayComponents(builder => builder.setContent(`Could not find any warnings for the specified filters:${filters.length > 0 ? filters : '\n- No filters provided'}`));
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
                 }
@@ -200,16 +200,16 @@ export default class Warn extends BotInteraction {
 
                         await repository.save(foundWarning);
 
-                        const response = this.client.util.getContainerBuilder(true, 'Update warning')
+                        const response = this.client.cv2.getContainerBuilder(true, 'Update warning')
                             .addTextDisplayComponents(builder => builder.setContent(`Successfully updated warning with ID \`${id}\` from User <@${foundWarning.user}>\n**Reason:** \`${foundWarning.reason}\`${reportRef ? `\n**Report reference:** <#${reportRef.id}>` : ''}`));
                         return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
                     } else {
-                        const response = this.client.util.getContainerBuilder(false, 'Update warning')
+                        const response = this.client.cv2.getContainerBuilder(false, 'Update warning')
                             .addTextDisplayComponents(builder => builder.setContent(`Could not find a warning with ID \`${id}\``));
                         return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
                     }
                 } else {
-                    const response = this.client.util.getContainerBuilder(false, 'Update warning')
+                    const response = this.client.cv2.getContainerBuilder(false, 'Update warning')
                         .addTextDisplayComponents(builder => builder.setContent('You have to provide an ID to update a warning!'));
                     return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
                 }
@@ -217,7 +217,7 @@ export default class Warn extends BotInteraction {
                 break;
         }
 
-        const response = this.client.util.getContainerBuilder(false, this.name)
+        const response = this.client.cv2.getContainerBuilder(false, this.name)
             .addTextDisplayComponents(builder => builder.setContent(`Unknown Action`));
         return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
     }

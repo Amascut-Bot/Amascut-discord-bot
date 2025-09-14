@@ -47,7 +47,7 @@ export default class HostLearner extends BotInteraction {
 
         const success = await HostHandler.postHost(channel, mode, message, learner.id, interaction.user.id);
 
-        const container = this.client.util.getContainerBuilder(success, "Host card creation");
+        const container = this.client.cv2.getContainerBuilder(success, "Host card creation");
         container.addTextDisplayComponents(builder => builder.setContent(success ? "Your host has been successfully created!" : "Your host could not be created!"));
 
         return await interaction.editReply({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });

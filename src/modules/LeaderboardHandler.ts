@@ -2,7 +2,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, Contai
 import Bot from '../Bot';
 import { EnrageLeaderboard } from '../entity/EnrageLeaderboard';
 import { LessThanOrEqual } from 'typeorm';
-import UtilityHandler from './UtilityHandler';
+import ComponentsV2Utils from './ComponentsV2Utils';
 
 export default interface LeaderboardHandler { client: Bot; id: string; interaction: Interaction }
 
@@ -26,7 +26,7 @@ export default class LeaderboardHandler {
     private async handleLeaderboardReject(interaction: ButtonInteraction<'cached'>) {
         await interaction.deferReply( { flags: MessageFlags.Ephemeral });
 
-        const container = UtilityHandler.cleanContainer(interaction.message.components[0]);
+        const container = ComponentsV2Utils.cleanContainer(interaction.message.components[0]);
 
         // Disable Buttons:
         const approveButton = new ButtonBuilder()
@@ -58,7 +58,7 @@ export default class LeaderboardHandler {
         await interaction.deferReply( { flags: MessageFlags.Ephemeral });
 
         const messageComponents = (interaction.message.components[0] as ContainerComponent).components;
-        const container = UtilityHandler.cleanContainer(interaction.message.components[0]);
+        const container = ComponentsV2Utils.cleanContainer(interaction.message.components[0]);
 
         // Extract Data
         const rawData: string = (messageComponents[0] as TextDisplayComponent).content;
@@ -156,7 +156,7 @@ export default class LeaderboardHandler {
     private async handleLeaderboardCreateSubmit(interaction: ButtonInteraction<'cached'>) {
         //await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const container = UtilityHandler.cleanContainer(interaction.message.components[0]);
+        const container = ComponentsV2Utils.cleanContainer(interaction.message.components[0]);
 
         // Read Message-Information
         const userIdSubmit: string = interaction.user.id;
