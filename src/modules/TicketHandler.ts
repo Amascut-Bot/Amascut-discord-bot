@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, SeparatorSpacingSize, TextChannel, TextInputBuilder, TextInputStyle, User } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, SeparatorSpacingSize, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -1366,9 +1366,8 @@ export default class TicketHandler {
     public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number): Promise<TextChannel | null> {
         try {
             const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
-            const parentCategoryId = ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory :
-            ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam'  ? this.client.channelIds.staffTicketsCategory : this.client.channelIds.ticketCategory;
-
+            const isStaffTicket = ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
+            const parentCategoryId = ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory : isStaffTicket ? this.client.channelIds.staffTicketsCategory : this.client.channelIds.ticketCategory;
 
             // Get admin and owner role IDs
             const adminRoleId = this.client.roleIds.admin;
@@ -1376,8 +1375,7 @@ export default class TicketHandler {
             const teacherRoleId = this.client.roleIds.teacher;
 
             // Create the channel with proper permissions
-
-            const channel = await guild.channels.create({
+            const channel: TextChannel = await guild.channels.create({
                 name: channelName,
                 type: ChannelType.GuildText,
                 parent: parentCategoryId,
@@ -1438,6 +1436,21 @@ export default class TicketHandler {
                 );
             }
 
+            if (isStaffTicket) {
+                const adminRole = this.client.roles.admin;
+                const ownerRole = this.client.roles.owner;
+
+                const member = await guild.members.fetch(userId);
+                const thread = await channel.threads.create({
+                    name: `Discussion - ${member.displayName}`,
+                    autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+                    type: ChannelType.PrivateThread,
+                    reason: 'Thread automatically created by TicketHandler'
+                });
+
+                await thread.send(`${adminRole}, ${ownerRole}: Discuss the applicant here`);
+            }
+
             this.client.logger.log({
                 message: `Created ticket channel: ${channelName} for user ${userId}`,
                 handler: 'UtilityHandler'
@@ -1454,17 +1467,16 @@ export default class TicketHandler {
         }
     }
 
-
-
     public async sendTicketWelcomeMessage(channel: TextChannel, userId: string, ticketType: string, formData: any): Promise<void> {
         try {
             const { capitalizeFirstLetter } = this.client.util
             const adminRole = this.client.roles.admin;
             const ownerRole = this.client.roles.owner;
             const teacherRole = this.client.roles.teacher;
+            const isStaffTicket = ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
 
             // Create welcome message
-            let welcomeMessage = `<@${userId}>, your ticket has been created. An ${adminRole} or ${ownerRole} will be with you shortly.`;
+            let welcomeMessage = `<@${userId}>, your ticket has been created. An ${isStaffTicket ? 'Admin' : adminRole} or ${isStaffTicket ? 'Owner' : ownerRole} will be with you shortly.`;
 
             if (ticketType === 'learner') {
                 welcomeMessage = `<@${userId}>, your ticket has been created. A ${teacherRole} will be with you shortly.`;
