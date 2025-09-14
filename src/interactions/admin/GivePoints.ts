@@ -4,6 +4,8 @@ import { TrialParticipation } from '../../entity/TrialParticipation';
 import { Trial } from '../../entity/Trial';
 import { Reaper } from '../../entity/Reaper';
 import { ReaperParticipation } from '../../entity/ReaperParticipation';
+import { LearnerHour } from '../../entity/LearnerHour';
+import { LearnerHourParticipation } from '../../entity/LearnerHourParticipation';
 
 export default class GivePoints extends BotInteraction {
     get name() {
@@ -91,6 +93,26 @@ export default class GivePoints extends BotInteraction {
                 .createQueryBuilder()
                 .insert()
                 .into(ReaperParticipation)
+                .values(newData)
+                .execute();
+        }
+
+        if (team === 'teacher') {
+            const teacherRepo = dataSource.getRepository(LearnerHour);
+            const placeholder = new LearnerHour();
+            placeholder.host = 'Placeholder';
+            placeholder.link = 'Placeholder';
+            const newPlaceholder = await teacherRepo.save(placeholder);
+
+            const newData: any = [...Array(quantity)].map(() => ({
+                participant: user.id,
+                learnerHour: newPlaceholder
+            }));
+
+            await dataSource
+                .createQueryBuilder()
+                .insert()
+                .into(LearnerHourParticipation)
                 .values(newData)
                 .execute();
         }
