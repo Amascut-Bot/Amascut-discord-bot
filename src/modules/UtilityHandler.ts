@@ -64,8 +64,8 @@ export default class UtilityHandler {
 
     get categories(): Categories {
         return {
-            killCount: ['catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer'],
-            collectionLog: ['visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty'],
+            killCount: ['kc100', 'kc250', 'kc500', 'kc750', 'kc1000', 'kc1500', 'kc2000', 'kc3000', 'kc5000', 'kc7500', 'kc10000'],
+            collectionLog: ['visionmaker', 'silverSpoon', 'goldenSpoon', 'mask5', 'top5', 'bottom5', 'gloves5', 'boots5', 'guard5', 'light5', 'pet', 'nexus5'],
             serverPings: ['serverAnnouncements', 'goodMorning'],
             vanity: ['silverSpoon', 'goldenSpoon'],
             enrage: ['enr500', 'enr1000', 'enr2000', 'enr4000', 'rd500', 'rd1000', 'rd2000', 'rd4000', 'rw500', 'rw1000', 'rw2000', 'rw4000']
@@ -74,7 +74,7 @@ export default class UtilityHandler {
 
     get hierarchy(): Hierarchy {
         return {
-            killCount: ['catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer']
+            killCount: ['kc100', 'kc250', 'kc500', 'kc750', 'kc1000', 'kc1500', 'kc2000', 'kc3000', 'kc5000', 'kc7500', 'kc10000'],
         }
     }
 

@@ -201,24 +201,30 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             devourerDayOne: '1401274865113370685',
 
             // KC Roles
-            catBoundInitiate: '1409628812915904652',
-            scarabMarkedDisciple: '1409628840287801385',
-            whispererOfTheWanderer: '1409628927080665189',
-            bearerOfTheUnholySigil: '1409628969837400075',
-            fangOfTheDevourer: '1409628992880771083',
+            kc100: '1409628812915904652', // Cat-Bound Initiate
+            kc250: '1409628840287801385', // Scarab-Marked Disciple
+            kc500: '1409628927080665189', // Whisperer of the Wanderer
+            kc750: '1409628969837400075', // Bearer of the Unholy Sigil
+            kc1000: '1409628992880771083', // Fang of the Devourer
+            kc1500: '1416694159883898951', // Seeker of the Kharid-ib
+            kc2000: '1416694240792285204', // Echo of Mah's Madness
+            kc3000: '1416694269103702078', // Oracle of the Hollow Sun
+            kc5000: '1416694297482231878', // Herald of the Scarab Paraoh
+            kc7500: '1416694341203660830', // Soul-Eater Ascendant
+            kc10000: '1416694373462310943', // Eternal Fang of the Devourer
 
             // Collection Log Roles
             silverSpoon: '1401274832284553226',
             goldenSpoon: '1401274807085039791',
             visionmaker: '1409629419059937442',
-            tumekenMask: '1409629498806108273',
-            tumekenRobeTop: '1401431461156098070',
-            tumekenRobeBottom: '1409629534101442720',
-            tumekenGloves: '1409629565629890690',
-            tumekenBoots: '1409629595736608776',
-            devourersGuard: '1409629629521858681',
-            tumekensLight: '1409629706218766358',
-            amaskitty: '1409629724732293293',
+            mask5: '1409629498806108273',
+            top5: '1401431461156098070',
+            bottom5: '1409629534101442720',
+            gloves5: '1409629565629890690',
+            boots5: '1409629595736608776',
+            guard5: '1409629629521858681',
+            light5: '1409629706218766358',
+            pet: '1409629724732293293',
 
             // Enrage Roles
             enr500: '1404800709462982716',
@@ -259,24 +265,31 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             teamformingTimeout: '1404882562190413824',
 
             // KC Roles
-            catBoundInitiate: '1401429471692722292',
-            scarabMarkedDisciple: '1401429722704904313',
-            whispererOfTheWanderer: '1401429855731449948',
-            bearerOfTheUnholySigil: '1401429929341485056',
-            fangOfTheDevourer: '1401430017367343106',
+            kc100: '1401429471692722292', // Cat-Bound Initiate
+            kc250: '1401429722704904313', // Scarab-Marked Disciple
+            kc500: '1401429855731449948', // Whisperer of the Wanderer
+            kc750: '1401429929341485056', // Bearer of the Unholy Sigil
+            kc1000: '1401430017367343106', // Fang of the Devourer
+            kc1500: '1401430067568967761', // Seeker of the Kharid-ib
+            kc2000: '1401430113547063390', // Echo of Mah's Madness
+            kc3000: '1401430169440227338', // Oracle of the Hollow Sun
+            kc5000: '1401430224079687751', // Herald of the Scarab Paraoh
+            kc7500: '1401430309328650310', // Soul-Eater Ascendant
+            kc10000: '1401430358443950132', // Eternal Fang of the Devourer
 
             // Collection Log Roles
             silverSpoon: '1400869056445415594',
             goldenSpoon: '1400869015940759662',
             visionmaker: '1401431808096342026',
-            tumekenMask: '1401431409620422677',
-            tumekenRobeTop: '1401431461156098070',
-            tumekenRobeBottom: '1401431508996067378',
-            tumekenGloves: '1401431599777583327',
-            tumekenBoots: '1401431554906914957',
-            devourersGuard: '1401431662327369780',
-            tumekensLight: '1401431760704901193',
-            amaskitty: '1401431834780241940',
+            mask5: '1401431409620422677',
+            top5: '1401431461156098070',
+            bottom5: '1401431508996067378',
+            gloves5: '1401431599777583327',
+            boots5: '1401431554906914957',
+            guard5: '1401431662327369780',
+            light5: '1401431760704901193',
+            pet: '1401431834780241940',
+            nexus5: '1416532184851808316',
 
             // Enrage Roles
             enr500: '1401450408492404877',
