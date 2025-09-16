@@ -22,6 +22,10 @@ interface BossRevenueData {
 
 interface BossConfig {
     kph: number;
+    lastMessageId?: string;
+    lastChannelId?: string;
+    lastGuildId?: string;
+    lastUpdated?: number;
 }
 
 export default class BossRevenueV2 extends BotInteraction {
@@ -38,10 +42,32 @@ export default class BossRevenueV2 extends BotInteraction {
     }
 
     get slashData() {
-        return new SlashCommandBuilder().setName(this.name).setDescription(this.description);
+        return new SlashCommandBuilder()
+            .setName(this.name)
+            .setDescription(this.description)
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('calculate')
+                    .setDescription('Calculate and post new Amascut revenue data')
+            )
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('refresh')
+                    .setDescription('Force refresh the last posted Amascut revenue message')
+            );
     }
 
     async run(interaction: ChatInputCommandInteraction) {
+        const subcommand = interaction.options.getSubcommand();
+        
+        if (subcommand === 'calculate') {
+            return await this.handleCalculate(interaction);
+        } else if (subcommand === 'refresh') {
+            return await this.handleRefresh(interaction);
+        }
+    }
+
+    private async handleCalculate(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral});
 
         try {
@@ -49,15 +75,15 @@ export default class BossRevenueV2 extends BotInteraction {
 
             const url = 'https://runescape.wiki/w/Money_making_guide/Killing_Amascut,_the_Devourer?action=edit';
             const versions = ['100 Enrage', '500 Enrage', '750 Enrage', '1000 Enrage', '2000 Enrage'];
-            const revenueData: Record<string, BossRevenueData> = {};
+                    const revenueData: Record<string, BossRevenueData> = {};
 
             for (const version of versions) {
-                try {
+                        try {
                     revenueData[version] = await this.calculateRevenue(version, url);
-                } catch (error) {
-                    continue;
-                }
-            }
+                        } catch (error) {
+                            continue;
+                        }
+                    }
 
             if (Object.keys(revenueData).length > 0 && interaction.channel && 'send' in interaction.channel) {
                 const config = this.loadBossConfig();
@@ -65,7 +91,7 @@ export default class BossRevenueV2 extends BotInteraction {
                     .setAccentColor(this.client.color);
 
                 container.addSectionComponents(section => section
-                    .addTextDisplayComponents(builder => builder.setContent('# Amascut, the Devourer'))
+                    .addTextDisplayComponents(builder => builder.setContent(`# Amascut, the Devourer\n\nLast updated: ${new Date().toLocaleString()}`))
                     .setThumbnailAccessory(thumbnail => thumbnail
                         .setDescription('Amascut, the Devourer')
                         .setURL('https://runescape.wiki/images/thumb/Amascut%2C_the_Devourer.png/280px-Amascut%2C_the_Devourer.png')
@@ -73,7 +99,7 @@ export default class BossRevenueV2 extends BotInteraction {
                 );
 
                 for (const version of versions) {
-                    if (revenueData[version]) {
+                        if (revenueData[version]) {
                         const data = revenueData[version];
                         
                         container.addSeparatorComponents(separator => separator.setSpacing(1));
@@ -98,7 +124,7 @@ export default class BossRevenueV2 extends BotInteraction {
                 });
                 
                 if (message) {
-                    await this.trackEmbed(message.id, interaction.channelId, interaction.guildId);
+                await this.trackEmbed(message.id, interaction.channelId, interaction.guildId);
                 }
             }
 
@@ -107,6 +133,24 @@ export default class BossRevenueV2 extends BotInteraction {
             const errorEmbed = new EmbedBuilder()
                 .setColor(this.client.util.colours.discord.red)
                 .setDescription('Failed to calculate boss revenue. Please try again later.');
+
+            await interaction.editReply({ embeds: [errorEmbed] });
+        }
+    }
+
+    private async handleRefresh(interaction: ChatInputCommandInteraction) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral});
+
+        try {
+            await interaction.editReply({ content: 'Force refreshing Amascut revenue message...' });
+            
+            await this.refreshLastMessage();
+            
+            await interaction.editReply({ content: 'Successfully refreshed the last Amascut revenue message!' });
+        } catch (error) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor(this.client.util.colours.discord.red)
+                .setDescription('Failed to refresh the message. Make sure there is a recent Amascut revenue message to refresh.');
 
             await interaction.editReply({ embeds: [errorEmbed] });
         }
@@ -348,7 +392,7 @@ export default class BossRevenueV2 extends BotInteraction {
             );
         }
 
-        processed = processed.replace(/\{\{#var:[^}]+\}\}/g, '0');
+            processed = processed.replace(/\{\{#var:[^}]+\}\}/g, '0');
 
         return processed;
     }
@@ -463,7 +507,6 @@ export default class BossRevenueV2 extends BotInteraction {
 
     private isUnique(itemName: string): boolean {
         const uniques = [
-            // Amascut uniques
             "Tumeken's Light", "Devourer's Guard", "Shard of Genesis Essence", 
             "The Devourer's Nexus", "Mask of Tumeken's resplendence", 
             "Robe top of Tumeken's resplendence", "Robe bottom of Tumeken's resplendence",
@@ -490,7 +533,6 @@ export default class BossRevenueV2 extends BotInteraction {
                     });
                 }
             } catch (error) {
-                // Silent fail for price fetching
             }
         }
 
@@ -498,7 +540,104 @@ export default class BossRevenueV2 extends BotInteraction {
     }
 
     private async trackEmbed(messageId: string, channelId: string, guildId: string | null): Promise<void> {
-        // Simple tracking - just log the message ID for reference
-        console.log(`Amascut revenue message posted: ${messageId}`);
+        if (!guildId) return;
+
+        try {
+            const configPath = path.join(process.cwd(), 'boss-configs.json');
+            let configData: any = {};
+
+            try {
+                configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            } catch {
+                configData = {};
+            }
+
+            if (!configData.amascut) configData.amascut = { kph: 6 };
+            
+            configData.amascut.lastMessageId = messageId;
+            configData.amascut.lastChannelId = channelId;
+            configData.amascut.lastGuildId = guildId;
+            configData.amascut.lastUpdated = Date.now();
+
+            fs.writeFileSync(configPath, JSON.stringify(configData, null, 4));
+        } catch (error) {
+            console.error('Failed to track message:', error);
+        }
+    }
+
+    public async refreshLastMessage(): Promise<void> {
+        try {
+            const config = this.loadBossConfig();
+            if (!config.lastMessageId || !config.lastChannelId) {
+                return;
+            }
+
+            const channel = await this.client.channels.fetch(config.lastChannelId);
+            if (!channel || !('send' in channel)) return;
+
+            const message = await channel.messages.fetch(config.lastMessageId);
+            if (!message) return;
+
+            const url = 'https://runescape.wiki/w/Money_making_guide/Killing_Amascut,_the_Devourer?action=edit';
+            const versions = ['100 Enrage', '500 Enrage', '750 Enrage', '1000 Enrage', '2000 Enrage'];
+            const revenueData: Record<string, BossRevenueData> = {};
+
+            for (const version of versions) {
+                try {
+                    revenueData[version] = await this.calculateRevenue(version, url);
+                } catch (error) {
+                    continue;
+                }
+            }
+
+            if (Object.keys(revenueData).length > 0) {
+                const container = new ContainerBuilder()
+                    .setAccentColor(this.client.color);
+
+                container.addSectionComponents(section => section
+                    .addTextDisplayComponents(builder => builder.setContent(`# Amascut, the Devourer\n\nLast updated: ${new Date().toLocaleString()}`))
+                    .setThumbnailAccessory(thumbnail => thumbnail
+                        .setDescription('Amascut, the Devourer')
+                        .setURL('https://runescape.wiki/images/thumb/Amascut%2C_the_Devourer.png/280px-Amascut%2C_the_Devourer.png')
+                    )
+                );
+
+                for (const version of versions) {
+                    if (revenueData[version]) {
+                        const data = revenueData[version];
+                        
+                        container.addSeparatorComponents(separator => separator.setSpacing(1));
+                        
+                        container.addTextDisplayComponents(builder => builder.setContent([
+                            `## ${version.replace(' Enrage', '% Enrage')}`,
+                            `**GP/Kill:** <:Coins:1400432187924287579> ${data.overallGpPerKillAfterTax.toLocaleString()}`,
+                            `**GP/Hour:** <:Coins:1400432187924287579> ${data.overallGpPerHourAfterTax.toLocaleString()}`
+                        ].join('\n')));
+                    }
+                }
+                
+                container.addSeparatorComponents(separator => separator.setSpacing(1));
+                container.addTextDisplayComponents(builder => builder.setContent(
+                    `*-# All GP/Hour values are approximate and based on ${config.kph} kills per hour. Data taken from the [RS Wiki](https://runescape.wiki/w/Amascut,_the_Devourer) drop tables using current GE prices (includes -2% for tax).*`
+                ));
+
+                await message.edit({ 
+                    components: [container], 
+                    flags: MessageFlags.IsComponentsV2, 
+                    allowedMentions: { "parse": [] } 
+                });
+
+                console.log(`Amascut revenue message refreshed: ${config.lastMessageId}`);
+            }
+        } catch (error) {
+            console.error('Failed to refresh message:', error);
+        }
+    }
+
+    public startAutoRefresh(): void {
+        setInterval(() => {
+            this.refreshLastMessage();
+        }, 3600000);
+        console.log('Amascut auto-refresh started (hourly)');
     }
 }
