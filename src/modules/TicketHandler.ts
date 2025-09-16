@@ -825,7 +825,11 @@ export default class TicketHandler {
                     const dateHeader = `\n**--- ${messageDate} ---**\n`;
 
                     if (currentBlock.length + dateHeader.length > maxLength) {
-                        await forumPost.send({ content: currentBlock });
+                        // BANDAID
+                        for (let i = 0; i < currentBlock.length; i += 2000) {
+                            await forumPost.send({ content: currentBlock.slice(i, i + 2000) });
+                        }
+
                         currentBlock = dateHeader;
                     } else {
                         currentBlock += dateHeader;
@@ -837,7 +841,10 @@ export default class TicketHandler {
                 const hasAttachments = message.attachments.size > 0;
 
                 if (currentBlock.length + messageBlock.length > maxLength && currentBlock.length > 0) {
-                    await forumPost.send({ content: currentBlock });
+                    // BANDAID
+                    for (let i = 0; i < currentBlock.length; i += 2000) {
+                        await forumPost.send({ content: currentBlock.slice(i, i + 2000) });
+                    }
                     currentBlock = '';
                 }
 
@@ -848,7 +855,10 @@ export default class TicketHandler {
                         const attachmentBlock = `**[${timeOnly}] ${author}:** ${attachment.url}\n`;
 
                         if (currentBlock.length + attachmentBlock.length > maxLength) {
-                            await forumPost.send({ content: currentBlock });
+                            // BANDAID
+                            for (let i = 0; i < currentBlock.length; i += 2000) {
+                                await forumPost.send({ content: currentBlock.slice(i, i + 2000) });
+                            }
                             currentBlock = attachmentBlock;
                         } else {
                             currentBlock += attachmentBlock;
@@ -860,7 +870,10 @@ export default class TicketHandler {
                     const embedInfo = `*[${author} sent ${message.embeds.length} embed(s)]*\n`;
 
                     if (currentBlock.length + embedInfo.length > maxLength) {
-                        await forumPost.send({ content: currentBlock });
+                        // BANDAID
+                        for (let i = 0; i < currentBlock.length; i += 2000) {
+                            await forumPost.send({ content: currentBlock.slice(i, i + 2000) });
+                        }
                         currentBlock = embedInfo;
                     } else {
                         currentBlock += embedInfo;
@@ -869,7 +882,10 @@ export default class TicketHandler {
             }
 
             if (currentBlock.trim()) {
-                await forumPost.send({ content: currentBlock });
+                // BANDAID
+                for (let i = 0; i < currentBlock.length; i += 2000) {
+                    await forumPost.send({ content: currentBlock.slice(i, i + 2000) });
+                }
             }
 
             // close and lock forum to not randomly reach discords limit for open forum threads (1000)
