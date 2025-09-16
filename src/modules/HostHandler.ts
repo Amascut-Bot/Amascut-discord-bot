@@ -65,7 +65,7 @@ export default class HostHandler {
 
         // give points
         const hostData = HostHandler.getHostData(containerJson);
-        const users: string[] = (hostData[1] as string[]).map(x => this.client.util.stripRole(x));
+        const users: string[] = (hostData[1] as string[]).map(x => x.slice(2, -1));
 
         if (!users.includes(interaction.user.id)) {
             users.push(interaction.user.id);
@@ -570,7 +570,7 @@ export default class HostHandler {
 
         // add all participants
         const learnerHourParticipants: LearnerHourParticipation[] = [];
-        for (const participant in participants) {
+        for (const participant of participants) {
             const learnerHourParticipation = new LearnerHourParticipation();
             learnerHourParticipation.participant = participant;
             learnerHourParticipation.learnerHour = learnerHour;
