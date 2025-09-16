@@ -91,7 +91,7 @@ export default class BossRevenueV2 extends BotInteraction {
                     .setAccentColor(this.client.color);
 
                 container.addSectionComponents(section => section
-                    .addTextDisplayComponents(builder => builder.setContent(`# Amascut, the Devourer\n\nLast updated: ${new Date().toLocaleString()}`))
+                    .addTextDisplayComponents(builder => builder.setContent(`# Amascut, the Devourer\n\nLast updated: ${new Date().toLocaleString('en-GB')}`))
                     .setThumbnailAccessory(thumbnail => thumbnail
                         .setDescription('Amascut, the Devourer')
                         .setURL('https://runescape.wiki/images/thumb/Amascut%2C_the_Devourer.png/280px-Amascut%2C_the_Devourer.png')
@@ -595,7 +595,7 @@ export default class BossRevenueV2 extends BotInteraction {
                     .setAccentColor(this.client.color);
 
                 container.addSectionComponents(section => section
-                    .addTextDisplayComponents(builder => builder.setContent(`# Amascut, the Devourer\n\nLast updated: ${new Date().toLocaleString()}`))
+                    .addTextDisplayComponents(builder => builder.setContent(`# Amascut, the Devourer\n\nLast updated: ${new Date().toLocaleString('en-GB')}`))
                     .setThumbnailAccessory(thumbnail => thumbnail
                         .setDescription('Amascut, the Devourer')
                         .setURL('https://runescape.wiki/images/thumb/Amascut%2C_the_Devourer.png/280px-Amascut%2C_the_Devourer.png')
