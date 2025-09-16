@@ -4,6 +4,8 @@ import { TrialParticipation } from '../../entity/TrialParticipation';
 import { Trial } from '../../entity/Trial';
 import { Reaper } from '../../entity/Reaper';
 import { ReaperParticipation } from '../../entity/ReaperParticipation';
+import { LearnerHour } from '../../entity/LearnerHour';
+import { LearnerHourParticipation } from '../../entity/LearnerHourParticipation';
 
 export default class RemovePoints extends BotInteraction {
     get name() {
@@ -105,10 +107,36 @@ export default class RemovePoints extends BotInteraction {
             }
         }
 
+        if (team === 'teacher') {
+            const learnerHourRepo = dataSource.getRepository(LearnerHour);
+            let existingPlaceholder = await learnerHourRepo.findOne({
+                where: {
+                    host: 'Placeholder'
+                }
+            })
+            if (!existingPlaceholder) {
+                const placeholder = new LearnerHour();
+                placeholder.host = 'Placeholder';
+                placeholder.link = 'Placeholder';
+                existingPlaceholder = await learnerHourRepo.save(placeholder);
+            }
+            const participationRepo = dataSource.getRepository(LearnerHourParticipation);
+            let participationToDelete = await participationRepo.find({
+                where: {
+                    participant: user.id,
+                },
+                take: quantity,
+            });
+            if (participationToDelete) {
+                await participationRepo.remove(participationToDelete);
+
+            }
+        }
+
         const replyEmbed = new EmbedBuilder()
-            .setTitle('Points successfully granted!')
+            .setTitle('Points successfully removed!')
             .setColor(colours.discord.green)
-            .setDescription(`<@${user.id}> was successfully granted **${quantity}** points.`);
+            .setDescription(`<@${user.id}> was successfully removed **${quantity}** points.`);
         await interaction.editReply({ embeds: [replyEmbed] });
     }
 }
