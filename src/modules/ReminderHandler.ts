@@ -38,6 +38,8 @@ export default class ReminderHandler {
             channels.reminderChannel3,
             channels.reminderChannel4,
             channels.reminderChannel5,
+            channels.reminderChannel6,
+            channels.reminderChannel7,
         ].filter(Boolean);
 
         for (const channelId of targetChannels) {
