@@ -1,4 +1,4 @@
-import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, ContainerBuilder, SeparatorSpacingSize, GuildMember, Message } from 'discord.js';
+import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, GuildMember, Message, Collection, FetchMessagesOptions } from 'discord.js';
 import Bot from '../Bot';
 import * as config from '../../config.json';
 import { Override } from '../entity/Override';
@@ -64,8 +64,8 @@ export default class UtilityHandler {
 
     get categories(): Categories {
         return {
-            killCount: ['catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer'],
-            collectionLog: ['visionmaker', 'tumekenMask', 'tumekenRobeTop', 'tumekenRobeBottom', 'tumekenGloves', 'tumekenBoots', 'devourersGuard', 'tumekensLight', 'amaskitty'],
+            killCount: ['kc100', 'kc250', 'kc500', 'kc750', 'kc1000', 'kc1500', 'kc2000', 'kc3000', 'kc5000', 'kc7500', 'kc10000'],
+            collectionLog: ['visionmaker', 'silverSpoon', 'goldenSpoon', 'mask5', 'top5', 'bottom5', 'gloves5', 'boots5', 'guard5', 'light5', 'pet', 'nexus5'],
             serverPings: ['serverAnnouncements', 'goodMorning'],
             vanity: ['silverSpoon', 'goldenSpoon'],
             enrage: ['enr500', 'enr1000', 'enr2000', 'enr4000', 'rd500', 'rd1000', 'rd2000', 'rd4000', 'rw500', 'rw1000', 'rw2000', 'rw4000']
@@ -74,7 +74,7 @@ export default class UtilityHandler {
 
     get hierarchy(): Hierarchy {
         return {
-            killCount: ['catBoundInitiate', 'scarabMarkedDisciple', 'whispererOfTheWanderer', 'bearerOfTheUnholySigil', 'fangOfTheDevourer']
+            killCount: ['kc100', 'kc250', 'kc500', 'kc750', 'kc1000', 'kc1500', 'kc2000', 'kc3000', 'kc5000', 'kc7500', 'kc10000'],
         }
     }
 
@@ -268,190 +268,26 @@ export default class UtilityHandler {
         }
     }
 
-    //#region componentsV2
+    public static async readAllMessages(channel: TextChannel): Promise<Collection<string, Message<true>>> {
+        let messages = new Collection<string, Message<true>>();
+        let lastId: string | undefined;
 
-    //cleans up a componentsV2-container
-    public static cleanContainer(containerData: any, disableControls: boolean = false) :any {
-        const newContainer: any = {};
+        while (true) {
+            const options: FetchMessagesOptions = { limit: 100 };
+            if (lastId) options.before = lastId;
 
-        if (containerData.type) newContainer.type = containerData.type;
-        if (containerData.accentColor) newContainer.accent_color = containerData.accentColor;
+            const fetched = await channel.messages.fetch(options);
+            if (fetched.size === 0) break;
 
-        if (containerData.components?.length > 0) {
-            //depending on component type...
-            newContainer.components = containerData.components.map((component: any) => {
-                return this.cleanComponent(component, disableControls);
-            });
+
+            messages = messages.concat(fetched);
+            lastId = fetched.last()?.id;
         }
 
-        return newContainer;
+        messages = messages.reverse();
+
+        return messages;
     }
-
-    private static cleanComponent(node: any, disableControls: boolean = false) :any {
-        let result: any = {};
-
-        //ActionRow
-        if (node.type == 1) {
-            result = {
-                type: node.type
-            };
-
-            result.components = node.components.map((component: any) => {
-                return this.cleanComponent(component, disableControls);
-            });
-        }
-
-        //Button
-        if (node.type == 2) {
-            result = {
-                type: node.type,
-                style: node.style,
-                custom_id: node.customId,
-                disabled: disableControls
-            };
-
-            if (node.label) result.label = node.label;
-            if (node.emoji) result.emoji = node.emoji;
-            if (node.url) result.url = node.url;
-        }
-
-        //String Select
-        if (node.type == 3) {
-            result = {
-                type: node.type,
-                custom_id: node.customId,
-                disabled: disableControls
-            };
-
-            if (node.placeholder) result.placeholder = node.placeholder;
-            if (node.minValues) result.min_values = node.minValues;
-            if (node.maxValues) result.max_values = node.maxValues;
-
-            result.options = node.options.map((option: any) => {
-                let optionResult: any = {};
-
-                if (option.label) optionResult.label = option.label;
-                if (option.value) optionResult.value = option.value;
-                if (option.description) optionResult.description = option.description;
-
-                if (option.emoji) {
-                    const emoji: any = {};
-
-                    if (option.emoji.name) emoji.name = option.emoji.name;
-                    if (option.emoji.id) emoji.id = option.emoji.id;
-                    if (option.emoji.animated) emoji.animated = option.emoji.animated;
-
-                    optionResult.emoji = emoji;
-                }
-
-                return optionResult;
-            });
-        }
-
-        //User Select
-        if (node.type == 5) {
-            result = {
-                type: node.type,
-                custom_id: node.customId,
-                disabled: disableControls
-            };
-
-            if (node.placeholder) result.placeholder = node.placeholder;
-            if (node.minValues) result.min_values = node.minValues;
-            if (node.maxValues) result.max_values = node.maxValues;
-        }
-
-        //Section
-        if (node.type == 9) {
-            result = {
-                type: node.type
-            };
-
-            result.components = node.components.map((component: any) => {
-                return this.cleanComponent(component, disableControls);
-            });
-
-            result.accessory = this.cleanComponent(node.accessory, disableControls);
-        }
-
-        //Text Display
-        if (node.type == 10) {
-            result = {
-                type: node.type,
-                content: node.content
-            };
-        }
-
-        //Thumbnail
-        if (node.type == 11) {
-            result = {
-                type: node.type,
-                media: {
-                    url: node.media.url
-                }
-            };
-
-            if (node.description) result.description = node.description;
-        }
-
-        //Media Gallery
-        if (node.type == 12) {
-            result = {
-                type: node.type
-            };
-
-            result.items = node.items.map((item: any) => {
-                let itemResult: any = {};
-
-                itemResult.media = {
-                    url: item.media.url
-                };
-
-                if (item.description) itemResult.description = item.description;
-
-                return itemResult;
-            });
-        }
-
-        //Separator
-        if (node.type == 14) {
-            result = {
-                type: node.type,
-                spacing: node.spacing
-            };
-        }
-
-        //Container
-        if (node.type == 17) {
-            result = {
-                type: node.type
-            };
-
-            if (node.accentColor) result.accent_color = node.accentColor;
-
-            result.components = node.components.map((component: any) => {
-                return this.cleanComponent(component, disableControls);
-            });
-        }
-
-        return result;
-    }
-
-    //#endregion
-
-    //#region Builders
-
-    public getContainerBuilder(success: boolean | null, title: string) : ContainerBuilder {
-        const container = new ContainerBuilder();
-
-        if (success === true) container.setAccentColor(this.colours.green).addTextDisplayComponents(builder => builder.setContent(`${title}`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
-        if (success === false) container.setAccentColor(this.colours.red).addTextDisplayComponents(builder => builder.setContent(`${title}`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
-        if (success === null) container.setAccentColor(this.client.color).addTextDisplayComponents(builder => builder.setContent(`${title}`)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
-
-        return container;
-    }
-
-    //#endregion
 
     //#region Timeout
 

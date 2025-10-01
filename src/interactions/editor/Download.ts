@@ -2,7 +2,7 @@ import BotInteraction from '../../types/BotInteraction';
 import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, AttachmentBuilder, ChannelType, APIEmbed } from 'discord.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import UtilityHandler from '../../modules/UtilityHandler';
+import ComponentsV2Utils from '../../modules/ComponentsV2Utils';
 
 export default class Download extends BotInteraction {
     get name() {
@@ -136,7 +136,7 @@ export default class Download extends BotInteraction {
 
                 //for componentsV2 you can just parse the whole container
                 if (message.components.length > 0) {
-                    const container = UtilityHandler.cleanContainer(message.components[0]);
+                    const container = ComponentsV2Utils.cleanContainer(message.components[0]);
                     const containerJson = JSON.stringify(container, null, 2);
                     currentBlock += `\n${containerJson}\n.componentsV2:json`;
                 }

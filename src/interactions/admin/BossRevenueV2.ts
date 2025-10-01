@@ -1,4 +1,4 @@
-import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from 'discord.js';
+import { EmbedBuilder, MessageFlags, SlashCommandBuilder, ContainerBuilder } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction } from 'discord.js';
 import axios from 'axios';
@@ -14,41 +14,27 @@ interface DropTableItem {
 }
 
 interface BossRevenueData {
-    regularGpPerKill: number;
     overallGpPerKill: number;
+    overallGpPerKillAfterTax: number;
     killsPerHour: number;
-    regularGpPerHour: number;
-    overallGpPerHour: number;
-    calculationTime: string;
-}
-
-interface TrackedEmbed {
-    messageId: string;
-    channelId: string;
-    guildId: string;
-    postedAt: number;
+    overallGpPerHourAfterTax: number;
 }
 
 interface BossConfig {
     kph: number;
-    trackedEmbeds?: TrackedEmbed[];
-}
-
-interface Bosses {
-    name: string;
-    url: string;
-    wikiUrl: string;
-    thumbnail: string;
-    versions: string[];
+    lastMessageId?: string;
+    lastChannelId?: string;
+    lastGuildId?: string;
+    lastUpdated?: number;
 }
 
 export default class BossRevenueV2 extends BotInteraction {
     get name() {
-        return 'boss-revenuevtwo';
+        return 'amascut-revenue';
     }
 
     get description() {
-        return 'Calculate GP per kill and GP per hour for bosses based on current prices';
+        return 'Calculate GP per kill and GP per hour for Amascut, the Devourer based on current prices';
     }
 
     get permissions() {
@@ -56,107 +42,93 @@ export default class BossRevenueV2 extends BotInteraction {
     }
 
     get slashData() {
-        return new SlashCommandBuilder().setName(this.name).setDescription(this.description);
+        return new SlashCommandBuilder()
+            .setName(this.name)
+            .setDescription(this.description)
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('calculate')
+                    .setDescription('Calculate and post new Amascut revenue data')
+            )
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('refresh')
+                    .setDescription('Force refresh the last posted Amascut revenue message')
+            );
     }
 
     async run(interaction: ChatInputCommandInteraction) {
+        const subcommand = interaction.options.getSubcommand();
+        
+        if (subcommand === 'calculate') {
+            return await this.handleCalculate(interaction);
+        } else if (subcommand === 'refresh') {
+            return await this.handleRefresh(interaction);
+        }
+    }
+
+    private async handleCalculate(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral});
 
         try {
-            const bosses: Bosses[] = [
-                {
-                    name: 'Telos',
-                    url: 'https://runescape.wiki/w/Money_making_guide/Killing_Telos,_the_Warden?action=edit',
-                    wikiUrl: 'https://runescape.wiki/w/Telos,_the_Warden',
-                    thumbnail: 'https://runescape.wiki/images/thumb/Telos%2C_the_Warden.png/201px-Telos%2C_the_Warden.png?99e18',
-                    versions: ['2449 Enrage Claims', '999 Enrage Claims', '100 Enrage Claims']
-                },
-                {
-                    name: 'Arch-Glacor',
-                    url: 'https://runescape.wiki/w/Money_making_guide/Killing_the_Arch-Glacor?action=edit',
-                    wikiUrl: 'https://runescape.wiki/w/Arch-Glacor',
-                    thumbnail: 'https://runescape.wiki/images/thumb/Arch-Glacor.png/280px-Arch-Glacor.png',
-                    versions: ['Normal Mode', 'Hard Mode 1000 percent enrage claims']
-                },
-                {
-                    name: 'Sanctum of Rebirth',
-                    url: 'https://runescape.wiki/w/Money_making_guide/Sanctum_of_Rebirth?action=edit',
-                    wikiUrl: 'https://runescape.wiki/w/Sanctum_of_Rebirth',
-                    thumbnail: 'https://runescape.wiki/images/thumb/Nakatra%2C_Devourer_Eternal.png/280px-Nakatra%2C_Devourer_Eternal.png',
-                    versions: ['Normal Mode', 'Hard Mode']
-                },
-                {
-                    name: 'Zamorak, Lord of Chaos',
-                    url: 'https://runescape.wiki/w/Money_making_guide/Killing_Zamorak,_Lord_of_Chaos?action=edit',
-                    wikiUrl: 'https://runescape.wiki/w/Zamorak,_Lord_of_Chaos',
-                    thumbnail: 'https://runescape.wiki/images/thumb/Zamorak%2C_Lord_of_Chaos.png/280px-Zamorak%2C_Lord_of_Chaos.png',
-                    versions: ['50 enrage', '100 enrage', '300 enrage', '500 enrage', '2000 enrage']
-                },
-                {
-                    name: 'Nex: Angel of Death',
-                    url: 'https://runescape.wiki/w/Money_making_guide/Killing_Nex:_Angel_of_Death?action=edit',
-                    wikiUrl: 'https://runescape.wiki/w/Nex:_Angel_of_Death',
-                    thumbnail: 'https://runescape.wiki/images/thumb/Nex%2C_Angel_of_Death.png/280px-Nex%2C_Angel_of_Death.png',
-                    versions: ['7-player', '4-player', 'Duo', 'Solo']
-                }
-            ];
+            await interaction.editReply({ content: 'Processing Amascut, the Devourer...' });
 
-            for (let i = 0; i < bosses.length; i++) {
-                const boss = bosses[i];
-
-                try {
-                    await interaction.editReply({ content: `Processing ${boss.name}... (${i + 1}/${bosses.length})` });
-
+            const url = 'https://runescape.wiki/w/Money_making_guide/Killing_Amascut,_the_Devourer?action=edit';
+            const versions = ['100 Enrage', '500 Enrage', '750 Enrage', '1000 Enrage', '2000 Enrage'];
                     const revenueData: Record<string, BossRevenueData> = {};
-                    let description = '';
 
-                    for (const version of boss.versions) {
+            for (const version of versions) {
                         try {
-                            console.log(`Calculating revenue for ${boss.name} - ${version}`);
-                            revenueData[version] = await this.calculateRevenue(version, boss.url);
-                            console.log(`${boss.name} - ${version}: ${revenueData[version].regularGpPerKill}/${revenueData[version].overallGpPerKill} gp/kill`);
+                    revenueData[version] = await this.calculateRevenue(version, url);
                         } catch (error) {
-                            console.log(`Error calculating revenue for ${boss.name} - ${version}:`, error);
                             continue;
                         }
                     }
 
-            const fields: any[] = [];
+            if (Object.keys(revenueData).length > 0 && interaction.channel && 'send' in interaction.channel) {
+                const config = this.loadBossConfig();
+                const container = new ContainerBuilder()
+                    .setAccentColor(this.client.color);
 
-                    boss.versions.forEach(version => {
+                container.addSectionComponents(section => section
+                    .addTextDisplayComponents(builder => builder.setContent(`# Amascut, the Devourer\n\nLast updated: ${new Date().toLocaleString('en-GB')}`))
+                    .setThumbnailAccessory(thumbnail => thumbnail
+                        .setDescription('Amascut, the Devourer')
+                        .setURL('https://runescape.wiki/images/thumb/Amascut%2C_the_Devourer.png/280px-Amascut%2C_the_Devourer.png')
+                    )
+                );
+
+                for (const version of versions) {
                         if (revenueData[version]) {
-                description += `## ${version}:\n`;
-                            description += `**Commons GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(revenueData[version].regularGpPerKill).toLocaleString()}\` gp *(no uniques)*\n`;
-                            description += `**Total GP/Kill:** <:Coins:1400432187924287579> \`${Math.round(revenueData[version].overallGpPerKill).toLocaleString()}\` gp *(with uniques)*\n`;
-
-                            fields.push({
-                                name: `## ${version}:\nGP/Hour (${revenueData[version].killsPerHour} kph)`,
-                                value: `<:Coins:1400432187924287579> ${Math.round(revenueData[version].overallGpPerHour).toLocaleString()} gp`,
-                        inline: false
-                            });
+                        const data = revenueData[version];
+                        
+                        container.addSeparatorComponents(separator => separator.setSpacing(1));
+                        
+                        container.addTextDisplayComponents(builder => builder.setContent([
+                            `## ${version.replace(' Enrage', '% Enrage')}`,
+                            `**GP/Kill:** <:Coins:1400432187924287579> ${data.overallGpPerKillAfterTax.toLocaleString()}`,
+                            `**GP/Hour:** <:Coins:1400432187924287579> ${data.overallGpPerHourAfterTax.toLocaleString()}`
+                        ].join('\n')));
                     }
-            });
+                }
+                
+                container.addSeparatorComponents(separator => separator.setSpacing(1));
+                container.addTextDisplayComponents(builder => builder.setContent(
+                    `*-# All GP/Hour values are approximate and based on ${config.kph} kills per hour. Data taken from the [RS Wiki](https://runescape.wiki/w/Amascut,_the_Devourer) drop tables using current GE prices (includes -2% for tax).*`
+                ));
 
-                    if (description && fields.length > 0) {
-            const embed = new EmbedBuilder()
-                .setColor(this.client.color)
-                            .setTitle(`${boss.name} - Wiki`)
-                            .setURL(boss.wikiUrl)
-                            .setThumbnail(boss.thumbnail)
-                            .setDescription(description.trim())
-                .addFields(fields);
-
-            if (interaction.channel && 'send' in interaction.channel) {
-                const message = await interaction.channel.send({ embeds: [embed] });
+                const message = await interaction.channel.send({ 
+                    components: [container], 
+                    flags: MessageFlags.IsComponentsV2, 
+                    allowedMentions: { "parse": [] } 
+                });
+                
+                if (message) {
                 await this.trackEmbed(message.id, interaction.channelId, interaction.guildId);
-                        }
-                    }
-                } catch (error) {
-                    continue;
                 }
             }
 
-            await interaction.editReply({ content: 'Embed sent!'});
+            await interaction.editReply({ content: 'Posted!'});
         } catch (error) {
             const errorEmbed = new EmbedBuilder()
                 .setColor(this.client.util.colours.discord.red)
@@ -166,21 +138,35 @@ export default class BossRevenueV2 extends BotInteraction {
         }
     }
 
+    private async handleRefresh(interaction: ChatInputCommandInteraction) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral});
+
+        try {
+            await interaction.editReply({ content: 'Force refreshing Amascut revenue message...' });
+            
+            await this.refreshLastMessage();
+            
+            await interaction.editReply({ content: 'Successfully refreshed the last Amascut revenue message!' });
+        } catch (error) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor(this.client.util.colours.discord.red)
+                .setDescription('Failed to refresh the message. Make sure there is a recent Amascut revenue message to refresh.');
+
+            await interaction.editReply({ embeds: [errorEmbed] });
+        }
+    }
+
     private loadBossConfig(): BossConfig {
         try {
             const configPath = path.join(process.cwd(), 'boss-configs.json');
             const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-            return configData.raksha || { kph: 20 };
+            return configData.amascut || { kph: 6 };
         } catch (error) {
-            return { kph: 20 };
+            return { kph: 6 };
         }
     }
 
     private async calculateRevenue(version: string, url: string): Promise<BossRevenueData> {
-        if (url.includes('Nex:_Angel_of_Death')) {
-            return await this.calculateAodRevenue(version);
-        }
-
         const dropTable = await this.fetchDropTable(version, url);
         if (dropTable.length === 0) {
             throw new Error('Unable to fetch drop table data');
@@ -189,32 +175,23 @@ export default class BossRevenueV2 extends BotInteraction {
         const config = this.loadBossConfig();
         const itemPrices = await this.getItemPrices(dropTable.map(item => item.name));
 
-        const regularDrops = dropTable.filter(drop => !drop.isUnique);
-        const uniqueDrops = dropTable.filter(drop => drop.isUnique);
-
-        let regularValue = 0;
-        for (const drop of regularDrops) {
-            const price = itemPrices[drop.name] || drop.price || 0;
-            if (price > 0) {
-                regularValue += (price * drop.quantity);
-            }
-        }
-
-        let overallValue = regularValue;
-        for (const drop of uniqueDrops) {
+        let overallValue = 0;
+        for (const drop of dropTable) {
             const price = itemPrices[drop.name] || drop.price || 0;
             if (price > 0) {
                 overallValue += (price * drop.quantity);
             }
         }
 
+        const overallGpPerKill = Math.round(overallValue);
+        const overallGpPerKillAfterTax = Math.round(overallGpPerKill * 0.98);
+        const overallGpPerHourAfterTax = overallGpPerKillAfterTax * config.kph;
+
         return {
-            regularGpPerKill: Math.round(regularValue),
-            overallGpPerKill: Math.round(overallValue),
+            overallGpPerKill: overallGpPerKill,
+            overallGpPerKillAfterTax: overallGpPerKillAfterTax,
             killsPerHour: config.kph,
-            regularGpPerHour: Math.round(regularValue) * config.kph,
-            overallGpPerHour: Math.round(overallValue) * config.kph,
-            calculationTime: new Date().toLocaleString()
+            overallGpPerHourAfterTax: overallGpPerHourAfterTax
         };
     }
 
@@ -252,14 +229,7 @@ export default class BossRevenueV2 extends BotInteraction {
         const dropTable: DropTableItem[] = [];
 
         try {
-            let processed = content;
-
-            if (content.includes('<!--chest-->')) {
-                processed = this.preprocessAod(content);
-            }
-
-            processed = this.resolveVariables(processed);
-
+            const processed = this.resolveVariables(content);
             const segments = this.parseMarkup(processed);
             const outputs = segments.filter(val => val.startsWith('Output'));
 
@@ -394,14 +364,6 @@ export default class BossRevenueV2 extends BotInteraction {
         return html.substring(start, end);
     }
 
-    private preprocessAod(content: string): string {
-        return content
-            .replace(/\{\{var\|([^|]+)\|([^}]+)\}\}/g, (match, key, value) =>
-                key.startsWith('Output') ? `|${key} = ${value}` : match
-            )
-            .replace(/\|Output\d+\s*=\s*\{\{#var:Output\d+\}\}/g, '')
-            .replace(/\{\{#var:Output\d+\}\}/g, '');
-    }
 
     private resolveVariables(content: string): string {
         const variables: Record<string, string> = {};
@@ -430,12 +392,7 @@ export default class BossRevenueV2 extends BotInteraction {
             );
         }
 
-        if (content.includes('<!--chest-->')) {
-            processed = processed.replace(/\{\{#var:(?!Output\d+)[^}]+\}\}/g, '0');
-            processed = this.cleanupTemplates(processed);
-        } else {
             processed = processed.replace(/\{\{#var:[^}]+\}\}/g, '0');
-        }
 
         return processed;
     }
@@ -489,207 +446,8 @@ export default class BossRevenueV2 extends BotInteraction {
         }
     }
 
-    private cleanupTemplates(text: string): string {
-        return text
-            .replace(/\{\{#expr:[^}]*\}\}/g, '0')
-            .replace(/\{\{#ifexpr:[^}]*\}\}/g, '0')
-            .replace(/\{\{[^}]*\}\}/g, '');
-    }
 
-    private async calculateAodRevenue(version: string): Promise<BossRevenueData> {
-        const response = await axios.get('https://runescape.wiki/w/Nex:_Angel_of_Death', {
-            headers: { 'User-Agent': 'Amascut Discord Bot' },
-            timeout: 15000
-        });
 
-        const dropTable = await this.parseAodHtml(response.data);
-        if (dropTable.length === 0) {
-            throw new Error(`No drop table data found for AOD ${version}`);
-        }
-
-        const config = this.loadBossConfig();
-        const itemPrices = await this.getItemPrices(dropTable.map(item => item.name));
-
-        const regularDrops = dropTable.filter(drop => !drop.isUnique);
-        const uniqueDrops = dropTable.filter(drop => drop.isUnique);
-        const teamSize = this.getTeamSize(version);
-
-        console.log(`AOD ${version} - Total items parsed: ${dropTable.length}`);
-        console.log(`AOD ${version} - Common items:`, regularDrops.map(d => `${d.name} (${d.quantity})`));
-        console.log(`AOD ${version} - Unique items:`, uniqueDrops.map(d => `${d.name} (${d.quantity})`));
-
-        let regularValue = 0;
-        for (const drop of regularDrops) {
-            const price = itemPrices[drop.name] || 0;
-            if (price > 0) {
-                regularValue += price * drop.quantity;
-                console.log(`AOD ${version} - Adding common: ${drop.name} = ${price} * ${drop.quantity} = ${price * drop.quantity}`);
-            }
-        }
-
-        let overallValue = regularValue;
-        for (const drop of uniqueDrops) {
-            const price = itemPrices[drop.name] || 0;
-            if (price > 0) {
-                overallValue += price * this.getDropChance(drop.name, teamSize);
-            }
-        }
-
-        return {
-            regularGpPerKill: Math.round(regularValue),
-            overallGpPerKill: Math.round(overallValue),
-            killsPerHour: config.kph,
-            regularGpPerHour: Math.round(regularValue) * config.kph,
-            overallGpPerHour: Math.round(overallValue) * config.kph,
-            calculationTime: new Date().toLocaleString()
-        };
-    }
-
-    private async parseAodHtml(html: string): Promise<DropTableItem[]> {
-        const dropTable: DropTableItem[] = [];
-        const tableRegex = /<table[^>]*class="[^"]*wikitable[^"]*"[^>]*>([\s\S]*?)<\/table>/gi;
-        let tableMatch;
-
-        while ((tableMatch = tableRegex.exec(html)) !== null) {
-            if (this.isDropTable(tableMatch[1])) {
-                dropTable.push(...this.parseTableRows(tableMatch[1]));
-            }
-        }
-
-        return dropTable;
-    }
-
-    private isDropTable(content: string): boolean {
-        const indicators = ['item', 'quantity', 'rarity', 'praesul', 'wand', 'core', 'codex', 'chest'];
-        return indicators.some(indicator => content.toLowerCase().includes(indicator));
-    }
-
-    private parseTableRows(content: string): DropTableItem[] {
-        const items: DropTableItem[] = [];
-        const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-        let rowMatch;
-
-        while ((rowMatch = rowRegex.exec(content)) !== null) {
-            if (rowMatch[1].includes('<th')) continue;
-
-            const cells = this.extractCells(rowMatch[1]);
-            if (cells.length >= 2) {
-                const itemName = this.extractItemName(cells[0]);
-                const quantity = this.parseAodQuantity(cells[1]);
-                const dropRate = this.getAodItemDropRate(itemName);
-
-                console.log(`AOD item: ${itemName}, quantity: ${quantity}, dropRate: ${dropRate}, cells: ${cells.length}`);
-
-                if (itemName && quantity > 0) {
-                    items.push({
-                        name: itemName,
-                        quantity: quantity * dropRate,
-                        dropRate: 1,
-                        isUnique: this.isUnique(itemName),
-                        price: 0
-                    });
-                }
-            }
-        }
-
-        return items;
-    }
-
-    private extractItemName(cell: string): string {
-        let name = cell;
-
-        const aodPattern = /^([^.]+)\.png:\s*RS3\s+Nex,\s*Angel\s+of\s+Death\s+drops\s+([^]+?)\s+with\s+rarity/i;
-        const aodMatch = name.match(aodPattern);
-        if (aodMatch) return aodMatch[2].trim();
-
-        if (/^\d+[–-]\d+%$|^\d+%$/.test(name.trim())) return '';
-
-        name = name
-            .replace(/<img[^>]*alt="([^"]*)"[^>]*>/gi, '$1')
-            .replace(/<img[^>]*>/gi, '')
-            .replace(/<a[^>]*>([^<]*)<\/a>/gi, '$1')
-            .replace(/<[^>]+>/g, '')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/&amp;/g, '&')
-            .replace(/\.png$|\.gif$|\.jpg$/gi, '')
-            .replace(/:\s*RS3.*$/i, '')
-            .trim();
-
-        return name && name !== '?' && name !== '-' ? name : '';
-    }
-
-    private getTeamSize(version: string): number {
-        const v = version.toLowerCase();
-        if (v.includes('7-player')) return 7;
-        if (v.includes('4-player')) return 4;
-        if (v.includes('duo')) return 2;
-        if (v.includes('solo')) return 1;
-        return 7;
-    }
-
-    private getDropChance(itemName: string, teamSize: number): number {
-        const item = itemName.toLowerCase();
-
-        const weapChance = teamSize > 7 ? 1/10000 : 1/(284 * teamSize);
-
-        if (item.includes('praesul codex')) {
-            return (1 / (36 * Math.min(teamSize, 7))) * (1 - 2 * weapChance);
-        }
-        if (item.includes('wand of the praesul') || item.includes('imperium core')) {
-            return weapChance;
-        }
-        if (item.includes('intricate') && item.includes('chest')) return 1 / 5000;
-
-        return 1 / 1000;
-    }
-
-    private parseAodQuantity(cell: string): number {
-        const clean = cell.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
-
-        const rangeMatch = clean.match(/(\d+(?:,\d+)?(?:\.\d+)?)[–-](\d+(?:,\d+)?(?:\.\d+)?)/);
-        if (rangeMatch) {
-            const min = parseFloat(rangeMatch[1].replace(/,/g, ''));
-            const max = parseFloat(rangeMatch[2].replace(/,/g, ''));
-            return (min + max) / 2;
-        }
-
-        const numberMatch = clean.match(/(\d+(?:,\d+)*(?:\.\d+)?)/);
-        return numberMatch ? parseFloat(numberMatch[1].replace(/,/g, '')) : 1;
-    }
-
-    private getAodItemDropRate(itemName: string): number {
-        const name = itemName.toLowerCase();
-
-        // Very rare drops (0.1% chance)
-        if (name.includes('uncut onyx')) return 0.001;
-        if (name.includes('blood tentacle')) return 0.001;
-        if (name.includes('starved ancient effigy')) return 0.001;
-
-        // Rare drops (1% chance)
-        if (name.includes('crystal key')) return 0.01;
-        if (name.includes('crystal triskelion')) return 0.01;
-        if (name.includes('sirenic scale')) return 0.01;
-
-        // Uncommon drops (10% chance)
-        if (name.includes('uncut dragonstone')) return 0.1;
-        if (name.includes('ascendri bolts')) return 0.1;
-        if (name.includes('onyx bolt tips')) return 0.1;
-
-        // All other items are common (100% chance)
-        return 1.0;
-    }
-
-    private extractCells(rowHtml: string): string[] {
-        const cells: string[] = [];
-        const cellRegex = /<td[^>]*>(.*?)<\/td>/gis;
-        let cellMatch;
-
-        while ((cellMatch = cellRegex.exec(rowHtml)) !== null) {
-            cells.push(cellMatch[1]);
-        }
-
-        return cells;
-    }
 
     private parseQuantity(cell: string): number {
         if (cell.includes('<') || cell.includes('>')) {
@@ -749,27 +507,10 @@ export default class BossRevenueV2 extends BotInteraction {
 
     private isUnique(itemName: string): boolean {
         const uniques = [
-            // Telos uniques
-            'Dormant staff of Sliske', 'Dormant Seren godbow', 'Dormant Zaros godsword',
-            'Reprisal Ability Codex',
-            // AOD uniques
-            'Praesul codex', 'Wand of the praesul', 'Imperium core', 'Intricate blood stained chest',
-            'Intricate ice chest', 'Intricate smoke-shrouded chest', 'Intricate shadow chest',
-            // AOD shit drops/not commons
-            'The Promised Gift', 'The Praesul', 'Blood tentacle', 'Starved ancient effigy',
-            'Crystal triskelion',
-            // Arch-Glacor uniques
-            'Leng artefact', 'Scripture of Wen', 'Frozen core of Leng', 'Dark Shard of Leng',
-            'Dark Sliver of Leng', 'Dark ice shard', 'Dark ice sliver',
-            // Sanctum uniques
-            'Scripture of Amascut', 'Divine Rage prayer codex', 'Road of Awakening',
-            'Ode to Deceit', 'Shard of Genesis',
-            // Zamorak uniques
-            'Bow of the Last Guardian',
-            'Chaos Roar Ability Codex',
-            'Vestments of havoc hood', 'Vestments of havoc robe top', 'Vestments of havoc robe bottom',
-            'Vestments of havoc boots', 'Vestments of havoc gloves',
-
+            "Tumeken's Light", "Devourer's Guard", "Shard of Genesis Essence", 
+            "The Devourer's Nexus", "Mask of Tumeken's resplendence", 
+            "Robe top of Tumeken's resplendence", "Robe bottom of Tumeken's resplendence",
+            "Gloves of Tumeken's resplendence", "Boots of Tumeken's resplendence"
         ];
         return uniques.some(unique => itemName.toLowerCase().includes(unique.toLowerCase()));
     }
@@ -792,7 +533,6 @@ export default class BossRevenueV2 extends BotInteraction {
                     });
                 }
             } catch (error) {
-                // Silent fail for price fetching
             }
         }
 
@@ -812,17 +552,92 @@ export default class BossRevenueV2 extends BotInteraction {
                 configData = {};
             }
 
-            if (!configData.raksha) configData.raksha = { kph: 20, trackedEmbeds: [] };
-            if (!configData.raksha.trackedEmbeds) configData.raksha.trackedEmbeds = [];
+            if (!configData.amascut) configData.amascut = { kph: 6 };
+            
+            configData.amascut.lastMessageId = messageId;
+            configData.amascut.lastChannelId = channelId;
+            configData.amascut.lastGuildId = guildId;
+            configData.amascut.lastUpdated = Date.now();
 
-            configData.raksha.trackedEmbeds = configData.raksha.trackedEmbeds
-                .filter((embed: TrackedEmbed) => embed.guildId !== guildId)
-                .concat(configData.raksha.trackedEmbeds.filter((embed: TrackedEmbed) => embed.guildId === guildId).slice(-4));
-
-            configData.raksha.trackedEmbeds.push({ messageId, channelId, guildId, postedAt: Date.now() });
             fs.writeFileSync(configPath, JSON.stringify(configData, null, 4));
         } catch (error) {
-            // Silent fail for embed tracking
+            console.error('Failed to track message:', error);
         }
+    }
+
+    public async refreshLastMessage(): Promise<void> {
+        try {
+            const config = this.loadBossConfig();
+            if (!config.lastMessageId || !config.lastChannelId) {
+                return;
+            }
+
+            const channel = await this.client.channels.fetch(config.lastChannelId);
+            if (!channel || !('send' in channel)) return;
+
+            const message = await channel.messages.fetch(config.lastMessageId);
+            if (!message) return;
+
+            const url = 'https://runescape.wiki/w/Money_making_guide/Killing_Amascut,_the_Devourer?action=edit';
+            const versions = ['100 Enrage', '500 Enrage', '750 Enrage', '1000 Enrage', '2000 Enrage'];
+            const revenueData: Record<string, BossRevenueData> = {};
+
+            for (const version of versions) {
+                try {
+                    revenueData[version] = await this.calculateRevenue(version, url);
+                } catch (error) {
+                    continue;
+                }
+            }
+
+            if (Object.keys(revenueData).length > 0) {
+                const container = new ContainerBuilder()
+                    .setAccentColor(this.client.color);
+
+                container.addSectionComponents(section => section
+                    .addTextDisplayComponents(builder => builder.setContent(`# Amascut, the Devourer\n\nLast updated: ${new Date().toLocaleString('en-GB')}`))
+                    .setThumbnailAccessory(thumbnail => thumbnail
+                        .setDescription('Amascut, the Devourer')
+                        .setURL('https://runescape.wiki/images/thumb/Amascut%2C_the_Devourer.png/280px-Amascut%2C_the_Devourer.png')
+                    )
+                );
+
+                for (const version of versions) {
+                    if (revenueData[version]) {
+                        const data = revenueData[version];
+                        
+                        container.addSeparatorComponents(separator => separator.setSpacing(1));
+                        
+                        container.addTextDisplayComponents(builder => builder.setContent([
+                            `## ${version.replace(' Enrage', '% Enrage')}`,
+                            `**GP/Kill:** <:Coins:1400432187924287579> ${data.overallGpPerKillAfterTax.toLocaleString()}`,
+                            `**GP/Hour:** <:Coins:1400432187924287579> ${data.overallGpPerHourAfterTax.toLocaleString()}`
+                        ].join('\n')));
+                    }
+                }
+                
+                container.addSeparatorComponents(separator => separator.setSpacing(1));
+                container.addTextDisplayComponents(builder => builder.setContent(
+                    `*-# All GP/Hour values are approximate and based on ${config.kph} kills per hour. Data taken from the [RS Wiki](https://runescape.wiki/w/Amascut,_the_Devourer) drop tables using current GE prices (includes -2% for tax).*`
+                ));
+
+                await message.edit({ 
+                    components: [container], 
+                    flags: MessageFlags.IsComponentsV2, 
+                    allowedMentions: { "parse": [] } 
+                });
+
+                console.log(`Amascut revenue message refreshed: ${config.lastMessageId}`);
+            }
+        } catch (error) {
+            console.error('Failed to refresh message:', error);
+        }
+    }
+
+    public startAutoRefresh(): void {
+        setInterval(() => {
+            this.refreshLastMessage();
+        }, 3600000);
+        console.log('Amascut auto-refresh started (hourly)');
     }
 }

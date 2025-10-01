@@ -1,9 +1,11 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, Interaction, Message, MessageFlags, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuInteraction, StringSelectMenuOptionBuilder, TextChannel, UserSelectMenuBuilder, UserSelectMenuInteraction } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ContainerBuilder, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuInteraction, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder, UserSelectMenuInteraction } from 'discord.js';
 import Bot from '../Bot';
 import * as fs from 'fs';
 import * as path from 'path';
-import UtilityHandler from './UtilityHandler';
 import TicketHandler from './TicketHandler';
+import ComponentsV2Utils from './ComponentsV2Utils';
+import { LearnerHour } from '../entity/LearnerHour';
+import { LearnerHourParticipation } from '../entity/LearnerHourParticipation';
 
 export default interface HostHandler { client: Bot; id: string; interaction: Interaction }
 
@@ -32,14 +34,64 @@ export default class HostHandler {
             return;
         }
 
+        if (id.startsWith("host_learner_finish_")) {
+            this.handleHostLearnerFinish(interaction as ModalSubmitInteraction, id.substring(20));
+        }
+
         switch (id) {
             case 'host_learner_select_user': this.handleLearnerHostUserselect(interaction as UserSelectMenuInteraction); break;
             case 'host_learner_select_role': this.handleLearnerHostStringselect(interaction as StringSelectMenuInteraction); break;
             case 'host_learner_submit_select': this.handleLearnerHostAssign(interaction); break;
-            case 'host_learner_finish': this.finishHost(interaction); break;
+            case 'host_learner_finish': this.finishHost(interaction as ButtonInteraction<'cached'>); break;
             case 'host_learner_disband': this.disbandHost(interaction); break;
         }
     }
+
+    //#region Modal Handlers
+
+    private async handleHostLearnerFinish(interaction: ModalSubmitInteraction, hostMessageId: string) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        // disable Host
+        await HostHandler.disableHost(interaction.message!);
+
+        // get current host card & clean it
+        const message = await interaction.channel!.messages.fetch({
+            limit: 1,
+            before: interaction.message!.id
+        });
+        const container = ComponentsV2Utils.cleanContainer(message!.first()!.components[0]);
+
+        let containerJson = JSON.stringify(container, null, 2);
+
+        // give points
+        const hostData = HostHandler.getHostData(containerJson);
+        const users: string[] = (hostData[1] as string[]).map(x => x.slice(2, -1));
+
+        if (!users.includes(interaction.user.id)) {
+            users.push(interaction.user.id);
+        }
+
+        await this.saveLearnerHour(message!.first()!.url, interaction.user.id, users);
+
+        // post summary in #teachers-chat
+        const summary = interaction.fields.getTextInputValue("summary");
+        const participants = `## Participants:\n${users.map(x => `<@${x}>`).join('\n')}`;
+
+        const summaryContainer = this.client.cv2.getContainerBuilder(null, `Learner Hour hosted by <@${interaction.user.id}> - Summary`);
+        summaryContainer.addTextDisplayComponents(t => t.setContent(participants)).addSeparatorComponents(s => s.setSpacing(SeparatorSpacingSize.Small));
+        summaryContainer.addTextDisplayComponents(t => t.setContent(summary));
+
+        const teacherChannel = await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel;
+        await teacherChannel.send({
+            components: [summaryContainer],
+            flags: MessageFlags.IsComponentsV2,
+            allowedMentions: { "parse": [] }
+        });
+
+        await interaction.editReply('Learner hour finished!');
+    }
+
+    //#endregion
 
     //#region Signup Handlers
 
@@ -73,7 +125,7 @@ export default class HostHandler {
             return await interaction.editReply('This action can only be used by Teachers!');
         }
 
-        const container = UtilityHandler.cleanContainer(interaction.message!.components[0]);
+        const container = ComponentsV2Utils.cleanContainer(interaction.message!.components[0]);
 
         //check submissionData
         const userIdSubmit: string = interaction.user.id;
@@ -122,33 +174,14 @@ export default class HostHandler {
         const userMention: string = `<@${user !== null ? user : interaction.user.id}>`;
 
         // get current host card & clean it
-        const container = UtilityHandler.cleanContainer(message.components[0]);
+        const container = ComponentsV2Utils.cleanContainer(message.components[0]);
 
         let containerJson = JSON.stringify(container, null, 2);
 
-        // extract data from current host card
-        const data = new Map<string, string>();
-        const regex = /([\w ]+):\s*(`empty`|<@!?[0-9]+>)(?:\s*&\s*(`empty`|<@!?[0-9]+>))*/g;
-        for (const match of containerJson.matchAll(regex)) {
-            let label = match[1].trim();
-            const value = match[2].trim();
-
-            if (label.startsWith('n')) label = label.substring(1);
-            label = label.replaceAll(" ", "").toLowerCase();
-
-            data.set(label, value);
-        }
-
-        // check if already 5 distinct people are signed up
-        const users: string[] = [];
-
-        for (const [_, entry] of data) {
-            if (entry !== '`empty`') {
-                if (!users.includes(entry)) {
-                    users.push(entry);
-                }
-            }
-        }
+        // extract data from current host
+        const hostData = HostHandler.getHostData(containerJson);
+        const data: Map<string, string> = hostData[0] as Map<string, string>;
+        const users: string[] = hostData[1] as string[];
 
         if (users.length === 5 && !users.includes(userMention)) {
             return await interaction.editReply('This host is already full!');
@@ -224,47 +257,33 @@ export default class HostHandler {
             return await interaction.editReply('This action can only be used by Teachers!');
         }
 
-        const container = UtilityHandler.cleanContainer(interaction.message!.components[0], true);
-
-        const message = await interaction.channel!.messages.fetch({
-            limit: 1,
-            before: interaction.message?.id
-        });
-
-        if (message) {
-            const hostContainer = UtilityHandler.cleanContainer(message.first()!.components[0], true);
-            await message.first()!.edit({
-                components: [hostContainer],
-                flags: MessageFlags.IsComponentsV2,
-                allowedMentions: { 'parse': [] }
-            });
-
-            // Edit Panel
-            await interaction.message!.edit({
-                components: [container],
-                flags: MessageFlags.IsComponentsV2,
-                allowedMentions: { 'parse': [] }
-            });
-
+        if (await HostHandler.disableHost(interaction.message!)) {
             return await interaction.editReply('Host was disbanded!');
+        } else {
+            return await interaction.editReply('Host could not be disbanded because the host message was not found!');
         }
-
-        return await interaction.editReply('Host could not be disbanded because the host message was not found!');
     }
 
-    private async finishHost(interaction: Interaction) {
-        if (!('editReply' in interaction)) {
-            return
-        }
-
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
+    private async finishHost(interaction: ButtonInteraction<'cached'>) {
         //check if user is teacher, admin or owner
         if (!await this.client.util.hasRolePermissions(this.client, ['teacher', 'admin', 'owner'], interaction)) {
-            return await interaction.editReply('This action can only be used by Teachers!');
+            return await interaction.reply('This action can only be used by Teachers!');
         }
 
-        return await interaction.editReply('Finish Host is without function atm :(.');
+        const modal = new ModalBuilder()
+            .setCustomId(`host_learner_finish_${interaction.message.id}`)
+            .setTitle('Learner Hour Summary');
+
+        const summaryInput = new TextInputBuilder()
+            .setCustomId('summary')
+            .setLabel('Please summarize the learner hour')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(summaryInput);
+
+        modal.addComponents(firstRow);
+        await interaction.showModal(modal);
     }
 
     private async handleHostPost(interaction: Interaction, id: string) {
@@ -289,6 +308,51 @@ export default class HostHandler {
     //#endregion
 
     //#region Static
+
+    private static getHostData(hostJson: string) {
+        // extract data from current host card
+        const data = new Map<string, string>();
+        const regex = /([\w ]+):\s*(`empty`|<@!?[0-9]+>)(?:\s*&\s*(`empty`|<@!?[0-9]+>))*/g;
+        for (const match of hostJson.matchAll(regex)) {
+            let label = match[1].trim();
+            const value = match[2].trim();
+
+            if (label.startsWith('n')) label = label.substring(1);
+            label = label.replaceAll(" ", "").toLowerCase();
+
+            data.set(label, value);
+        }
+
+        // check if already 5 distinct people are signed up
+        const users: string[] = [];
+
+        for (const [_, entry] of data) {
+            if (entry !== '`empty`') {
+                if (!users.includes(entry)) {
+                    users.push(entry);
+                }
+            }
+        }
+
+        return [data, users];
+    }
+
+    private static async disableHost(hostMessage: Message<boolean>): Promise<boolean> {
+        const message = await hostMessage.channel!.messages.fetch({
+            limit: 1,
+            before: hostMessage.id
+        });
+
+        if (message) {
+            // disable controls
+            await ComponentsV2Utils.disableControls(message.first()!);
+            await ComponentsV2Utils.disableControls(hostMessage);
+
+            return true;
+        }
+
+        return false;
+    }
 
     static get roleCombinationBlacklist(): RoleIntersection {
         return {
@@ -488,6 +552,49 @@ export default class HostHandler {
             return null;
         }
     }
+
+    //#endregion
+
+    //#region Database
+
+    //#region Learners
+
+    private async saveLearnerHour(link: string, host: string, participants: string[]): Promise<void> {
+        const { dataSource } = this.client;
+        const learnerHourRepository = dataSource.getRepository(LearnerHour);
+        const learnerHourParticipationRepository = dataSource.getRepository(LearnerHourParticipation);
+
+        const learnerHour = new LearnerHour();
+        learnerHour.host = host;
+        learnerHour.link = link;
+
+        // add all participants
+        const learnerHourParticipants: LearnerHourParticipation[] = [];
+        for (const participant of participants) {
+            const learnerHourParticipation = new LearnerHourParticipation();
+            learnerHourParticipation.participant = participant;
+            learnerHourParticipation.learnerHour = learnerHour;
+            learnerHourParticipants.push(learnerHourParticipation);
+        }
+
+        // if host is not in list, add them aswell
+        if (!participants.includes(host)) {
+            const learnerHourParticipation = new LearnerHourParticipation();
+            learnerHourParticipation.participant = host;
+            learnerHourParticipation.learnerHour = learnerHour;
+            learnerHourParticipants.push(learnerHourParticipation);
+        }
+
+        learnerHour.participants = learnerHourParticipants;
+
+        await learnerHourRepository.save(learnerHour);
+        await learnerHourParticipationRepository.save(learnerHourParticipants);
+    }
+
+    //#endregion
+
+    //#region Trials
+    //#endregion
 
     //#endregion
 }

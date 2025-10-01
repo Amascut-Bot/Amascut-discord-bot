@@ -3,6 +3,7 @@ import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import TempChannelManager from '../modules/TempVCHandler';
 import BossRevenue from '../interactions/admin/BossRevenue';
+import BossRevenueV2 from '../interactions/admin/BossRevenueV2';
 import { Timeout } from '../entity/Timeout';
 import { LessThanOrEqual } from 'typeorm';
 import { readdirSync } from 'fs';
@@ -60,6 +61,11 @@ export default class ClientReady extends BotEvent {
         // Start Boss Revenue Auto-Updater
         BossRevenue.startAutoUpdater(this.client);
         this.client.logger.log({ message: 'Boss Revenue auto-updater started (10-minute intervals)' }, true);
+
+        // Start Amascut Revenue Auto-Refresh
+        const amascutRevenue = new BossRevenueV2(this.client);
+        amascutRevenue.startAutoRefresh();
+        this.client.logger.log({ message: 'Amascut Revenue auto-refresh started (hourly intervals)' }, true);
 
         // Start Voice Channel Reminders
         this.client.reminderHandler.startReminders();

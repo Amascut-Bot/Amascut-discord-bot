@@ -14,12 +14,14 @@ import GoogleSheetsHandler from './modules/GoogleSheetsHandler';
 import { DataSource } from "typeorm"
 import { AppDataSource } from './DataSource';
 import { Roles, Channels, getRoles, getChannels } from './GuildSpecifics';
+import ComponentsV2Utils from './modules/ComponentsV2Utils';
 
 export default interface Bot extends Client {
     color: number;
     dataSource: DataSource;
     commandsRun: number;
     util: UtilityHandler;
+    cv2: ComponentsV2Utils
     quitting?: boolean;
     location?: string;
     logger: BotLogger;
@@ -47,6 +49,7 @@ export default class Bot extends Client {
         this.dataSource = AppDataSource;
         this.commandsRun = 0;
         this.util = new UtilityHandler(this);
+        this.cv2 = new ComponentsV2Utils(this);
         this.quitting = false;
         this.location = process.cwd();
         this.logger = new BotLogger();

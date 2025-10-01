@@ -96,6 +96,10 @@ export default class InteractionHandler extends EventEmitter {
             if (interaction.customId.startsWith('leaderboard_')) {
                 return new LeaderboardHandler(this.client, interaction.customId, interaction);
             }
+
+            if (interaction.customId.startsWith('host_')) {
+                return new HostHandler(this.client, interaction.customId, interaction);
+            }
         }
 
         if (interaction.isAutocomplete()) {
