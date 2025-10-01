@@ -99,6 +99,8 @@ export function getChannels(guildId: string | undefined) : Channels {
             reminderChannel3: '1403494299903066142',
             reminderChannel4: '1401385848993222866',
             reminderChannel5: '1413114658541539410',
+            reminderChannel6: '1422202006793097328',
+            reminderChannel7: '1422618338927841431',
             ticketCategory: '1404278113784823849',
             wipTicketCategory: '1404834663339528362',
             staffTicketsCategory: '1416098705127375068',
