@@ -247,7 +247,7 @@ export default class AutoTriggerHandler {
     ];
 
     private async handleKeeps(message: Message): Promise<boolean> {
-        const teamformingChannels = [this.client.channelIds.reminderChannel1, this.client.channelIds.reminderChannel2, this.client.channelIds.reminderChannel3, this.client.channelIds.reminderChannel4];
+        const teamformingChannels = [this.client.channelIds.reminderChannel1, this.client.channelIds.reminderChannel3, this.client.channelIds.reminderChannel4];
 
         if (teamformingChannels.includes(message.channelId) && (AutoTriggerHandler.keepsKeywords.some((keyword) => { return message.content.toLowerCase().includes(keyword)})) && 'send' in message.channel) {
             if (await this.client.util.hasRolePermissionsMessage(this.client, ['admin', 'owner'], message)) return false;

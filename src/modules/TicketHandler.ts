@@ -241,7 +241,7 @@ export default class TicketHandler {
     private async handleTicketLibrarian(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
             .setCustomId(`ticket:create_librarian_${interaction.user.id}`)
-            .setTitle('Librarian staff application');
+            .setTitle('Librarian Team staff application');
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
@@ -275,7 +275,7 @@ export default class TicketHandler {
     private async handleTicketSupport(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
             .setCustomId(`ticket:create_support_${interaction.user.id}`)
-            .setTitle('Support team staff application');
+            .setTitle('Support Team staff application');
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
@@ -308,7 +308,7 @@ export default class TicketHandler {
     private async handleTicketTeacher(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
             .setCustomId(`ticket:create_teacher_${interaction.user.id}`)
-            .setTitle('Teacher staff application');
+            .setTitle('Teacher Team staff application');
 
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
