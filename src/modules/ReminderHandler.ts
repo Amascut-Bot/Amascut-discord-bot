@@ -35,7 +35,6 @@ export default class ReminderHandler {
         const channels = this.client.channelIds;
         const targetChannels = [
             channels.reminderChannel1,
-            channels.reminderChannel2,
             channels.reminderChannel3,
             channels.reminderChannel4,
             channels.reminderChannel5,
@@ -106,7 +105,6 @@ export default class ReminderHandler {
         const channels = this.client.channelIds;
         const targetChannels = [
             channels.reminderChannel1,
-            channels.reminderChannel2,
             channels.reminderChannel3,
             channels.reminderChannel4
         ].filter(Boolean);

@@ -96,7 +96,6 @@ export function getChannels(guildId: string | undefined) : Channels {
             leaderboardSubmission: '1401295523020935218',
             leaderboards: '1401296202116501544',
             reminderChannel1: '1389393102258573475',
-            reminderChannel2: '1389393146647154808',
             reminderChannel3: '1403494299903066142',
             reminderChannel4: '1401385848993222866',
             reminderChannel5: '1413114658541539410',
