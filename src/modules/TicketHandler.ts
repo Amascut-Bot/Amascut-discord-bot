@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, PermissionFlagsBits, SeparatorSpacingSize, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, OverwriteType, PermissionFlagsBits, SeparatorSpacingSize, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -625,7 +625,7 @@ export default class TicketHandler {
 
             if (!ticketUserId) {
                 for (const [id, overwrite] of channel.permissionOverwrites.cache) {
-                    if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
+                    if (overwrite.type === OverwriteType.Member && overwrite.allow.has('ViewChannel')) {
                         const adminRoleId = this.client.roleIds.admin;
                         const ownerRoleId = this.client.roleIds.owner;
 
@@ -1153,7 +1153,7 @@ export default class TicketHandler {
         }
 
         for (const [id, overwrite] of channel.permissionOverwrites.cache) {
-            if (overwrite.type === 1 && overwrite.allow.has('ViewChannel')) {
+            if (overwrite.type === OverwriteType.Member && overwrite.allow.has('ViewChannel')) {
                 const isAdmin = id === client.roleIds.admin;
                 const isOwner = id === client.roleIds.owner;
                 const isBot = id === client.user?.id;

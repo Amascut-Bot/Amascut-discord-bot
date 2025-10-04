@@ -1,3 +1,4 @@
+import { BotError } from "./LoggingHandler";
 
 export default class WebhookLogger {
     private infoWebhookUrl: string;
@@ -17,7 +18,7 @@ export default class WebhookLogger {
         }
     }
 
-    private serializeMessage(message: any): string {
+    private serializeMessage(message: BotError): string {
         if (typeof message === 'string') {
             return message;
         }
@@ -45,7 +46,7 @@ export default class WebhookLogger {
         this.infoQueue.push(message);
     }
 
-    public async logError(message: any): Promise<void> {
+    public async logError(message: BotError): Promise<void> {
         if (!this.errorWebhookUrl) return;
 
         const content = this.serializeMessage(message);
