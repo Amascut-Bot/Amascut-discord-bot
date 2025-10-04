@@ -292,7 +292,7 @@ export default class UtilityHandler {
     //#region Timeout
 
     public parseDuration(input: string): number | null {
-        const match = input.match(/^(\d+)([smhdw])$/i);
+        const match = input.match(/^(\d+)([smhdwy])$/i);
         if (!match) return null;
 
         const value = parseInt(match[1]);
@@ -303,11 +303,12 @@ export default class UtilityHandler {
             'm': 60 * 1000,
             'h': 60 * 60 * 1000,
             'd': 24 * 60 * 60 * 1000,
-            'w': 7 * 24 * 60 * 60 * 1000
+            'w': 7 * 24 * 60 * 60 * 1000,
+            'y': 365 * 24 * 60 * 60 * 1000
         };
 
         const ms = value * multipliers[unit as keyof typeof multipliers];
-        const maxTimeout = 28 * 24 * 60 * 60 * 1000;
+        const maxTimeout = 10 * 365 * 24 * 60 * 60 * 1000;
 
         return ms <= maxTimeout ? ms : null;
     }
