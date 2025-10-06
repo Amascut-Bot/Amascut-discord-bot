@@ -1,6 +1,4 @@
 import { ApplicationCommandOption, SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder, SlashCommandOptionsOnlyBuilder, ChatInputCommandInteraction, AutocompleteInteraction } from 'discord.js';
-// import { APIApplicationCommandOptionBase, APIApplicationCommandOption } from 'discord-api-types/v10';
-// import { ApplicationCommandOption } from 'discord.js'
 import * as uuid from 'uuid';
 import Bot from '../Bot';
 

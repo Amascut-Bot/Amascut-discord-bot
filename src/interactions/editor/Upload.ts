@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { Attachment, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, ChannelType, Message, MessageFlags, GuildMember } from 'discord.js';
+import { Attachment, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, ChannelType, Message, MessageFlags, GuildMember, MessageType, ComponentType } from 'discord.js';
 import { parseTree, getNodeValue, ParseError, } from 'jsonc-parser';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -271,7 +271,7 @@ export default class Upload extends BotInteraction {
                                 try {
                                     const messages = await targetChannel.messages.fetch({ limit: 10 });
                                     const pinNotification = messages.find(msg =>
-                                        msg.type === 6 && // MessageType.ChannelPinnedMessage
+                                        msg.type === MessageType.ChannelPinnedMessage &&
                                         msg.createdTimestamp > sentMessage.createdTimestamp
                                     );
 
@@ -907,13 +907,13 @@ export default class Upload extends BotInteraction {
         const convert = (text: string) => text ? this.convertEmojis(text, interaction) : text;
 
         container.components.forEach((component: any) => {
-            if (component.type === 10) {
+            if (component.type === ComponentType.TextDisplay) {
                 component.content = convert(component.content);
             }
 
-            if (component.type === 9) {
+            if (component.type === ComponentType.Section) {
                 component.components.forEach((subComponent: any) => {
-                    if (subComponent.type === 10) {
+                    if (subComponent.type === ComponentType.TextDisplay) {
                         subComponent.content = convert(subComponent.content);
                     }
                 });

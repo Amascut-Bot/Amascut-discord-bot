@@ -1,4 +1,4 @@
-import { Message } from 'discord.js';
+import { Message, MessageType } from 'discord.js';
 import BotEvent from '../types/BotEvent';
 
 export default class MessageCreate extends BotEvent {
@@ -23,7 +23,7 @@ export default class MessageCreate extends BotEvent {
         if (this.client.util.config.guildMessageDisabled.includes(message.guild.id)) return;
 
         // Auto-delete pin notification system messages
-        if (message.type === 6) { // MessageType.ChannelPinnedMessage
+        if (message.type === MessageType.ChannelPinnedMessage) {
             try {
                 if (!message.reference || !message.reference.messageId) return;
                 // Fetch the message that was actually pinned

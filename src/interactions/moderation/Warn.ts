@@ -16,13 +16,13 @@ export default class Warn extends BotInteraction {
     }
 
     get actionOptions() {
-        const ticketTypes: any = {
+        const ticketTypes: Record<string, number> = {
             'Add': 0,
             'Remove': 1,
             'List': 2,
             'Update': 3
         }
-        const options: any = [];
+        const options: { name: string, value: number }[] = [];
         Object.keys(ticketTypes).forEach((key: string) => {
             options.push({ name: key, value: ticketTypes[key] })
         })

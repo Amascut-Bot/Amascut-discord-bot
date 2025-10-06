@@ -1,4 +1,4 @@
-import { ContainerBuilder, Message, MessageFlags, SeparatorSpacingSize } from "discord.js";
+import { ComponentType, ContainerBuilder, Message, MessageFlags, SeparatorSpacingSize, TopLevelComponentData } from "discord.js";
 import Bot from "../Bot";
 
 export default interface ComponentsV2Utils {
@@ -31,7 +31,7 @@ export default class ComponentsV2Utils {
         let result: any = {};
 
         //ActionRow
-        if (node.type == 1) {
+        if (node.type == ComponentType.ActionRow) {
             result = {
                 type: node.type
             };
@@ -42,7 +42,7 @@ export default class ComponentsV2Utils {
         }
 
         //Button
-        if (node.type == 2) {
+        if (node.type == ComponentType.Button) {
             result = {
                 type: node.type,
                 style: node.style,
@@ -56,7 +56,7 @@ export default class ComponentsV2Utils {
         }
 
         //String Select
-        if (node.type == 3) {
+        if (node.type == ComponentType.StringSelect) {
             result = {
                 type: node.type,
                 custom_id: node.customId,
@@ -89,7 +89,7 @@ export default class ComponentsV2Utils {
         }
 
         //User Select
-        if (node.type == 5) {
+        if (node.type == ComponentType.UserSelect) {
             result = {
                 type: node.type,
                 custom_id: node.customId,
@@ -102,7 +102,7 @@ export default class ComponentsV2Utils {
         }
 
         //Section
-        if (node.type == 9) {
+        if (node.type == ComponentType.Section) {
             result = {
                 type: node.type
             };
@@ -115,7 +115,7 @@ export default class ComponentsV2Utils {
         }
 
         //Text Display
-        if (node.type == 10) {
+        if (node.type == ComponentType.TextDisplay) {
             result = {
                 type: node.type,
                 content: node.content
@@ -123,7 +123,7 @@ export default class ComponentsV2Utils {
         }
 
         //Thumbnail
-        if (node.type == 11) {
+        if (node.type == ComponentType.Thumbnail) {
             result = {
                 type: node.type,
                 media: {
@@ -135,7 +135,7 @@ export default class ComponentsV2Utils {
         }
 
         //Media Gallery
-        if (node.type == 12) {
+        if (node.type == ComponentType.MediaGallery) {
             result = {
                 type: node.type
             };
@@ -154,7 +154,7 @@ export default class ComponentsV2Utils {
         }
 
         //Separator
-        if (node.type == 14) {
+        if (node.type == ComponentType.Separator) {
             result = {
                 type: node.type,
                 spacing: node.spacing
@@ -162,7 +162,7 @@ export default class ComponentsV2Utils {
         }
 
         //Container
-        if (node.type == 17) {
+        if (node.type == ComponentType.Container) {
             result = {
                 type: node.type
             };
@@ -180,7 +180,7 @@ export default class ComponentsV2Utils {
     public static async disableControls(message: Message): Promise<void> {
         if (message.flags.has(MessageFlags.IsComponentsV2)) {
             const components = message.components;
-            const newComponents = [];
+            const newComponents: TopLevelComponentData[] = [];
 
             for (const container of components) {
                 newComponents.push(this.cleanContainer(container, true));

@@ -18,7 +18,7 @@ export default class TicketStatistics extends BotInteraction {
 
     // 0 = Suggestion, 1 = Report, 2 = Content Creator, 3 = Other
     get ticketTypeOptions() {
-        const ticketTypes: any = {
+        const ticketTypes: Record<string, number> = {
             'Suggestion': 0,
             'Report': 1,
             'Content Creator': 2,
@@ -30,7 +30,7 @@ export default class TicketStatistics extends BotInteraction {
             'Teacher': 8,
             'Trial Team': 9
         }
-        const options: any = [];
+        const options: { name: string, value: number }[] = [];
         Object.keys(ticketTypes).forEach((key: string) => {
             options.push({ name: key, value: ticketTypes[key] })
         })
