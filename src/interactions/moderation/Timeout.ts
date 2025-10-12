@@ -61,7 +61,7 @@ export default class TimeoutCommand extends BotInteraction {
         }
 
         const action: number = interaction.options.getNumber('action', true);
-        const type: number = interaction.options.getNumber('type', false) ?? 0;
+        const type: number = interaction.options.getNumber('type', false) ?? 1;
         const user: User = interaction.options.getUser('user', true);
         let durationInput: string | null = interaction.options.getString('duration', false);
         const reason: string = interaction.options.getString('reason', false) || 'No reason provided';
@@ -89,7 +89,7 @@ export default class TimeoutCommand extends BotInteraction {
                 const duration = this.client.util.parseDuration(durationInput);
                 if (!duration) {
                     return await interaction.editReply({
-                        content: 'Invalid duration format. Use format like: 10m, 1h, 2d (max 10 years)'
+                        content: 'Invalid duration format. Use format like: 10m, 1h, 2d (max 10 years for teamforming, 28 days for global)'
                     });
                 }
 
