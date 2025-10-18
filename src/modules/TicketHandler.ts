@@ -693,6 +693,12 @@ export default class TicketHandler {
         if (hasRolePermissions) return true;
 
         const channel = interaction.channel as TextChannel;
+
+        if (channel.name.startsWith('learner')) {
+            const isTeacher = await this.client.util.hasRolePermissions(this.client, ['teacher'], interaction);
+            if (isTeacher) return true;
+        }
+
         const userPermissions = channel.permissionOverwrites.cache.get(interaction.user.id);
 
         return userPermissions !== undefined;
