@@ -43,6 +43,7 @@ export default class TicketHandler {
             case 'ticket:create_other': this.handleTicketOther(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_learner': this.handleTicketLearner(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_librarian': this.handleTicketLibrarian(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_librariankill': this.handleTicketLibrarianKill(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_support': this.handleTicketSupport(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_teacher': this.handleTicketTeacher(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_trialteam': this.handleTicketTrialTeam(interaction as ButtonInteraction<'cached'>); break;
@@ -222,19 +223,12 @@ export default class TicketHandler {
             .setRequired(true)
             .setMaxLength(1000);
 
-        const secretWordInput = new TextInputBuilder()
-            .setCustomId('secretWord')
-            .setLabel('Provide secret word')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
         const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
         const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
         const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(confirmInput);
         const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(assistanceInput);
-        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(secretWordInput);
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
         await interaction.showModal(modal);
     }
 
@@ -269,6 +263,31 @@ export default class TicketHandler {
         const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
 
         modal.addComponents(firstRow, secondRow, thirdRow);
+        await interaction.showModal(modal);
+    }
+
+    private async handleTicketLibrarianKill(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_librariankill_${interaction.user.id}`)
+            .setTitle('Librarian Request');
+
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setLabel('Your RSN (RuneScape Name)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        const timezoneInput = new TextInputBuilder()
+            .setCustomId('timezone')
+            .setLabel('Timezone and Game Times Active')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
+        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
+
+        modal.addComponents(firstRow, secondRow);
         await interaction.showModal(modal);
     }
 
@@ -438,11 +457,13 @@ export default class TicketHandler {
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.confirm = interaction.fields.getTextInputValue('confirm');
                     formData.goals = interaction.fields.getTextInputValue('goals');
-                    formData.secretWord = interaction.fields.getTextInputValue('secretWord');
                     break;
                 case 'librarian':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
+                    break;
+                case 'librariankill':
+                    formData.timezone = interaction.fields.getTextInputValue('timezone');
                     break;
                 case 'support':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
@@ -697,6 +718,11 @@ export default class TicketHandler {
         if (channel.name.startsWith('learner')) {
             const isTeacher = await this.client.util.hasRolePermissions(this.client, ['teacher'], interaction);
             if (isTeacher) return true;
+        }
+
+        if (channel.name.startsWith('librariankill')) {
+            const isLibrarian = await this.client.util.hasRolePermissions(this.client, ['librarian'], interaction);
+            if (isLibrarian) return true;
         }
 
         const userPermissions = channel.permissionOverwrites.cache.get(interaction.user.id);
@@ -1030,7 +1056,7 @@ export default class TicketHandler {
 
     private async handleTicketDelete(interaction: ButtonInteraction<'cached'>): Promise<void> {
         // Check if user has admin/owner permissions
-        const hasPermission = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        const hasPermission = await this.canCloseTicket(interaction);
         if (!hasPermission) {
             await interaction.reply({ content: 'You do not have permission to use this command.', flags: MessageFlags.Ephemeral });
             return;
@@ -1390,12 +1416,13 @@ export default class TicketHandler {
             const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
             const isStaffTicket = ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
             const isClearanceTicket = ticketType === 'clearance';
-            const parentCategoryId = ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory : isStaffTicket ? this.client.channelIds.staffTicketsCategory : isClearanceTicket ? this.client.channelIds.wipTicketCategory : this.client.channelIds.ticketCategory;
+            const parentCategoryId = ticketType === 'learner' || ticketType === 'librariankill' ? this.client.channelIds.learnerTicketsCategory : isStaffTicket ? this.client.channelIds.staffTicketsCategory : isClearanceTicket ? this.client.channelIds.wipTicketCategory : this.client.channelIds.ticketCategory;
 
             // Get admin and owner role IDs
             const adminRoleId = this.client.roleIds.admin;
             const ownerRoleId = this.client.roleIds.owner;
             const teacherRoleId = this.client.roleIds.teacher;
+            const librarianRoleId = this.client.roleIds.librarian;
 
             // Create the channel with proper permissions
             const channel: TextChannel = await guild.channels.create({
@@ -1459,6 +1486,21 @@ export default class TicketHandler {
                 );
             }
 
+            if (ticketType === 'librariankill') {
+                await channel.permissionOverwrites.create(
+                    librarianRoleId,
+                    {
+                        ViewChannel: true,
+                        SendMessages: true,
+                        ReadMessageHistory: true,
+                        AttachFiles: true,
+                        EmbedLinks: true,
+                        ManageMessages: true,
+                        ManageChannels: true,
+                    }
+                );
+            }
+
             if (isStaffTicket) {
                 const adminRole = this.client.roles.admin;
                 const ownerRole = this.client.roles.owner;
@@ -1496,6 +1538,7 @@ export default class TicketHandler {
             const adminRole = this.client.roles.admin;
             const ownerRole = this.client.roles.owner;
             const teacherRole = this.client.roles.teacher;
+            const librarianRole = this.client.roles.librarian;
             const isStaffTicket = ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
 
             // Create welcome message
@@ -1505,6 +1548,9 @@ export default class TicketHandler {
                 welcomeMessage = `<@${userId}>, your ticket has been created. A ${teacherRole} will be with you shortly.`;
             }
 
+            if (ticketType === 'librariankill') {
+                welcomeMessage = `<@${userId}>, your ticket has been created. A ${librarianRole} will be with you shortly.`;
+            }
 
             if (ticketType === 'clearance') {
                 welcomeMessage = 'Your clearance ticket has been created.';
@@ -1512,7 +1558,7 @@ export default class TicketHandler {
 
             // Create embed with form data using fields for better organization
             const embed = new EmbedBuilder()
-                .setTitle(`${ticketType === 'trialteam' ? 'Trial Team' : capitalizeFirstLetter(ticketType)} Ticket`)
+                .setTitle(`${ticketType === 'trialteam' ? 'Trial Team' : ticketType === 'librariankill' ? 'Librarian Kill' : capitalizeFirstLetter(ticketType)} Ticket`)
                 .setColor(this.client.color)
                 .setTimestamp()
                 .setAuthor({
@@ -1579,7 +1625,6 @@ export default class TicketHandler {
                         { name: 'Timezone and Game Times Active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'Confirm you\'ve read & understand requirements', value: `\`\`\`${formData.confirm}\`\`\``, inline: false },
                         { name: 'What are you hoping to get out of this ticket?', value: `\`\`\`${formData.goals}\`\`\``, inline: false },
-                        { name: 'Provide secret word', value: `\`\`\`${formData.secretWord}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.goals.match(urlRegex) || []);
                     break;
@@ -1590,6 +1635,12 @@ export default class TicketHandler {
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
+                    break;
+                case 'librariankill':
+                    embed.addFields(
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Timezone and Game Times Active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                    );
                     break;
                 case 'support':
                     embed.addFields(
@@ -1607,6 +1658,7 @@ export default class TicketHandler {
                         { name: 'Please provide your preset and kc', value: `\`\`\`${formData.presetkc}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
+                    urls = urls.concat(formData.presetkc.match(urlRegex) || []);
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break;
                 case 'trialteam':
@@ -1617,6 +1669,7 @@ export default class TicketHandler {
                         { name: 'Please provide your preset and kc', value: `\`\`\`${formData.presetkc}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
+                    urls = urls.concat(formData.presetkc.match(urlRegex) || []);
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break;
             }
@@ -1742,6 +1795,8 @@ export default class TicketHandler {
                 ticketObject.ticketType = 8;
             case 'trialteam':
                 ticketObject.ticketType = 9;
+            case 'librariankill':
+                ticketObject.ticketType = 10;
         }
 
         await ticketRepository.save(ticketObject);
