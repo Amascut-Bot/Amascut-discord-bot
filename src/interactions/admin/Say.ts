@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { Attachment, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ModalSubmitInteraction } from 'discord.js';
+import { Attachment, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ModalSubmitInteraction, Channel } from 'discord.js';
 
 export default class Say extends BotInteraction {
     get name() {
@@ -18,13 +18,15 @@ export default class Say extends BotInteraction {
         return new SlashCommandBuilder()
             .setName(this.name)
             .setDescription(this.description)
-            .addAttachmentOption((option) => option.setName('image').setDescription('An optional image attachment.').setRequired(false));
+            .addAttachmentOption((option) => option.setName('image').setDescription('An optional image attachment.').setRequired(false))
+            .addChannelOption((option) => option.setName('channel').setDescription('Channel to speak in').setRequired(false));
     }
 
     async run(interaction: ChatInputCommandInteraction) {
         if (!interaction.inCachedGuild()) return;
 
         const attachment: Attachment | null = interaction.options.getAttachment('image', false);
+        const channelOption: Channel | null = interaction.options.getChannel('channel', false);
 
         const modal = new ModalBuilder()
             .setCustomId('say-command-modal')
@@ -47,7 +49,7 @@ export default class Say extends BotInteraction {
 
             const rawMessage: string = modalInteraction.fields.getTextInputValue('say-message-input');
             const parsedMessage = await this.parseMessage(rawMessage, interaction);
-            const channel = interaction.channel as TextChannel;
+            const channel = channelOption ? channelOption : interaction.channel as TextChannel;
 
             if (channel && 'send' in channel) {
                 await channel.send(attachment ? { content: parsedMessage, files: [attachment] } : { content: parsedMessage });
