@@ -1455,7 +1455,12 @@ export default class TicketHandler {
 
             const isStaffTicket = ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
             const isClearanceTicket = ticketType === 'clearance';
-            const parentCategoryId = ticketType === 'learner' || ticketType === 'librariankill' ? this.client.channelIds.learnerTicketsCategory : isStaffTicket ? this.client.channelIds.staffTicketsCategory : isClearanceTicket ? this.client.channelIds.wipTicketCategory : this.client.channelIds.ticketCategory;
+            const parentCategoryId =
+                ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory
+                : ticketType === 'librariankill' ? this.client.channelIds.librarianTicketsCategory
+                : isStaffTicket ? this.client.channelIds.staffTicketsCategory
+                : isClearanceTicket ? this.client.channelIds.wipTicketCategory
+                : this.client.channelIds.ticketCategory;
 
             // Get admin and owner role IDs
             const adminRoleId = this.client.roleIds.admin;
