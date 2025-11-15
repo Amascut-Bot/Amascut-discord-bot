@@ -70,6 +70,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             learnerHosts: '1411662134756118569',
             staffTicketsCategory: '1415817949868068976',
             teachersChat: '1405664850469847122',
+            librarianTicketsCategory: '1412871767932010547'
         }
     }
 
@@ -105,11 +106,12 @@ export function getChannels(guildId: string | undefined) : Channels {
             wipTicketCategory: '1404834663339528362',
             staffTicketsCategory: '1416098705127375068',
             // Learner Section Channels
+            librarianTicketsCategory: '1439305836873777333',
+            learnerTicketsCategory: '1412878315395481782',
             learnerCategory: '1404510300715356232',
             learnerTempVCCreate: '1405678891565187112',
             learnerWaiting: '1405668159922503810',
             learnerTeaching: '1405338959063814227',
-            learnerTicketsCategory: '1412878315395481782',
             learnerHosts: '1411429884571422922',
             teachersChat: '1404510586536202453',
             // Trial Team Channels
