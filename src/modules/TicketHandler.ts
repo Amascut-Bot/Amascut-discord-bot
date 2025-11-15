@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, OverwriteType, PermissionFlagsBits, SeparatorSpacingSize, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, OverwriteType, PermissionFlagsBits, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -197,38 +197,70 @@ export default class TicketHandler {
             .setCustomId(`ticket:create_learner_${interaction.user.id}`)
             .setTitle('Learner Request');
 
+        // RSN
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Timezone
         const timezoneInput = new TextInputBuilder()
             .setCustomId('timezone')
-            .setLabel('Timezone and Game Times Active')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Timezone and Game Times Active')
+            .setTextInputComponent(timezoneInput)
+        );
+
+        // Confirm
         const confirmInput = new TextInputBuilder()
             .setCustomId('confirm')
-            .setLabel('Confirm you\'ve read & understand requirements')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Confirm you\'ve read & understand requirements')
+            .setTextInputComponent(confirmInput)
+        );
+
+        // Goals
         const assistanceInput = new TextInputBuilder()
             .setCustomId('goals')
-            .setLabel('What are you hoping to get out of this ticket')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(confirmInput);
-        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(assistanceInput);
+        modal.addLabelComponents(label => label
+            .setLabel('What are you hoping to get out of this ticket')
+            .setTextInputComponent(assistanceInput)
+        );
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
+        // Mode
+        const modeSelect = new StringSelectMenuBuilder()
+            .setCustomId('mode')
+            .addOptions([
+                new StringSelectMenuOptionBuilder().setLabel('Normal Mode').setValue('nm'),
+                new StringSelectMenuOptionBuilder().setLabel('100% Enrage').setValue('100'),
+                new StringSelectMenuOptionBuilder().setLabel('500% Enrage').setValue('500'),
+                new StringSelectMenuOptionBuilder().setLabel('750% Enrage').setValue('750'),
+                new StringSelectMenuOptionBuilder().setLabel('1000% Enrage').setValue('1000'),
+                new StringSelectMenuOptionBuilder().setLabel('2000% Enrage').setValue('2000'),
+                new StringSelectMenuOptionBuilder().setLabel('4000% Enrage').setValue('4000'),
+            ]);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Mode & Enrage')
+            .setStringSelectMenuComponent(modeSelect)
+        );
+
         await interaction.showModal(modal);
     }
 
@@ -457,6 +489,7 @@ export default class TicketHandler {
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.confirm = interaction.fields.getTextInputValue('confirm');
                     formData.goals = interaction.fields.getTextInputValue('goals');
+                    formData.mode = interaction.fields.getStringSelectValues('mode');
                     break;
                 case 'librarian':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
@@ -489,7 +522,8 @@ export default class TicketHandler {
                 interaction.guild,
                 ticketType,
                 interaction.user.id,
-                ticketNumber
+                ticketNumber,
+                ticketType === 'learner' ? formData.mode : null
             );
 
             if (!ticketChannel) {
@@ -1411,9 +1445,14 @@ export default class TicketHandler {
         }
     }
 
-    public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number): Promise<TextChannel | null> {
+    public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number, mode: string | null = null): Promise<TextChannel | null> {
         try {
-            const channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
+            let channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
+
+            if (mode != null) {
+                channelName += `-${mode}`;
+            }
+
             const isStaffTicket = ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
             const isClearanceTicket = ticketType === 'clearance';
             const parentCategoryId = ticketType === 'learner' || ticketType === 'librariankill' ? this.client.channelIds.learnerTicketsCategory : isStaffTicket ? this.client.channelIds.staffTicketsCategory : isClearanceTicket ? this.client.channelIds.wipTicketCategory : this.client.channelIds.ticketCategory;
@@ -1625,6 +1664,7 @@ export default class TicketHandler {
                         { name: 'Timezone and Game Times Active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'Confirm you\'ve read & understand requirements', value: `\`\`\`${formData.confirm}\`\`\``, inline: false },
                         { name: 'What are you hoping to get out of this ticket?', value: `\`\`\`${formData.goals}\`\`\``, inline: false },
+                        { name: 'Mode and Enrage', value: `\`\`\`${formData.mode}\`\`\``, inline: false },
                     );
                     urls = urls.concat(formData.goals.match(urlRegex) || []);
                     break;
