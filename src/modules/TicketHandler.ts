@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, OverwriteType, PermissionFlagsBits, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, FileUploadBuilder, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, OverwriteType, PermissionFlagsBits, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User, UserSelectMenuBuilder } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -61,32 +61,42 @@ export default class TicketHandler {
             .setCustomId(`ticket:create_suggestion_${interaction.user.id}`)
             .setTitle('Submit a Suggestion');
 
+        // RSN
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Suggestion
         const suggestionInput = new TextInputBuilder()
             .setCustomId('suggestion')
-            .setLabel('Briefly describe your suggestion')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Briefly describe your suggestion')
+            .setTextInputComponent(suggestionInput)
+        );
+
+        // Reason
         const reasonInput = new TextInputBuilder()
             .setCustomId('reason')
-            .setLabel('Why do you think your suggestion would work?')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(suggestionInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonInput);
+        modal.addLabelComponents(label => label
+            .setLabel('Why do you think your suggestion would work?')
+            .setTextInputComponent(reasonInput)
+        );
 
-        modal.addComponents(firstRow, secondRow, thirdRow);
         await interaction.showModal(modal);
     }
 
@@ -95,40 +105,62 @@ export default class TicketHandler {
             .setCustomId(`ticket:create_report_${interaction.user.id}`)
             .setTitle('Submit a Report');
 
+        // RSN
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Reported user
+        const userSelect = new UserSelectMenuBuilder()
+            .setCustomId('user_select')
+            .setRequired(true)
+            .setMaxValues(5);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Who are you reporting?')
+            .setUserSelectMenuComponent(userSelect)
+        );
+
         const reportedUserInput = new TextInputBuilder()
             .setCustomId('reported_user')
-            .setLabel('RSN & Discord User you are reporting')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(100);
 
+        modal.addLabelComponents(label => label
+            .setLabel('RSN of the user, you are reporting')
+            .setTextInputComponent(reportedUserInput)
+        );
+
+        // Reason
         const reasonInput = new TextInputBuilder()
             .setCustomId('reason')
-            .setLabel('What is the reason for your report?')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(200);
-
-        const descriptionInput = new TextInputBuilder()
-            .setCustomId('description')
-            .setLabel('Briefly describe the issue.')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reportedUserInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonInput);
-        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput);
+        modal.addLabelComponents(label => label
+            .setLabel('What is the reason for your report?')
+            .setTextInputComponent(reasonInput)
+        );
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow);
+        // Evidence
+        const fileUpload = new FileUploadBuilder()
+            .setCustomId('attachment')
+            .setRequired(false);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Please provide any evidence you got')
+            .setFileUploadComponent(fileUpload)
+        );
+
         await interaction.showModal(modal);
     }
 
@@ -137,32 +169,40 @@ export default class TicketHandler {
             .setCustomId(`ticket:create_contentcreator_${interaction.user.id}`)
             .setTitle('Content Creator Application');
 
+        // RSN
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
         const platformInput = new TextInputBuilder()
             .setCustomId('platform_url')
-            .setLabel("What's your streaming platform URL?")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(200);
 
+        modal.addLabelComponents(label => label
+            .setLabel('What\'s your streaming platform URL?')
+            .setTextInputComponent(platformInput)
+        );
+
         const additionalInput = new TextInputBuilder()
             .setCustomId('additional')
-            .setLabel("Anything else you'd like to add?")
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(platformInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(additionalInput);
+        modal.addLabelComponents(label => label
+            .setLabel('Anything else you\'d like to add?')
+            .setTextInputComponent(additionalInput)
+        );
 
-        modal.addComponents(firstRow, secondRow, thirdRow);
         await interaction.showModal(modal);
     }
 
@@ -171,24 +211,29 @@ export default class TicketHandler {
             .setCustomId(`ticket:create_other_${interaction.user.id}`)
             .setTitle('Other Support Request');
 
+        // RSN
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
         const assistanceInput = new TextInputBuilder()
             .setCustomId('assistance')
-            .setLabel('How can we assist you?')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(assistanceInput);
+        modal.addLabelComponents(label => label
+            .setLabel('How can we assist you?')
+            .setTextInputComponent(assistanceInput)
+        );
 
-        modal.addComponents(firstRow, secondRow);
         await interaction.showModal(modal);
     }
 
@@ -216,7 +261,7 @@ export default class TicketHandler {
             .setRequired(true);
 
         modal.addLabelComponents(label => label
-            .setLabel('Timezone and Game Times Active')
+            .setLabel('When are you available ingame (in Game Time)?')
             .setTextInputComponent(timezoneInput)
         );
 
@@ -254,10 +299,11 @@ export default class TicketHandler {
                 new StringSelectMenuOptionBuilder().setLabel('1000% Enrage').setValue('1000'),
                 new StringSelectMenuOptionBuilder().setLabel('2000% Enrage').setValue('2000'),
                 new StringSelectMenuOptionBuilder().setLabel('4000% Enrage').setValue('4000'),
-            ]);
+            ])
+            .setMaxValues(7);
 
         modal.addLabelComponents(label => label
-            .setLabel('Mode & Enrage')
+            .setLabel('What do you want to learn? (Select any)')
             .setStringSelectMenuComponent(modeSelect)
         );
 
@@ -269,32 +315,41 @@ export default class TicketHandler {
             .setCustomId(`ticket:create_librarian_${interaction.user.id}`)
             .setTitle('Librarian Team staff application');
 
+        // RSN
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Timezone
         const timezoneInput = new TextInputBuilder()
             .setCustomId('timezone')
-            .setLabel('Timezone and Game Times active')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
+        modal.addLabelComponents(label => label
+            .setLabel('When are you available ingame (in Game Time)?')
+            .setTextInputComponent(timezoneInput)
+        );
+
+        // Reason
         const reasonsInput = new TextInputBuilder()
             .setCustomId('reasons')
-            .setLabel('Why are you applying for this role?')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Why are you applying for this role?')
+            .setTextInputComponent(reasonsInput)
+        );
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
-
-        modal.addComponents(firstRow, secondRow, thirdRow);
         await interaction.showModal(modal);
     }
 
@@ -303,23 +358,29 @@ export default class TicketHandler {
             .setCustomId(`ticket:create_librariankill_${interaction.user.id}`)
             .setTitle('Librarian Request');
 
+        // RSN
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Timezone
         const timezoneInput = new TextInputBuilder()
             .setCustomId('timezone')
-            .setLabel('Timezone and Game Times Active')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
+        modal.addLabelComponents(label => label
+            .setLabel('When are you available ingame (in Game Time)?')
+            .setTextInputComponent(timezoneInput)
+        );
 
-        modal.addComponents(firstRow, secondRow);
         await interaction.showModal(modal);
     }
 
@@ -328,31 +389,41 @@ export default class TicketHandler {
             .setCustomId(`ticket:create_support_${interaction.user.id}`)
             .setTitle('Support Team staff application');
 
+        // RSN
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Timezone
         const timezoneInput = new TextInputBuilder()
             .setCustomId('timezone')
-            .setLabel('Timezone and Game Times active')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
+        modal.addLabelComponents(label => label
+            .setLabel('When are you available ingame (in Game Time)?')
+            .setTextInputComponent(timezoneInput)
+        );
+
+        // Reason
         const reasonsInput = new TextInputBuilder()
             .setCustomId('reasons')
-            .setLabel('Why are you applying for this role?')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        modal.addLabelComponents(label => label
+            .setLabel('Why are you applying for this role?')
+            .setTextInputComponent(reasonsInput)
+        );
 
-        modal.addComponents(firstRow, secondRow, thirdRow);
         await interaction.showModal(modal);
     }
 
@@ -361,45 +432,70 @@ export default class TicketHandler {
             .setCustomId(`ticket:create_teacher_${interaction.user.id}`)
             .setTitle('Teacher Team staff application');
 
+        // RSN
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Timezone
         const timezoneInput = new TextInputBuilder()
             .setCustomId('timezone')
-            .setLabel('Timezone and Game Times active')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
-        const enrageInput = new TextInputBuilder()
-            .setCustomId('enrage')
-            .setLabel('Which enrage do you want to teach people')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+        modal.addLabelComponents(label => label
+            .setLabel('When are you available ingame (in Game Time)?')
+            .setTextInputComponent(timezoneInput)
+        );
 
-        const presetKcInput = new TextInputBuilder()
-            .setCustomId('presetkc')
-            .setLabel('Please provide your preset and kc')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
+        // Reason
         const reasonsInput = new TextInputBuilder()
             .setCustomId('reasons')
-            .setLabel('Why are you applying for this role?')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(enrageInput);
-        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(presetKcInput);
-        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        modal.addLabelComponents(label => label
+            .setLabel('Why are you applying for this role?')
+            .setTextInputComponent(reasonsInput)
+        );
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        // Enrage
+        const modeSelect = new StringSelectMenuBuilder()
+            .setCustomId('enrage')
+            .addOptions([
+                new StringSelectMenuOptionBuilder().setLabel('Normal Mode').setValue('nm'),
+                new StringSelectMenuOptionBuilder().setLabel('100% Enrage').setValue('100'),
+                new StringSelectMenuOptionBuilder().setLabel('500% Enrage').setValue('500'),
+                new StringSelectMenuOptionBuilder().setLabel('750% Enrage').setValue('750'),
+                new StringSelectMenuOptionBuilder().setLabel('1000% Enrage').setValue('1000'),
+                new StringSelectMenuOptionBuilder().setLabel('2000% Enrage').setValue('2000'),
+                new StringSelectMenuOptionBuilder().setLabel('4000% Enrage').setValue('4000'),
+            ])
+            .setMaxValues(7);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Which enrage do you want to teach people?')
+            .setStringSelectMenuComponent(modeSelect)
+        );
+
+        // presetkc
+        const fileUpload = new FileUploadBuilder()
+            .setCustomId('attachment')
+            .setRequired(false);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Please provide your preset and kc')
+            .setFileUploadComponent(fileUpload)
+        );
+
         await interaction.showModal(modal);
     }
 
@@ -408,45 +504,67 @@ export default class TicketHandler {
             .setCustomId(`ticket:create_trialteam_${interaction.user.id}`)
             .setTitle('Trial Team staff application');
 
+        // RSN
         const rsnInput = new TextInputBuilder()
             .setCustomId('rsn')
-            .setLabel('Your RSN (RuneScape Name)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(12);
 
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Timezone
         const timezoneInput = new TextInputBuilder()
             .setCustomId('timezone')
-            .setLabel('Timezone and Game Times active')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
-        const enrageInput = new TextInputBuilder()
-            .setCustomId('enrage')
-            .setLabel('Which enrage do you want to trial people')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+        modal.addLabelComponents(label => label
+            .setLabel('When are you available ingame (in Game Time)?')
+            .setTextInputComponent(timezoneInput)
+        );
 
-        const presetKcInput = new TextInputBuilder()
-            .setCustomId('presetkc')
-            .setLabel('Please provide your preset and kc')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
+        // Reason
         const reasonsInput = new TextInputBuilder()
             .setCustomId('reasons')
-            .setLabel('Why are you applying for this role?')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
             .setMaxLength(1000);
 
-        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(rsnInput);
-        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(timezoneInput);
-        const thirdRow = new ActionRowBuilder<TextInputBuilder>().addComponents(enrageInput);
-        const fourthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(presetKcInput);
-        const fifthRow = new ActionRowBuilder<TextInputBuilder>().addComponents(reasonsInput);
+        modal.addLabelComponents(label => label
+            .setLabel('Why are you applying for this role?')
+            .setTextInputComponent(reasonsInput)
+        );
 
-        modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        // Enrage
+        const modeSelect = new StringSelectMenuBuilder()
+            .setCustomId('enrage')
+            .addOptions([
+                new StringSelectMenuOptionBuilder().setLabel('500% Enrage').setValue('500'),
+                new StringSelectMenuOptionBuilder().setLabel('750% Enrage').setValue('750'),
+                new StringSelectMenuOptionBuilder().setLabel('1000% Enrage').setValue('1000'),
+                new StringSelectMenuOptionBuilder().setLabel('2000% Enrage').setValue('2000'),
+                new StringSelectMenuOptionBuilder().setLabel('4000% Enrage').setValue('4000'),
+            ])
+            .setMaxValues(5);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Which enrage do you want to trial people?')
+            .setStringSelectMenuComponent(modeSelect)
+        );
+
+        // presetkc
+        const fileUpload = new FileUploadBuilder()
+            .setCustomId('attachment')
+            .setRequired(false);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Please provide your preset and kc')
+            .setFileUploadComponent(fileUpload)
+        );
         await interaction.showModal(modal);
     }
 
@@ -470,9 +588,10 @@ export default class TicketHandler {
 
             switch (ticketType) {
                 case 'report':
+                    formData.user_select = interaction.fields.getSelectedUsers('user_select');
                     formData.reported_user = interaction.fields.getTextInputValue('reported_user');
                     formData.reason = interaction.fields.getTextInputValue('reason');
-                    formData.description = interaction.fields.getTextInputValue('description');
+                    formData.attachment = interaction.fields.getUploadedFiles('attachment');
                     break;
                 case 'suggestion':
                     formData.suggestion = interaction.fields.getTextInputValue('suggestion');
@@ -505,14 +624,14 @@ export default class TicketHandler {
                 case 'teacher':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
-                    formData.presetkc = interaction.fields.getTextInputValue('presetkc');
-                    formData.enrage = interaction.fields.getTextInputValue('enrage');
+                    formData.attachment = interaction.fields.getUploadedFiles('attachment');
+                    formData.enrage = interaction.fields.getStringSelectValues('enrage');
                     break;
                 case 'trialteam':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
-                    formData.presetkc = interaction.fields.getTextInputValue('presetkc');
-                    formData.enrage = interaction.fields.getTextInputValue('enrage');
+                    formData.attachment = interaction.fields.getUploadedFiles('attachment');
+                    formData.enrage = interaction.fields.getStringSelectValues('enrage');
                     break;
             }
 
@@ -523,7 +642,8 @@ export default class TicketHandler {
                 ticketType,
                 interaction.user.id,
                 ticketNumber,
-                ticketType === 'learner' ? formData.mode : null
+                ticketType === 'learner' ? formData.mode : null,
+                formData
             );
 
             if (!ticketChannel) {
@@ -584,7 +704,8 @@ export default class TicketHandler {
                 interaction.guild,
                 'clearance',
                 reportedUser.id,
-                ticketNumber
+                ticketNumber,
+                null
             );
 
             if (!ticketChannel) {
@@ -755,7 +876,7 @@ export default class TicketHandler {
         }
 
         if (channel.name.startsWith('librariankill')) {
-            const isLibrarian = await this.client.util.hasRolePermissions(this.client, ['librarian'], interaction);
+            const isLibrarian = await this.client.util.hasRolePermissions(this.client, ['librarian', 'teacher'], interaction);
             if (isLibrarian) return true;
         }
 
@@ -771,7 +892,7 @@ export default class TicketHandler {
         const messages = await UtilityHandler.readAllMessages(channel);
         const messageArray = Array.from(messages.values());
 
-        const transcriptBuffer = await TranscriptGenerator.createTranscript(messages, channel.name);
+        const transcriptBuffer = await TranscriptGenerator.createTranscript(messages, channel.name, this.client);
         const transcriptAttachment = new AttachmentBuilder(transcriptBuffer, { name: `${channel.name}-transcript.html` });
 
         const welcomeMessage = messages.find(msg =>
@@ -813,16 +934,16 @@ export default class TicketHandler {
 
         if (ticketType === 'report' && originalTicketEmbed?.fields) {
             const reportedUserField = originalTicketEmbed.fields.find(field =>
-                field.name === 'Reported User'
+                field.name === 'Reported Users'
             );
 
             if (reportedUserField) {
-                const reportedUser = reportedUserField.value.replace(/```/g, '').trim();
+                const reportedUser = reportedUserField.value.replace(/```/g, '').replace(/(<@\d+>)/g, '').trim();
                 forumTitle = `Report-${ticketOpener}-${reportedUser}`;
             }
         } else if (ticketType === 'clearance' && originalTicketEmbed?.fields) {
             const reportedUserField = originalTicketEmbed.fields.find(field =>
-                field.name === 'RSN' || 'Reported User'
+                field.name === 'RSN' || 'Reported Users'
             );
 
             if (reportedUserField) {
@@ -876,7 +997,8 @@ export default class TicketHandler {
 
             for (const message of messageArray) {
                 if (message.author.id === this.client.user?.id) {
-                    continue;
+                    //continue;
+                    //we want that now.
                 }
 
                 const messageDate = message.createdAt.toLocaleDateString();
@@ -918,7 +1040,8 @@ export default class TicketHandler {
 
                 if (hasAttachments) {
                     for (const attachment of message.attachments.values()) {
-                        const attachmentBlock = `**[${timeOnly}] ${author}:** ${attachment.url}\n`;
+                        const newUrl: string = await this.client.util.reuploadImage(attachment.url);
+                        const attachmentBlock = `**[${timeOnly}] ${author}:** ${newUrl}\n`;
 
                         if (currentBlock.length + attachmentBlock.length > maxLength) {
                             // BANDAID
@@ -1235,7 +1358,7 @@ export default class TicketHandler {
 
     public static async handleDMTranscriptDownload(client: Bot, interaction: ButtonInteraction, forumPostId: string): Promise<void> {
         client.logger.log({
-            message: `[Transcript] handleDMTranscriptDownload called with forumPostId: "${forumPostId}", user: ${interaction.user.id}`,
+            message: `[Transcript] handleDMTranscriptDownload called with forumPostId: "${forumPostId}", user: ${interaction.user.id} / ${interaction.user.displayName}`,
             handler: 'ButtonHandler'
         }, true);
 
@@ -1322,7 +1445,7 @@ export default class TicketHandler {
 
     private async handleTranscriptDownload(interaction: ButtonInteraction, forumPostId: string): Promise<void> {
         this.client.logger.log({
-            message: `[Transcript] handleTranscriptDownload called with forumPostId: "${forumPostId}", user: ${interaction.user.id}`,
+            message: `[Transcript] handleTranscriptDownload called with forumPostId: "${forumPostId}", user: ${interaction.user.id} / ${interaction.user.displayName}`,
             handler: this.constructor.name
         }, true);
 
@@ -1445,7 +1568,7 @@ export default class TicketHandler {
         }
     }
 
-    public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number, mode: string | null = null): Promise<TextChannel | null> {
+    public async createTicketChannel(guild: any, ticketType: string, userId: string, ticketNumber: number, mode: string | null = null, formData: any | null = null): Promise<TextChannel | null> {
         try {
             let channelName = `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
 
@@ -1532,6 +1655,19 @@ export default class TicketHandler {
 
             if (ticketType === 'librariankill') {
                 await channel.permissionOverwrites.create(
+                    teacherRoleId,
+                    {
+                        ViewChannel: true,
+                        SendMessages: true,
+                        ReadMessageHistory: true,
+                        AttachFiles: true,
+                        EmbedLinks: true,
+                        ManageMessages: true,
+                        ManageChannels: true,
+                    }
+                );
+
+                await channel.permissionOverwrites.create(
                     librarianRoleId,
                     {
                         ViewChannel: true,
@@ -1545,19 +1681,38 @@ export default class TicketHandler {
                 );
             }
 
-            if (isStaffTicket) {
+            if (isStaffTicket || ticketType === 'report') {
                 const adminRole = this.client.roles.admin;
                 const ownerRole = this.client.roles.owner;
 
                 const member = await guild.members.fetch(userId);
                 const thread = await channel.threads.create({
-                    name: `Discussion - ${member.displayName}`,
+                    name: isStaffTicket ? `Discussion - ${member.displayName}` : `Report - ${member.displayName}`,
                     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
                     type: ChannelType.PrivateThread,
                     reason: 'Thread automatically created by TicketHandler'
                 });
 
-                await thread.send(`${adminRole}, ${ownerRole}: Discuss the applicant here`);
+                if (isStaffTicket) {
+                    await thread.send(`${adminRole}, ${ownerRole}: Discuss the applicant here`);
+                } else {
+                    await thread.send(`${adminRole}, ${ownerRole}: Speak as the bot here`);
+
+                    if (formData.user_select) {
+                        for (const [_, user] of formData.user_select) {
+                            // check if reported users have warnings
+                            const warning = await this.client.util.GetWarnings(user);
+
+                            if (warning) {
+                                await thread.send({
+                                    components: [warning],
+                                    flags: MessageFlags.IsComponentsV2,
+                                    allowedMentions: { "parse": [] }
+                                });
+                            }
+                        }
+                    }
+                }
             }
 
             this.client.logger.log({
@@ -1586,7 +1741,7 @@ export default class TicketHandler {
             const isStaffTicket = ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
 
             // Create welcome message
-            let welcomeMessage = `<@${userId}>, your ticket has been created. An ${isStaffTicket ? 'Admin' : adminRole} or ${isStaffTicket ? 'Owner' : ownerRole} will be with you shortly.`;
+            let welcomeMessage = `<@${userId}>, your ticket has been created. An ${isStaffTicket || ticketType === 'report' ? 'Admin' : adminRole} or ${isStaffTicket ? 'Owner' : ownerRole} will be with you shortly.`;
 
             if (ticketType === 'learner') {
                 welcomeMessage = `<@${userId}>, your ticket has been created. A ${teacherRole} will be with you shortly.`;
@@ -1626,15 +1781,19 @@ export default class TicketHandler {
                     urls = urls.concat(formData.reason.match(urlRegex) || []);
                     break;
                 case 'report':
+                    let reportedUsers: string = '';
+                    if (formData.user_select) {
+                        for (const [_, user] of formData.user_select) {
+                            reportedUsers += `<@${user.id}>\n`;
+                        }
+                    }
+
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
-                        { name: 'Reported User', value: `\`\`\`${formData.reported_user}\`\`\``, inline: false },
+                        { name: 'Reported Users', value: `${reportedUsers.trim()}\n\`\`\`${formData.reported_user}\`\`\``, inline: false },
                         { name: 'Reason', value: `\`\`\`${formData.reason}\`\`\``, inline: false },
-                        { name: 'Description', value: `\`\`\`${formData.description}\`\`\``, inline: false }
                     );
-
                     urls = urls.concat(formData.reason.match(urlRegex) || []);
-                    urls = urls.concat(formData.description.match(urlRegex) || []);
                     break;
                 case 'contentcreator':
                     embed.addFields(
@@ -1666,7 +1825,7 @@ export default class TicketHandler {
                 case 'learner':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
-                        { name: 'Timezone and Game Times Active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'When are you available ingame (in Game Time)?', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'Confirm you\'ve read & understand requirements', value: `\`\`\`${formData.confirm}\`\`\``, inline: false },
                         { name: 'What are you hoping to get out of this ticket?', value: `\`\`\`${formData.goals}\`\`\``, inline: false },
                         { name: 'Mode and Enrage', value: `\`\`\`${formData.mode}\`\`\``, inline: false },
@@ -1676,7 +1835,7 @@ export default class TicketHandler {
                 case 'librarian':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
-                        { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'When are you available ingame (in Game Time)?', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
@@ -1684,13 +1843,13 @@ export default class TicketHandler {
                 case 'librariankill':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
-                        { name: 'Timezone and Game Times Active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'When are you available ingame (in Game Time)?', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                     );
                     break;
                 case 'support':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
-                        { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'When are you available ingame (in Game Time)?', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
@@ -1698,25 +1857,29 @@ export default class TicketHandler {
                 case 'teacher':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
-                        { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'When are you available ingame (in Game Time)?', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'Which enrage do you want to teach people', value: `\`\`\`${formData.enrage}\`\`\``, inline: false },
-                        { name: 'Please provide your preset and kc', value: `\`\`\`${formData.presetkc}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
-                    urls = urls.concat(formData.presetkc.match(urlRegex) || []);
+
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break;
                 case 'trialteam':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
-                        { name: 'Timezone and Game Times active', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'When are you available ingame (in Game Time)?', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
                         { name: 'Which enrage do you want to trial people', value: `\`\`\`${formData.enrage}\`\`\``, inline: false },
-                        { name: 'Please provide your preset and kc', value: `\`\`\`${formData.presetkc}\`\`\``, inline: false },
                         { name: 'Why are you applying for this role?', value: `\`\`\`${formData.reasons}\`\`\``, inline: false }
                     );
-                    urls = urls.concat(formData.presetkc.match(urlRegex) || []);
+
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break;
+            }
+
+            if (formData.attachment) {
+                for (const [_, image] of formData.attachment) {
+                    urls.push(image.url);
+                }
             }
 
             // Create close button
@@ -1740,7 +1903,9 @@ export default class TicketHandler {
                     '- Your overall PvM experience',
                     '- A screenshot of your Amascut preset to provide feedback',
                     '- A screenshot of your kill count and current PR (please include your RSN in screenshot)',
-                    '- Please change your discord nickname to your RSN if you haven\'t already'
+                    '- Please change your discord nickname to your RSN if you haven\'t already',
+                    '- Before your scheduled hour, please review <#1404510914526580837> and the roles found in <#1405324280522346657>',
+                    '- Some mechanics include the distinction between red, blue and green colours, please let us know if you are colourblind to accomodate for that'
                 ].join('\n')));
 
                 container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
@@ -1786,7 +1951,7 @@ export default class TicketHandler {
             }
 
             if (urls.length > 0) {
-                await channel.send(`Found following URL's:\n${urls.join('\n\n')}`);
+                await channel.send(`Found following URL's / attachments:\n${urls.join('\n\n')}`);
             }
 
             this.client.logger.log({
@@ -1881,6 +2046,44 @@ export default class TicketHandler {
         }
 
         await warningRepository.save(existingEntries);
+    }
+
+    //#endregion
+
+    //#region MessageSync
+
+    public static async SyncMessage(client: Bot, message: Message<true>) {
+        if ((message.channel.parentId === client.channelIds.ticketCategory || message.channel.parentId === client.channelIds.wipTicketCategory)) {
+            // Message is sent in a report-channel -> sync to thread
+            const threads = await (message.channel as TextChannel).threads.fetch();
+
+            if (threads) {
+                const thread = threads.threads.first();
+
+                let attachments = [];
+
+                if (message.attachments?.size > 0) {
+                    for (const [_, attachment] of message.attachments) {
+                        attachments.push(attachment);
+                    }
+                }
+
+                const messageContent = `${message.author.displayName}: ${message.content}`;
+                await thread?.send(attachments.length > 0 ? { content: messageContent, files: attachments } : { content: messageContent });
+            }
+        } else if ((message.channel.parent?.parentId === client.channelIds.ticketCategory || message.channel.parent?.parentId === client.channelIds.wipTicketCategory)) {
+            // Message is sent in a report-channel-thread -> sync to channel
+            const channel = message.channel.parent as TextChannel;
+            let attachments = [];
+
+            if (message.attachments?.size > 0) {
+                for (const [_, attachment] of message.attachments) {
+                    attachments.push(attachment);
+                }
+            }
+
+            await channel.send(attachments.length > 0 ? { content: message.content, files: attachments } : { content: message.content });
+        }
     }
 
     //#endregion

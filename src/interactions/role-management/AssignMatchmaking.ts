@@ -121,8 +121,9 @@ export default class Pass extends BotInteraction {
         const member = await interaction.guild.members.fetch(interaction.user.id);
         const hasAdminPermissions = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
         const hasTrialTeamPermissions = member.roles.cache.has(this.client.roleIds.trialTeam);
+        const hasTeacherPermissions = member.roles.cache.has(this.client.roleIds.teacher);
 
-        if (hasAdminPermissions) {
+        if (hasAdminPermissions || (hasTrialTeamPermissions && hasTeacherPermissions)) {
             choices = allOptions;
         } else if (hasTrialTeamPermissions) {
             choices = trialTeamOptions;
