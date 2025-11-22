@@ -2,17 +2,17 @@ import LeaderboardHandler from '../../modules/LeaderboardHandler';
 import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, TextChannel } from 'discord.js';
 
-export default class TeacherLeaderboard extends BotInteraction {
+export default class LoreBookLeaderboard extends BotInteraction {
     get name() {
-        return 'teacher-leaderboard';
+        return 'lorebook-leaderboard';
     }
 
     get description() {
-        return 'Teacher Leaderboards';
+        return 'Lore Book Leaderboards';
     }
 
     get permissions() {
-        return 'TEACHER';
+        return 'LOREBOOK';
     }
 
     get timespanOptions() {
@@ -44,7 +44,7 @@ export default class TeacherLeaderboard extends BotInteraction {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const timespan: string | null = interaction.options.getString('timespan', false);
 
-        await LeaderboardHandler.postLeaderBoard(this.client, 0, interaction.channel as TextChannel, timespan ?? null)
+        await LeaderboardHandler.postLeaderBoard(this.client, 1, interaction.channel as TextChannel, timespan ?? null)
 
         await interaction.editReply('Leaderboard sent!');
     }

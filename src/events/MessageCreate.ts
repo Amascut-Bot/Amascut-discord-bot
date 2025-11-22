@@ -91,7 +91,7 @@ export default class MessageCreate extends BotEvent {
         }
 
         // Report-Message-Sync
-        if (message.channel.name.toLowerCase().startsWith('report')) {
+        if (message.channel.name.toLowerCase().startsWith('report') || message.channel.name.toLowerCase().startsWith('clearance')) {
             await TicketHandler.SyncMessage(this.client, message);
         }
     }

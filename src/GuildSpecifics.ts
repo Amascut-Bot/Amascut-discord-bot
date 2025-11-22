@@ -70,7 +70,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             learnerHosts: '1411662134756118569',
             staffTicketsCategory: '1415817949868068976',
             teachersChat: '1405664850469847122',
-            librarianTicketsCategory: '1412871767932010547'
+            lorebookTicketsCategory: '1412871767932010547'
         }
     }
 
@@ -106,7 +106,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             wipTicketCategory: '1404834663339528362',
             staffTicketsCategory: '1416098705127375068',
             // Learner Section Channels
-            librarianTicketsCategory: '1439305836873777333',
+            lorebookTicketsCategory: '1439305836873777333',
             learnerTicketsCategory: '1412878315395481782',
             learnerCategory: '1404510300715356232',
             learnerTempVCCreate: '1405678891565187112',
@@ -193,7 +193,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             reaper: '1391860635347849374',
             teacher: '1412871872374116463',
             helperLearner: '1412871872374116463',
-            librarian: '1412871872374116463',
+            lorebook: '1441892735144558776',
 
             CONTENT_CREATOR_ROLE: '1391860635456901393',
             LIVE_ROLE: '1391860635456901398',
@@ -260,7 +260,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             reaper: '1390444833537130568',
             teacher: '1412881470673916077',
             helperLearner: '1404509333185892422',
-            librarian: '1405001670101827617',
+            lorebook: '1405001670101827617',
             editor: '1389397640533250058',
 
             nitroBooster: '000000000000000000',

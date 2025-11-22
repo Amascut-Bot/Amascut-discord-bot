@@ -25,7 +25,7 @@ export default class TicketStatistics extends BotInteraction {
             'Other': 3,
             'Clearance': 4,
             'Learner': 5,
-            'Librarian' : 6,
+            'Lore Book' : 6,
             'Support': 7,
             'Teacher': 8,
             'Trial Team': 9
@@ -120,10 +120,10 @@ export default class TicketStatistics extends BotInteraction {
             const ticketType = ticket.type;
 
             if (detailed) {
-                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : ticketType === 5 ? 'Learner' : ticketType === 6 ? 'Librarian' :
+                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : ticketType === 5 ? 'Learner' : ticketType === 6 ? 'Lore Book' :
                     ticketType === 7 ? 'Support' : ticketType === 8 ? 'Teacher' : ticketType === 9 ? 'Trial Team' : 'Other' )} | Opened by: <@${ticket.userOpen}> | Closed by: <@${ticket.userClose}> | Archive: <#${ticket.forumPostId}>\n`;
             } else {
-                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : ticketType === 5 ? 'Learner' : ticketType === 6 ? 'Librarian' :
+                message += `Ticket Type: ${(ticketType === 0 ? 'Suggestion' : ticketType === 1 ? 'Report' : ticketType === 2 ? 'Content Creator' : ticketType === 4 ? 'Clearance' : ticketType === 5 ? 'Learner' : ticketType === 6 ? 'Lore Book' :
                     ticketType === 7 ? 'Support' : ticketType === 8 ? 'Teacher' : ticketType === 9 ? 'Trial Team' : 'Other' )} | Ticket Count: ${ticket.count}\n`;
             }
         });
@@ -142,7 +142,7 @@ export default class TicketStatistics extends BotInteraction {
                 `> Ticket Stats from <t:${Math.round(dateFrom.getTime() / 1000)}:f> to <t:${Math.round(dateTo.getTime() / 1000)}:f>.`,
                 userOpen ? `> Opening User: <@${userOpen.id}>` : '',
                 userClose ? `> Closing User: <@${userClose.id}>` : '',
-                type != null ? '> Ticket-Type: ' + (type === 0 ? 'Suggestion' : type === 1 ? 'Report' : type === 2 ? 'Content Creator' : type === 4 ? 'Clearance' : type === 5 ? 'Learner' : type === 6 ? 'Librarian' :
+                type != null ? '> Ticket-Type: ' + (type === 0 ? 'Suggestion' : type === 1 ? 'Report' : type === 2 ? 'Content Creator' : type === 4 ? 'Clearance' : type === 5 ? 'Learner' : type === 6 ? 'Lore Book' :
                     type === 7 ? 'Support' : type === 8 ? 'Teacher' : type === 9 ? 'Trial Team' : 'Other') : '',
                 !userOpen && !userClose && type == null ? '> No additional Filter specified' : '',
             ].filter(str => str.trim() !== '').join('\n').trim()));

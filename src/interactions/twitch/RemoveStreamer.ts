@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, AutocompleteInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, AutocompleteInteraction, MessageFlags } from "discord.js";
 import BotInteraction from "../../types/BotInteraction";
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -64,7 +64,7 @@ export default class RemoveStreamer extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction) {
         if (!interaction.inCachedGuild()) return;
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const userNameToRemove = interaction.options.getString('username', true);
 

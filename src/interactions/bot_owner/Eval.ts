@@ -28,7 +28,7 @@ export default class Eval extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction<any>) {
-        await interaction.deferReply({ ephemeral: false });
+        await interaction.deferReply();
         const code = interaction.options.getString('code', true);
         let res;
         try {

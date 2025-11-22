@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, FileUploadBuilder, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, OverwriteType, PermissionFlagsBits, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User, UserSelectMenuBuilder } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, FileUploadBuilder, GuildMember, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, OverwriteType, PermissionFlagsBits, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User, UserSelectMenuBuilder } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -42,8 +42,8 @@ export default class TicketHandler {
             case 'ticket:create_contentcreator': this.handleTicketContentCreator(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_other': this.handleTicketOther(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_learner': this.handleTicketLearner(interaction as ButtonInteraction<'cached'>); break;
-            case 'ticket:create_librarian': this.handleTicketLibrarian(interaction as ButtonInteraction<'cached'>); break;
-            case 'ticket:create_librariankill': this.handleTicketLibrarianKill(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_lorebook': this.handleTicketLoreBook(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_lorebookkill': this.handleTicketLoreBookKill(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_support': this.handleTicketSupport(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_teacher': this.handleTicketTeacher(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_trialteam': this.handleTicketTrialTeam(interaction as ButtonInteraction<'cached'>); break;
@@ -310,10 +310,10 @@ export default class TicketHandler {
         await interaction.showModal(modal);
     }
 
-    private async handleTicketLibrarian(interaction: ButtonInteraction<'cached'>): Promise<void> {
+    private async handleTicketLoreBook(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
-            .setCustomId(`ticket:create_librarian_${interaction.user.id}`)
-            .setTitle('Librarian Team staff application');
+            .setCustomId(`ticket:create_lorebook_${interaction.user.id}`)
+            .setTitle('Lore Book Crew staff application');
 
         // RSN
         const rsnInput = new TextInputBuilder()
@@ -353,10 +353,10 @@ export default class TicketHandler {
         await interaction.showModal(modal);
     }
 
-    private async handleTicketLibrarianKill(interaction: ButtonInteraction<'cached'>): Promise<void> {
+    private async handleTicketLoreBookKill(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const modal = new ModalBuilder()
-            .setCustomId(`ticket:create_librariankill_${interaction.user.id}`)
-            .setTitle('Librarian Request');
+            .setCustomId(`ticket:create_lorebookkill_${interaction.user.id}`)
+            .setTitle('Lore Book Kill Request');
 
         // RSN
         const rsnInput = new TextInputBuilder()
@@ -571,7 +571,7 @@ export default class TicketHandler {
     private async handleTicketModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
         if (!interaction.inCachedGuild()) return;
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
             const customIdParts = interaction.customId.split('_');
@@ -608,13 +608,13 @@ export default class TicketHandler {
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.confirm = interaction.fields.getTextInputValue('confirm');
                     formData.goals = interaction.fields.getTextInputValue('goals');
-                    formData.mode = interaction.fields.getStringSelectValues('mode');
+                    formData.mode = interaction.fields.getStringSelectValues('mode').join('-');
                     break;
-                case 'librarian':
+                case 'lorebook':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
                     break;
-                case 'librariankill':
+                case 'lorebookkill':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     break;
                 case 'support':
@@ -686,7 +686,7 @@ export default class TicketHandler {
     private async handleCreateClearanceTicket(interaction: ChatInputCommandInteraction): Promise<void> {
         if (!interaction.inCachedGuild()) return;
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
             const reportedUser: User = interaction.options.getUser('reporteduser', true);
@@ -875,9 +875,9 @@ export default class TicketHandler {
             if (isTeacher) return true;
         }
 
-        if (channel.name.startsWith('librariankill')) {
-            const isLibrarian = await this.client.util.hasRolePermissions(this.client, ['librarian', 'teacher'], interaction);
-            if (isLibrarian) return true;
+        if (channel.name.startsWith('lorebookkill')) {
+            const isLoreBookCrew = await this.client.util.hasRolePermissions(this.client, ['lorebook', 'teacher'], interaction);
+            if (isLoreBookCrew) return true;
         }
 
         const userPermissions = channel.permissionOverwrites.cache.get(interaction.user.id);
@@ -1363,7 +1363,7 @@ export default class TicketHandler {
         }, true);
 
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             client.logger.log({
                 message: `[Transcript] Successfully deferred reply for post ${forumPostId}`,
                 handler: 'ButtonHandler'
@@ -1436,7 +1436,7 @@ export default class TicketHandler {
 
             // Final attempt to notify the user
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', ephemeral: true }).catch(() => {});
+                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', flags: MessageFlags.Ephemeral }).catch(() => {});
             } else {
                 await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => {});
             }
@@ -1450,7 +1450,7 @@ export default class TicketHandler {
         }, true);
 
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             this.client.logger.log({
                 message: `[Transcript] Successfully deferred reply for post ${forumPostId}`,
                 handler: this.constructor.name
@@ -1532,7 +1532,7 @@ export default class TicketHandler {
 
             // Final attempt to notify the user
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', ephemeral: true }).catch(() => {});
+                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', flags: MessageFlags.Ephemeral }).catch(() => {});
             } else {
                 await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => {});
             }
@@ -1576,11 +1576,12 @@ export default class TicketHandler {
                 channelName += `-${mode}`;
             }
 
-            const isStaffTicket = ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
+            const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
             const isClearanceTicket = ticketType === 'clearance';
+            const isReportTicket = ticketType === 'report';
             const parentCategoryId =
                 ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory
-                : ticketType === 'librariankill' ? this.client.channelIds.librarianTicketsCategory
+                : ticketType === 'lorebookkill' ? this.client.channelIds.lorebookTicketsCategory
                 : isStaffTicket ? this.client.channelIds.staffTicketsCategory
                 : isClearanceTicket ? this.client.channelIds.wipTicketCategory
                 : this.client.channelIds.ticketCategory;
@@ -1589,7 +1590,7 @@ export default class TicketHandler {
             const adminRoleId = this.client.roleIds.admin;
             const ownerRoleId = this.client.roleIds.owner;
             const teacherRoleId = this.client.roleIds.teacher;
-            const librarianRoleId = this.client.roleIds.librarian;
+            const lorebookRoleId = this.client.roleIds.lorebook;
 
             // Create the channel with proper permissions
             const channel: TextChannel = await guild.channels.create({
@@ -1653,7 +1654,7 @@ export default class TicketHandler {
                 );
             }
 
-            if (ticketType === 'librariankill') {
+            if (ticketType === 'lorebookkill') {
                 await channel.permissionOverwrites.create(
                     teacherRoleId,
                     {
@@ -1668,7 +1669,7 @@ export default class TicketHandler {
                 );
 
                 await channel.permissionOverwrites.create(
-                    librarianRoleId,
+                    lorebookRoleId,
                     {
                         ViewChannel: true,
                         SendMessages: true,
@@ -1681,13 +1682,16 @@ export default class TicketHandler {
                 );
             }
 
-            if (isStaffTicket || ticketType === 'report') {
+            if (isStaffTicket || isReportTicket || isClearanceTicket) {
                 const adminRole = this.client.roles.admin;
                 const ownerRole = this.client.roles.owner;
 
                 const member = await guild.members.fetch(userId);
                 const thread = await channel.threads.create({
-                    name: isStaffTicket ? `Discussion - ${member.displayName}` : `Report - ${member.displayName}`,
+                    name: isStaffTicket ? `Discussion - ${member.displayName}`
+                    : isReportTicket ? `Report - ${member.displayName}`
+                    : isClearanceTicket ? `Clearance - ${member.displayName}`
+                    : `Undefined - ${member.displayName}`,
                     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
                     type: ChannelType.PrivateThread,
                     reason: 'Thread automatically created by TicketHandler'
@@ -1695,11 +1699,11 @@ export default class TicketHandler {
 
                 if (isStaffTicket) {
                     await thread.send(`${adminRole}, ${ownerRole}: Discuss the applicant here`);
-                } else {
+                } else if (isReportTicket) {
                     await thread.send(`${adminRole}, ${ownerRole}: Speak as the bot here`);
 
-                    if (formData.user_select) {
-                        for (const [_, user] of formData.user_select) {
+                    if (formData?.user_select) {
+                        for (const [_, user] of formData?.user_select) {
                             // check if reported users have warnings
                             const warning = await this.client.util.GetWarnings(user);
 
@@ -1711,6 +1715,19 @@ export default class TicketHandler {
                                 });
                             }
                         }
+                    }
+                } else if (isClearanceTicket) {
+                    await thread.send(`${adminRole}, ${ownerRole}: Speak as the bot here`);
+                    const member: GuildMember = await guild.members.fetch(userId);
+
+                    const warning = await this.client.util.GetWarnings(member.user);
+
+                    if (warning) {
+                        await thread.send({
+                            components: [warning],
+                            flags: MessageFlags.IsComponentsV2,
+                            allowedMentions: { "parse": [] }
+                        });
                     }
                 }
             }
@@ -1737,8 +1754,8 @@ export default class TicketHandler {
             const adminRole = this.client.roles.admin;
             const ownerRole = this.client.roles.owner;
             const teacherRole = this.client.roles.teacher;
-            const librarianRole = this.client.roles.librarian;
-            const isStaffTicket = ticketType === 'librarian' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
+            const lorebookRole = this.client.roles.lorebook;
+            const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
 
             // Create welcome message
             let welcomeMessage = `<@${userId}>, your ticket has been created. An ${isStaffTicket || ticketType === 'report' ? 'Admin' : adminRole} or ${isStaffTicket ? 'Owner' : ownerRole} will be with you shortly.`;
@@ -1747,8 +1764,8 @@ export default class TicketHandler {
                 welcomeMessage = `<@${userId}>, your ticket has been created. A ${teacherRole} will be with you shortly.`;
             }
 
-            if (ticketType === 'librariankill') {
-                welcomeMessage = `<@${userId}>, your ticket has been created. A ${librarianRole} will be with you shortly.`;
+            if (ticketType === 'lorebookkill') {
+                welcomeMessage = `<@${userId}>, your ticket has been created. A ${lorebookRole} will be with you shortly.`;
             }
 
             if (ticketType === 'clearance') {
@@ -1757,7 +1774,7 @@ export default class TicketHandler {
 
             // Create embed with form data using fields for better organization
             const embed = new EmbedBuilder()
-                .setTitle(`${ticketType === 'trialteam' ? 'Trial Team' : ticketType === 'librariankill' ? 'Librarian Kill' : capitalizeFirstLetter(ticketType)} Ticket`)
+                .setTitle(`${ticketType === 'trialteam' ? 'Trial Team' : ticketType === 'lorebookkill' ? 'Lore Book Kill' : capitalizeFirstLetter(ticketType)} Ticket`)
                 .setColor(this.client.color)
                 .setTimestamp()
                 .setAuthor({
@@ -1832,7 +1849,7 @@ export default class TicketHandler {
                     );
                     urls = urls.concat(formData.goals.match(urlRegex) || []);
                     break;
-                case 'librarian':
+                case 'lorebook':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'When are you available ingame (in Game Time)?', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
@@ -1840,7 +1857,7 @@ export default class TicketHandler {
                     );
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break;
-                case 'librariankill':
+                case 'lorebookkill':
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'When are you available ingame (in Game Time)?', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
@@ -1942,6 +1959,44 @@ export default class TicketHandler {
                             .setStyle(ButtonStyle.Secondary),
                     ]
                 ));
+                container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    [
+                        new ButtonBuilder()
+                            .setCustomId('host_learner_quickfinish')
+                            .setLabel('Finish an host')
+                            .setStyle(ButtonStyle.Secondary)
+                    ]
+                ));
+
+                await channel.send({
+                    components: [container],
+                    flags: MessageFlags.IsComponentsV2,
+                    allowedMentions: { 'parse': [] }
+                });
+            }
+
+            if (ticketType === 'lorebookkill') {
+                const container = this.client.cv2.getContainerBuilder(null, '## Additional information');
+                container.addTextDisplayComponents(builder => builder.setContent([
+                    '- Please change your discord nickname to your RSN if you haven\'t already',
+                    '- Before your scheduled hour, please review <#1404510914526580837> and the roles found in <#1405324280522346657>',
+                    '- Some mechanics include the distinction between red, blue and green colours, please let us know if you are colourblind to accomodate for that'
+                ].join('\n')));
+
+                container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+                container.addTextDisplayComponents(builder => builder.setContent('### Lore Book Crew Controls'));
+                container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    [
+                        new ButtonBuilder()
+                            .setCustomId('host_lorebook_post_nm')
+                            .setLabel('Host Normal Mode')
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId('host_lorebook_quickfinish')
+                            .setLabel('Finish an host')
+                            .setStyle(ButtonStyle.Secondary)
+                    ]
+                ));
 
                 await channel.send({
                     components: [container],
@@ -1997,7 +2052,7 @@ export default class TicketHandler {
                 break;
             case 'learner':
                 ticketObject.ticketType = 5;
-            case 'librarian':
+            case 'lorebook':
                 ticketObject.ticketType = 6;
             case 'support':
                 ticketObject.ticketType = 7;
@@ -2005,7 +2060,7 @@ export default class TicketHandler {
                 ticketObject.ticketType = 8;
             case 'trialteam':
                 ticketObject.ticketType = 9;
-            case 'librariankill':
+            case 'lorebookkill':
                 ticketObject.ticketType = 10;
         }
 

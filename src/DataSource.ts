@@ -15,6 +15,7 @@ import { Warning } from "./entity/Warning"
 import { Timeout } from "./entity/Timeout"
 import { LearnerHour } from "./entity/LearnerHour"
 import { LearnerHourParticipation } from "./entity/LearnerHourParticipation"
+import { HostParticipation } from "./entity/HostParticipation"
 
 export const AppDataSource = new DataSource({
     type: "sqlite",
@@ -36,7 +37,8 @@ export const AppDataSource = new DataSource({
         Warning,
         Timeout,
         LearnerHour,
-        LearnerHourParticipation
+        LearnerHourParticipation,
+        HostParticipation
     ],
     migrations: [],
     subscribers: [],

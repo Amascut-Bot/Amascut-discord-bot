@@ -1,5 +1,5 @@
 import { Dirent, readdirSync } from 'fs';
-import { EmbedBuilder, Collection, Interaction } from 'discord.js';
+import { EmbedBuilder, Collection, Interaction, MessageFlags } from 'discord.js';
 import Bot from '../Bot';
 import BotInteraction from '../types/BotInteraction';
 import ButtonHandler from './ButtonHandler';
@@ -121,7 +121,7 @@ export default class InteractionHandler extends EventEmitter {
                                 message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
                                 handler: this.constructor.name,
                             }, true);
-                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', ephemeral: true });
+                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', flags: MessageFlags.Ephemeral });
                         }
                         break;
                     case 'OWNER':
@@ -130,7 +130,7 @@ export default class InteractionHandler extends EventEmitter {
                                 message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
                                 handler: this.constructor.name,
                             }, true);
-                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', ephemeral: true });
+                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', flags: MessageFlags.Ephemeral });
                         }
                     case 'ADMIN':
                         if (!(await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction))) {
@@ -138,7 +138,7 @@ export default class InteractionHandler extends EventEmitter {
                                 message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
                                 handler: this.constructor.name,
                             }, true);
-                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', ephemeral: true });
+                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', flags: MessageFlags.Ephemeral });
                         }
                     case 'EDITOR':
                         if (!(await this.client.util.hasRolePermissions(this.client, ['editor', 'admin', 'owner'], interaction))) {
@@ -146,7 +146,34 @@ export default class InteractionHandler extends EventEmitter {
                                 message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
                                 handler: this.constructor.name,
                             }, true);
-                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', ephemeral: true });
+                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', flags: MessageFlags.Ephemeral });
+                        }
+                        break;
+                    case 'TEACHER':
+                        if (!(await this.client.util.hasRolePermissions(this.client, ['teacher', 'admin', 'owner'], interaction))) {
+                            this.client.logger.log({
+                                message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                                handler: this.constructor.name,
+                            }, true);
+                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', flags: MessageFlags.Ephemeral });
+                        }
+                        break;
+                    case 'LOREBOOK':
+                        if (!(await this.client.util.hasRolePermissions(this.client, ['lorebook', 'teacher', 'admin', 'owner'], interaction))) {
+                            this.client.logger.log({
+                                message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                                handler: this.constructor.name,
+                            }, true);
+                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', flags: MessageFlags.Ephemeral });
+                        }
+                        break;
+                    case 'TRIALTEAM':
+                        if (!(await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction))) {
+                            this.client.logger.log({
+                                message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                                handler: this.constructor.name,
+                            }, true);
+                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', flags: MessageFlags.Ephemeral });
                         }
                         break;
                     default:
@@ -179,7 +206,7 @@ export default class InteractionHandler extends EventEmitter {
         }
 
         if (interaction.isStringSelectMenu() && interaction.inCachedGuild()) {
-            if (interaction.customId.startsWith('host_learner_')) {
+            if (interaction.customId.startsWith('host_')) {
                 return new HostHandler(this.client, interaction.customId, interaction);
             }
 
@@ -189,7 +216,7 @@ export default class InteractionHandler extends EventEmitter {
         if (interaction.isUserSelectMenu() && interaction.inCachedGuild()) {
             if (interaction.customId.startsWith('leaderboard_')) {
                 return new LeaderboardHandler(this.client, interaction.customId, interaction);
-            } else if (interaction.customId.startsWith('host_learner_')) {
+            } else if (interaction.customId.startsWith('host_')) {
                 return new HostHandler(this.client, interaction.customId, interaction);
             }
         }

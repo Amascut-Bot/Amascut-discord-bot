@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, SlashCommandBuilder, User, Role, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, User, Role, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 
 interface Hierarchy {
     [key: string]: string[];
@@ -139,7 +139,7 @@ export default class Pass extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const userResponse: User = interaction.options.getUser('user', true);
         const role: string = interaction.options.getString('role', true);
 

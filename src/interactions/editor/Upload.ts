@@ -312,7 +312,7 @@ export default class Upload extends BotInteraction {
 
                 await interaction.followUp({
                     content: errorDetails,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
                 return;
             }
@@ -380,14 +380,14 @@ export default class Upload extends BotInteraction {
                     if (chunks.length > 0) {
                         await interaction.followUp({
                             content: `**${summary}**\n\n**Corrected file:**\n\`\`\`json\n${chunks[0]}\n\`\`\``,
-                            ephemeral: true,
+                            flags: MessageFlags.Ephemeral,
                         });
                     }
 
                     for (let i = 1; i < chunks.length; i++) {
                         await interaction.followUp({
                             content: `\`\`\`json\n${chunks[i]}\n\`\`\``,
-                            ephemeral: true,
+                            flags: MessageFlags.Ephemeral,
                         });
                     }
                 }
@@ -524,7 +524,7 @@ export default class Upload extends BotInteraction {
                 const chunk = textChunks.slice(i, i + 2);
                 await interaction.followUp({
                     content: `**Link Errors Found**\nI've provided suggestions for the segments below. You can copy the corrected versions.\n\n${chunk.join('\n\n')}`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 

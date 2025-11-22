@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, Role, GuildMember, AutocompleteInteraction, TextChannel, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, Role, GuildMember, AutocompleteInteraction, TextChannel, EmbedBuilder, MessageFlags } from "discord.js";
 import BotInteraction from "../../types/BotInteraction";
 import Bot from "../../Bot";
 
@@ -62,7 +62,7 @@ export default class RoleReplace extends BotInteraction {
             return;
         }
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const currentRole = interaction.options.getRole('current-role', true) as Role;
         const desiredRole = interaction.options.getRole('desired-role', true) as Role;
@@ -100,10 +100,10 @@ export default class RoleReplace extends BotInteraction {
                 const membersWithRole = interaction.guild.members.cache.filter(member => member.roles.cache.has(currentRole.id));
 
                 if (membersWithRole.size === 0) {
-                    return interaction.followUp({ content: `No one has the ${currentRole.name} role.`, ephemeral: true });
+                    return interaction.followUp({ content: `No one has the ${currentRole.name} role.`, flags: MessageFlags.Ephemeral });
                 }
 
-                await interaction.followUp({ content: `Found ${membersWithRole.size} members. Starting role replacement...`, ephemeral: true });
+                await interaction.followUp({ content: `Found ${membersWithRole.size} members. Starting role replacement...`, flags: MessageFlags.Ephemeral });
 
                 let successCount = 0;
                 let errorCount = 0;
@@ -119,11 +119,11 @@ export default class RoleReplace extends BotInteraction {
                     }
                 }
 
-                return interaction.followUp({ content: `Mass replacement complete. Replaced the ${currentRole.name} role with ${desiredRole.name} for ${successCount} members. Failed to replace for ${errorCount} members.`, ephemeral: true });
+                return interaction.followUp({ content: `Mass replacement complete. Replaced the ${currentRole.name} role with ${desiredRole.name} for ${successCount} members. Failed to replace for ${errorCount} members.`, flags: MessageFlags.Ephemeral });
 
             } catch (error) {
                 this.client.logger.error({ message: `Failed mass role replacement for role ${currentRole.name}`, error });
-                return interaction.followUp({ content: `An unexpected error occurred during mass replacement.`, ephemeral: true });
+                return interaction.followUp({ content: `An unexpected error occurred during mass replacement.`, flags: MessageFlags.Ephemeral });
             }
         }
     }
