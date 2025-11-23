@@ -72,7 +72,8 @@ export default class RemovePoints extends BotInteraction {
             where: {
                 type: team === 'teacher' ? 0 : team === 'lorebook' ? 1 : team === 'trial' ? 2 : -1,
                 host: type === 'host' || type === 'both' ? 1 : 0,
-                participate: type === 'participation' || type === 'both' ? 1: 0
+                participate: type === 'participation' || type === 'both' ? 1: 0,
+                user: user.id
             },
             take: quantity
         });
