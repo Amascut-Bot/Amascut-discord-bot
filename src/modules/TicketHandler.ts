@@ -1776,11 +1776,19 @@ export default class TicketHandler {
             const embed = new EmbedBuilder()
                 .setTitle(`${ticketType === 'trialteam' ? 'Trial Team' : ticketType === 'lorebook' ? 'Lore Book Crew' : ticketType === 'lorebookkill' ? 'Lore Book Kill' : capitalizeFirstLetter(ticketType)} Ticket`)
                 .setColor(this.client.color)
-                .setTimestamp()
-                .setAuthor({
+                .setTimestamp();
+
+            if (ticketType === 'clearance') {
+                embed.setAuthor({
+                    name: `User: ${this.client.user?.username}`,
+                    iconURL: this.client.user?.displayAvatarURL()
+                });
+            } else {
+                embed.setAuthor({
                     name: `User: ${channel.guild.members.cache.get(userId)?.user.username || 'Unknown User'}`,
                     iconURL: channel.guild.members.cache.get(userId)?.user.displayAvatarURL() || undefined
                 });
+            }
 
             let urls: string[] = [];
             const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
