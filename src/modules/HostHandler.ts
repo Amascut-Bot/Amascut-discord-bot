@@ -134,8 +134,12 @@ export default class HostHandler {
 
         summaryContainer.addTextDisplayComponents(t => t.setContent(summary));
 
-        const teacherChannel = await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel;
-        await teacherChannel.send({
+        const targetChannel = type === 0 ? await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel
+                                : type === 1 ? await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel
+                                : type === 2 ? await this.client.channels.fetch(this.client.channelIds.trialLounge) as TextChannel
+                                : await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel;
+
+        await targetChannel.send({
             components: [summaryContainer],
             flags: MessageFlags.IsComponentsV2,
             allowedMentions: { "parse": [] }
@@ -243,7 +247,10 @@ export default class HostHandler {
                         const newValue = `${oldValue} ${userMention}`;
 
                         //edge case: card CAN not contain a learner yet, but always has a host
-                        if (typeSelect === 'learner' && !containerJson.includes('Learner:')) {
+                        if ((typeSelect === 'learner' && !containerJson.includes('Learner:'))
+                            || (typeSelect === 'participant' && !containerJson.includes('Participant:'))
+                            || (typeSelect === 'trialee' && !containerJson.includes('Trialee:'))
+                         ) {
                             containerJson = containerJson.replace('Host:', `${newValue}\\nHost:`);
                         } else {
                             containerJson = containerJson.replace(oldValue, newValue);
@@ -341,18 +348,34 @@ export default class HostHandler {
 
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        //check if user is teacher, admin or owner
-        if (!await this.client.util.hasRolePermissions(this.client, ['teacher', 'admin', 'owner'], interaction)) {
-            return await interaction.editReply('This action can only be used by Teachers!');
+        if (type === 0) {
+            //check if user is teacher, admin or owner
+            if (!await this.client.util.hasRolePermissions(this.client, ['teacher', 'admin', 'owner'], interaction)) {
+                return await interaction.editReply('This action can only be used by Teachers!');
+            }
         }
 
-        //find learner from learner ticket
+        if (type === 1) {
+            //check if user is lore book crew, teacher, admin or owner
+            if (!await this.client.util.hasRolePermissions(this.client, ['lorebook', 'teacher', 'admin', 'owner'], interaction)) {
+                return await interaction.editReply('This action can only be used by Lore Book Crew and Teachers!');
+            }
+        }
+
+        if (type === 2) {
+            //check if user is trial team, admin or owner
+            if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
+                return await interaction.editReply('This action can only be used by Trial Team Members!');
+            }
+        }
+
+        //find from ticket
         const learner = await TicketHandler.findTicketOpener(interaction.channel as TextChannel, this.client);
 
-        //grab learner hosts channel
+        //grab hosts channel
         const hostChannel = type === 0 ? await interaction.guild?.channels.fetch(this.client.channelIds.learnerHosts) as TextChannel
                             : type === 1 ? await interaction.guild?.channels.fetch(this.client.channelIds.learnerHosts) as TextChannel
-                            : type === 2 ? await interaction.guild?.channels.fetch(this.client.channelIds.learnerHosts) as TextChannel // TODO - Trials
+                            : type === 2 ? await interaction.guild?.channels.fetch(this.client.channelIds.trialHosts) as TextChannel
                             : await interaction.guild?.channels.fetch(this.client.channelIds.learnerHosts) as TextChannel;
 
         //set up the host card in it
@@ -559,7 +582,7 @@ export default class HostHandler {
                 allowedMentions: { "parse": [] }
             });
 
-            if (type === 1) {
+            if (type === 0 || type === 1) {
                 for (let index = 0; index < learnersArray.length; index++) {
                     await HostHandler.saveHost(this.client, type, null, hostsArray, fillersArray);
                 }

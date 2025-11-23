@@ -31,7 +31,7 @@ export default class HostLoreBook extends BotInteraction {
 
         const learnerHostChannel = await interaction.guild?.channels.fetch(this.client.channelIds.learnerHosts) as TextChannel;
 
-        const success = await HostHandler.postHost(learnerHostChannel, 'nm', message, [learner.id], [interaction.user.id]);
+        const success = await HostHandler.postHost(learnerHostChannel, 'nm', message, [learner.id], [interaction.user.id], null, 1);
 
         const container = this.client.cv2.getContainerBuilder(success, "Host card creation");
         container.addTextDisplayComponents(builder => builder.setContent(success ? "Your host has been successfully created!" : "Your host could not be created!"));
