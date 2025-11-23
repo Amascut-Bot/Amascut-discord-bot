@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
 
 export default class StreamDashboard extends BotInteraction {
@@ -27,16 +27,16 @@ export default class StreamDashboard extends BotInteraction {
         try {
             const twitchHandler = this.client.twitchHandler;
             if (!twitchHandler) {
-                await interaction.reply({ content: 'Twitch handler not found.', ephemeral: true });
+                await interaction.reply({ content: 'Twitch handler not found.', flags: MessageFlags.Ephemeral });
                 return;
             }
 
             await (twitchHandler as any).updateContentCreatorsDashboard();
 
-            await interaction.reply({ content: 'Content creators dashboard has been created/updated!', ephemeral: true });
+            await interaction.reply({ content: 'Content creators dashboard has been created/updated!', flags: MessageFlags.Ephemeral });
         } catch (error) {
             console.error('Failed to create dashboard:', error);
-            await interaction.reply({ content: 'Failed to create the dashboard. Check the logs for details.', ephemeral: true });
+            await interaction.reply({ content: 'Failed to create the dashboard. Check the logs for details.', flags: MessageFlags.Ephemeral });
         }
     }
 }

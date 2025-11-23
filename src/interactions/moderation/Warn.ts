@@ -114,77 +114,9 @@ export default class Warn extends BotInteraction {
                 }
 
             case 2:
-                // List warnings
-                let foundWarnings: Warning[] | null = await repository.find({
-                    order: {
-                        createdAt: 'ASC'
-                    }
-                });
-                let filters: string = '';
-
-                if (id) {
-                    foundWarnings = foundWarnings.filter(x => x.id === id);
-                    filters += `\n- **ID:** \`${id}\``;
-                }
-
-                if (user) {
-                    foundWarnings = foundWarnings.filter(x => x.user === user.id);
-                    filters += `\n- **User:** <@${user.id}>`;
-                }
-
-                if (reportRef) {
-                    foundWarnings = foundWarnings.filter(x => x.reportRef === reportRef.id);
-                    filters += `\n- **Report reference:** \`${reportRef}\``;
-                }
-
-                if (foundWarnings.length > 0 && foundWarnings.length < 25) {
-                    const response = this.client.cv2.getContainerBuilder(null, `List warnings - \`${foundWarnings.length}\` found`);
-
-                    let content: string = '';
-
-                    if (id) {
-                        content = `Found warning for ID \`${id}\`:\n\n`
-                    } else if (user) {
-                        content = `Found warnings for User <@${user.id}>:\n\n`
-                    } else if (reportRef) {
-                        content = `Found warnings for report reference \`${reportRef}\`:\n\n`
-                    } else {
-                        content = `Found warnings:\n\n`
-                    }
-
-                    for (const warning of foundWarnings) {
-                        if (id) {
-                            content += `**User:** <@${warning.user}>\n`
-                            content += `**Reason:** \`${warning.reason}\`\n`;
-                            if (warning.reportRef) content += `**Report reference:** <#${warning.reportRef}>\n`;
-                        } else if (user) {
-                            content += `**ID:** \`${warning.id}\`\n`;
-                            content += `**Reason:** \`${warning.reason}\`\n`;
-                            if (warning.reportRef) content += `**Report reference:** <#${warning.reportRef}>\n`;
-                        } else {
-                            content += `**ID:** \`${warning.id}\`\n`;
-                            content += `**User:** <@${warning.user}>\n`;
-                            content += `**Reason:** \`${warning.reason}\`\n`;
-                            if (warning.reportRef) content += `**Report reference:** <#${warning.reportRef}>\n`;
-                        }
-                        content += '\n';
-                    }
-
-                    content = content.trim();
-
-                    response.addTextDisplayComponents(builder => builder.setContent(content));
-
-                    return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
-                } else if (foundWarnings.length >= 25) {
-                    const response = this.client.cv2.getContainerBuilder(false, 'List warnings')
-                        .addTextDisplayComponents(builder => builder.setContent(`Found too many warnings (\`${foundWarnings.length}\`), please specify your search until a proper pagination system is implemented.`));
-                    return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
-                } else {
-                    const response = this.client.cv2.getContainerBuilder(false, 'List warnings')
-                        .addTextDisplayComponents(builder => builder.setContent(`Could not find any warnings for the specified filters:${filters.length > 0 ? filters : '\n- No filters provided'}`));
-                    return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });
-                }
-
+                // moved to UtilityHandler
+                const response = await this.client.util.GetWarnings(user, id, reportRef);
+                return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
             case 3:
                 if (id) {
                     const foundWarning: Warning | null = await repository.findOne({

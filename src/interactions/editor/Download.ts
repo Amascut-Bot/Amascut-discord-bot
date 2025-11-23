@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, AttachmentBuilder, ChannelType, APIEmbed } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel, AttachmentBuilder, ChannelType, APIEmbed, MessageFlags } from 'discord.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import ComponentsV2Utils from '../../modules/ComponentsV2Utils';
@@ -45,7 +45,7 @@ export default class Download extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const channel = interaction.options.getChannel('channel', true) as TextChannel;
         const archived = (interaction.options.getString('archived', false) ?? 'yes') === 'yes';

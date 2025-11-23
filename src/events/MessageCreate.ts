@@ -1,5 +1,6 @@
 import { Message, MessageType } from 'discord.js';
 import BotEvent from '../types/BotEvent';
+import TicketHandler from '../modules/TicketHandler';
 
 export default class MessageCreate extends BotEvent {
     get name() {
@@ -87,6 +88,11 @@ export default class MessageCreate extends BotEvent {
                 });
                 return message.reply('Sorry, I couldn\'t create an invite to your voice channel. Make sure I have the "Create Instant Invite" permission!');
             }
+        }
+
+        // Report-Message-Sync
+        if (message.channel.name.toLowerCase().startsWith('report') || message.channel.name.toLowerCase().startsWith('clearance')) {
+            await TicketHandler.SyncMessage(this.client, message);
         }
     }
 }

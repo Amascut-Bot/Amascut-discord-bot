@@ -2,54 +2,36 @@ import BotInteraction from '../../types/BotInteraction';
 import { ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, MessageFlags, User } from 'discord.js';
 import HostHandler from '../../modules/HostHandler';
 
-export default class HostLearner extends BotInteraction {
+export default class HostLoreBook extends BotInteraction {
     get name() {
-        return 'host-learner';
+        return 'host-lorebook';
     }
 
     get description() {
-        return 'Set up a learner Host Card';
+        return 'Set up a Lore Book Host Card';
     }
 
     get permissions() {
-        return 'TEACHER';
-    }
-
-    get enrageOptions() {
-        const enrage: any = {
-            'Normal Mode': 'nm',
-            'Enrage Mode - 100%': '100',
-            'Enrage Mode - 500%': '500',
-            'Enrage Mode - 750%': '750',
-            'Enrage Mode - 1000%': '1000',
-            'Enrage Mode - 2000%': '2000',
-        }
-        const options: any = [];
-        Object.keys(enrage).forEach((key: string) => {
-            options.push({ name: key, value: enrage[key] })
-        })
-        return options;
+        return 'LOREBOOK';
     }
 
     get slashData() {
         return new SlashCommandBuilder()
             .setName(this.name)
             .setDescription(this.description)
-            .addStringOption((option) => option.setName('mode').setDescription('Mode and Enrage').setChoices(...this.enrageOptions).setRequired(true))
-            .addUserOption((option) => option.setName('learner').setDescription('Learner to host for').setRequired(true))
+            .addUserOption((option) => option.setName('lorebook').setDescription('Person to host for').setRequired(true))
             .addStringOption((option) => option.setName('message').setDescription('Add a Message').setRequired(false));
     }
 
     async run(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const mode: string = interaction.options.getString('mode', true);
         const message: string | null = interaction.options.getString('message', false);
-        const learner: User = interaction.options.getUser('learner', true);
+        const learner: User = interaction.options.getUser('lorebook', true);
 
         const learnerHostChannel = await interaction.guild?.channels.fetch(this.client.channelIds.learnerHosts) as TextChannel;
 
-        const success = await HostHandler.postHost(learnerHostChannel, mode, message, [learner.id], [interaction.user.id], null, 0);
+        const success = await HostHandler.postHost(learnerHostChannel, 'nm', message, [learner.id], [interaction.user.id], null, 1);
 
         const container = this.client.cv2.getContainerBuilder(success, "Host card creation");
         container.addTextDisplayComponents(builder => builder.setContent(success ? "Your host has been successfully created!" : "Your host could not be created!"));

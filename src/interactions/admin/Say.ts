@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { Attachment, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ModalSubmitInteraction, Channel } from 'discord.js';
+import { Attachment, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ModalSubmitInteraction, Channel, MessageFlags } from 'discord.js';
 
 export default class Say extends BotInteraction {
     get name() {
@@ -55,7 +55,7 @@ export default class Say extends BotInteraction {
                 await channel.send(attachment ? { content: parsedMessage, files: [attachment] } : { content: parsedMessage });
             }
 
-            await modalInteraction.reply({ content: `Message sent!`, ephemeral: true });
+            await modalInteraction.reply({ content: `Message sent!`, flags: MessageFlags.Ephemeral });
         } catch (err) {
             console.error('Say command error:', err);
         }

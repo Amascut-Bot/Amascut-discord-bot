@@ -1,9 +1,10 @@
-import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, GuildMember, Message, Collection, FetchMessagesOptions } from 'discord.js';
+import { EmbedBuilder, ChatInputCommandInteraction, Interaction, AttachmentBuilder, TextChannel, GuildMember, Message, Collection, FetchMessagesOptions, User, ContainerBuilder } from 'discord.js';
 import Bot from '../Bot';
 import * as config from '../../config.json';
 import { Override } from '../entity/Override';
 import axios from 'axios';
 import { Timeout } from '../entity/Timeout';
+import { Warning } from '../entity/Warning';
 
 export default interface UtilityHandler {
     client: Bot;
@@ -341,6 +342,84 @@ export default class UtilityHandler {
             return true;
         } catch (error) {
             return false;
+        }
+    }
+
+    //#endregion
+
+    //#region Warnings
+
+    public async GetWarnings(user: User | null = null, id: number | null = null, reportRef: TextChannel | null = null): Promise<ContainerBuilder> {
+        // List warnings
+        const repository = this.client.dataSource.getRepository(Warning);
+        let foundWarnings: Warning[] | null = await repository.find({
+            order: {
+                createdAt: 'ASC'
+            }
+        });
+        let filters: string = '';
+
+        if (id) {
+            foundWarnings = foundWarnings.filter(x => x.id === id);
+            filters += `\n- **ID:** \`${id}\``;
+        }
+
+        if (user) {
+            foundWarnings = foundWarnings.filter(x => x.user === user.id);
+            filters += `\n- **User:** <@${user.id}>`;
+        }
+
+        if (reportRef) {
+            foundWarnings = foundWarnings.filter(x => x.reportRef === reportRef.id);
+            filters += `\n- **Report reference:** \`${reportRef}\``;
+        }
+
+        if (foundWarnings.length > 0 && foundWarnings.length < 25) {
+            const response = this.client.cv2.getContainerBuilder(null, `List warnings - \`${foundWarnings.length}\` found`);
+
+            let content: string = '';
+
+            if (id) {
+                content = `Found warning for ID \`${id}\`:\n\n`
+            } else if (user) {
+                content = `Found warnings for User <@${user.id}>:\n\n`
+            } else if (reportRef) {
+                content = `Found warnings for report reference \`${reportRef}\`:\n\n`
+            } else {
+                content = `Found warnings:\n\n`
+            }
+
+            for (const warning of foundWarnings) {
+                if (id) {
+                    content += `**User:** <@${warning.user}>\n`
+                    content += `**Reason:** \`${warning.reason}\`\n`;
+                    if (warning.reportRef) content += `**Report reference:** <#${warning.reportRef}>\n`;
+                } else if (user) {
+                    content += `**ID:** \`${warning.id}\`\n`;
+                    content += `**Reason:** \`${warning.reason}\`\n`;
+                    if (warning.reportRef) content += `**Report reference:** <#${warning.reportRef}>\n`;
+                } else {
+                    content += `**ID:** \`${warning.id}\`\n`;
+                    content += `**User:** <@${warning.user}>\n`;
+                    content += `**Reason:** \`${warning.reason}\`\n`;
+                    if (warning.reportRef) content += `**Report reference:** <#${warning.reportRef}>\n`;
+                }
+                content += '\n';
+            }
+
+            content = content.trim();
+
+            response.addTextDisplayComponents(builder => builder.setContent(content));
+
+            return response;
+        } else if (foundWarnings.length >= 25) {
+            const response = this.client.cv2.getContainerBuilder(false, 'List warnings')
+                .addTextDisplayComponents(builder => builder.setContent(`Found too many warnings (\`${foundWarnings.length}\`), please specify your search until a proper pagination system is implemented.`));
+            return response;
+        } else {
+            const response = this.client.cv2.getContainerBuilder(false, 'List warnings')
+                .addTextDisplayComponents(builder => builder.setContent(`Could not find any warnings for the specified filters:${filters.length > 0 ? filters : '\n- No filters provided'}`));
+            return response;
         }
     }
 

@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ContainerBuilder, ContainerComponent, Interaction, MediaGalleryBuilder, MediaGalleryComponent, MessageFlags, ModalBuilder, ModalSubmitInteraction, SectionBuilder, SeparatorSpacingSize, TextChannel, TextDisplayBuilder, TextDisplayComponent, TextInputBuilder, TextInputStyle, User, UserSelectMenuInteraction } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ContainerBuilder, ContainerComponent, EmbedBuilder, Interaction, MediaGalleryBuilder, MediaGalleryComponent, MessageFlags, ModalBuilder, ModalSubmitInteraction, SectionBuilder, SeparatorSpacingSize, TextChannel, TextDisplayBuilder, TextDisplayComponent, TextInputBuilder, TextInputStyle, User, UserSelectMenuInteraction } from 'discord.js';
 import Bot from '../Bot';
 import { EnrageLeaderboard } from '../entity/EnrageLeaderboard';
 import { LessThanOrEqual } from 'typeorm';
@@ -20,6 +20,163 @@ export default class LeaderboardHandler {
             case 'leaderboard_submit': this.handleLeaderboardSubmit(interaction as ModalSubmitInteraction); break;
         }
     }
+
+    //#region Static
+
+    public static async postLeaderBoard(client: Bot, type: number, channel: TextChannel, timespan: string | null) {
+        let dateFrom: Date;
+        let dateTo: Date;
+        let timestamp: Date = new Date();
+        let description: String;
+
+        if (timespan == null){
+            timespan = 'currentMonth';
+        }
+
+        switch(timespan){
+            case 'currentMonth':{
+                dateFrom = new Date(timestamp.getFullYear(), timestamp.getMonth(), 1, 0, 0, 0);
+                dateTo = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate(), 23, 59, 59);
+                description = 'Current Month';
+                break;
+            }
+            case 'lastMonth':{
+                timestamp.setDate(0);
+                dateFrom = new Date(timestamp.getFullYear(), timestamp.getMonth(), 1, 0, 0, 0);
+                dateTo = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate(), 23, 59, 59);
+                description = 'Last Month';
+                break;
+            }
+            case 'lastThreeMonths':{
+                dateTo = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate(), 23, 59, 59);
+                timestamp.setMonth(timestamp.getMonth() - 3);
+                dateFrom = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate(), 0, 0, 0);
+                description = 'Last 3 Months';
+                break;
+            }
+            case 'currentYear':{
+                dateFrom = new Date(timestamp.getFullYear(), 1, 1, 0, 0, 0);
+                dateTo = new Date(timestamp.getFullYear(), 12, 31, 23, 59, 59);
+                description = 'Current Year';
+                break;
+            }
+            case 'lastYear':{
+                dateFrom = new Date(timestamp.getFullYear() - 1, 1, 1, 0, 0, 0);
+                dateTo = new Date(timestamp.getFullYear() - 1, 12, 31, 23, 59, 59);
+                description = 'Last Year';
+                break;
+            }
+            default:{
+                dateFrom = new Date(2000, 1, 1, 0, 0, 0);
+                dateTo = new Date(2099, 31, 12, 23, 59, 59);
+                description = 'All Time';
+                break;
+            }
+        }
+
+        const query = `select
+                        user,
+                        sum(case when host = 1 then 1 else 0 end) as amount_hosted,
+                        sum(case when participate = 1 then 1 else 0 end) as amount_participated
+                        from host_participation
+                        where type = @type
+                        and created_at between '@dateFrom' and '@dateTo'
+                        group by user
+                        order by amount_hosted desc, amount_participated desc, user asc`
+                        .replace('@dateFrom', this.formatDate(dateFrom))
+                        .replace('@dateTo', this.formatDate(dateTo))
+                        .replace('@type', type.toString());
+
+        const result: { user: string, amount_hosted: number, amount_participated: number}[] = await client.dataSource.query(query);
+
+        const hosts = result.filter(r => r.amount_hosted > 0);
+        const participants = result.filter(r => r.amount_participated > 0).sort((a, b) => b.amount_participated - a.amount_participated);
+
+        const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book Kill' : type === 2 ? 'Trial' : 'Undefined';
+
+        const embed = new EmbedBuilder()
+            .setTimestamp()
+            .setTitle(`${hostTypeLabel} Leaderboard (${description})`)
+            .setColor(client.color)
+            .addFields(this.buildEmbedFields(client, hosts, participants));
+
+        await channel.send({ embeds: [embed] });
+    }
+
+    private static formatDate(date: Date): string {
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const dd = String(date.getDate()).padStart(2, "0");
+        const hh = String(date.getHours()).padStart(2, "0");
+        const min = String(date.getMinutes()).padStart(2, "0");
+
+        return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+    }
+
+    private static chunkArray<T>(arr: T[], size: number): T[][] {
+        const chunks: T[][] = [];
+        for (let i = 0; i < arr.length; i += size) {
+            chunks.push(arr.slice(i, i + size));
+        }
+        return chunks;
+    }
+
+    private static buildEmbedFields(client: Bot, hosts: { user: string, amount_hosted: number, amount_participated: number}[], participants: { user: string, amount_hosted: number, amount_participated: number}[]) {
+        const { gem1, gem2, gem3 } = client.util.emojis;
+        const chunkSize = 10;
+        const hostChunks = this.chunkArray(hosts, chunkSize);
+        const participantChunks = this.chunkArray(participants, chunkSize);
+
+        const maxChunks = Math.max(hostChunks.length, participantChunks.length);
+        const fields: any[] = [];
+
+        for (let i = 0; i < maxChunks; i++) {
+            const hostSlice = hostChunks[i] ?? [];
+            const participantSlice = participantChunks[i] ?? [];
+
+            const hostText = hostSlice
+                .map((x, idx) => {
+                    const pos = i * chunkSize + idx + 1;
+                    const label = pos === 1 ? gem1 : pos === 2 ? gem2 : pos === 3 ? gem3 : `${pos}.`;
+                    return `${label} <@${x.user}> — ${x.amount_hosted}`;
+                }).join("\n");
+
+            const participantText = participantSlice
+                .map((x, idx) => {
+                    const pos = i * chunkSize + idx + 1;
+                    const label = pos === 1 ? gem1 : pos === 2 ? gem2 : pos === 3 ? gem3 : `${pos}.`;
+                    return `${label} <@${x.user}> — ${x.amount_participated}`;
+                }).join("\n");
+
+            fields.push(
+                {
+                    name: `Hosts`,// ${i * chunkSize + 1}-${i * chunkSize + hostSlice.length}`,
+                    value: hostText || "*No more hosts*",
+                    inline: true
+                },
+                {
+                    name: `Participants`,// ${i * chunkSize + 1}-${i * chunkSize + participantSlice.length}`,
+                    value: participantText || "*No more participants*",
+                    inline: true
+                }
+            );
+
+            // Add empty spacer row between blocks — except after final block
+            if (i < maxChunks - 1) {
+                fields.push({
+                    name: "\u200B",
+                    value: "\u200B",
+                    inline: false
+                });
+            }
+        }
+
+        return fields;
+    }
+
+    //#endregion
+
+    // following is deprecated
 
     //#region Moderation
 

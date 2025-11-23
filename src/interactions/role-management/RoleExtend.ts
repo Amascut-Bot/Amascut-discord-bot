@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, Role, GuildMember, AutocompleteInteraction, TextChannel, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, Role, GuildMember, AutocompleteInteraction, TextChannel, EmbedBuilder, MessageFlags } from "discord.js";
 import BotInteraction from "../../types/BotInteraction";
 import Bot from "../../Bot";
 
@@ -70,7 +70,7 @@ export default class RoleExtend extends BotInteraction {
             return;
         }
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const currentRole = interaction.options.getRole('current-role', true) as Role;
         const desiredRole1 = interaction.options.getRole('desired-role-1', true) as Role;
@@ -118,10 +118,10 @@ export default class RoleExtend extends BotInteraction {
                 const membersWithRole = interaction.guild.members.cache.filter(member => member.roles.cache.has(currentRole.id));
 
                 if (membersWithRole.size === 0) {
-                    return interaction.followUp({ content: `${identifier} No one has the ${currentRole.name} role.`, ephemeral: true });
+                    return interaction.followUp({ content: `${identifier} No one has the ${currentRole.name} role.`, flags: MessageFlags.Ephemeral });
                 }
 
-                await interaction.followUp({ content: `${identifier} Found ${membersWithRole.size} members. Starting role extension...`, ephemeral: true });
+                await interaction.followUp({ content: `${identifier} Found ${membersWithRole.size} members. Starting role extension...`, flags: MessageFlags.Ephemeral });
 
                 let successCount = 0;
                 let errorCount = 0;
@@ -139,11 +139,11 @@ export default class RoleExtend extends BotInteraction {
                     }
                 }
 
-                return interaction.followUp({ content: `${identifier} Mass extension complete. Extended the ${currentRole.name} role with ${desiredRole1.name} and ${desiredRole2.name} for ${successCount} members. Failed to extend for ${errorCount} members.`, ephemeral: true });
+                return interaction.followUp({ content: `${identifier} Mass extension complete. Extended the ${currentRole.name} role with ${desiredRole1.name} and ${desiredRole2.name} for ${successCount} members. Failed to extend for ${errorCount} members.`, flags: MessageFlags.Ephemeral });
 
             } catch (error) {
                 this.client.logger.error({ message: `Failed mass role extension for role ${currentRole.name}`, error });
-                return interaction.followUp({ content: `${identifier} An unexpected error occurred during mass extension.`, ephemeral: true });
+                return interaction.followUp({ content: `${identifier} An unexpected error occurred during mass extension.`, flags: MessageFlags.Ephemeral });
             }
         }
     }

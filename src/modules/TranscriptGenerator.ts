@@ -1,14 +1,18 @@
 import { Collection, Message, PartialMessage, Attachment } from 'discord.js';
+import Bot from '../Bot';
 
 export default class TranscriptGenerator {
-
-    public static async createTranscript(messages: Collection<string, Message | PartialMessage>, channelName: string): Promise<Buffer> {
-        const html = await this.generateHtml(messages, channelName);
+    public static async createTranscript(messages: Collection<string, Message | PartialMessage>, channelName: string, client: Bot): Promise<Buffer> {
+        const html = await this.generateHtml(messages, channelName, client);
         return Buffer.from(html, 'utf-8');
     }
 
-    private static async generateHtml(messages: Collection<string, Message | PartialMessage>, channelName: string): Promise<string> {
-        const messageHtml = Array.from(messages.values()).reverse().map(this.formatMessage, this).join('');
+    private static async generateHtml(messages: Collection<string, Message | PartialMessage>, channelName: string, client: Bot): Promise<string> {
+        let messageHtml: string = '';
+
+        for (const message of Array.from(messages.values())) {
+            messageHtml += await this.formatMessage(message, client);
+        }
 
         return `
             <!DOCTYPE html>
@@ -106,6 +110,11 @@ export default class TranscriptGenerator {
                             color: #72767d;
                             margin-top: 10px;
                         }
+                        .embed-img {
+                            max-width: 400px;
+                            border-radius: 3px;
+                            margin-top: 5px;
+                        }
                     </style>
                 </head>
                 <body>
@@ -120,7 +129,7 @@ export default class TranscriptGenerator {
         `;
     }
 
-    private static formatMessage(message: Message | PartialMessage): string {
+    private static async formatMessage(message: Message | PartialMessage, client: Bot): Promise<string> {
         const author = message.author;
         // This can be null for partial messages
         if (!author) {
@@ -147,16 +156,16 @@ export default class TranscriptGenerator {
 
         // Handle attachments
         if (message.attachments.size > 0) {
-            message.attachments.forEach(attachment => {
-                messageBody += this.formatAttachment(attachment);
-            });
+            for (const [_, attachment] of message.attachments) {
+                messageBody += await this.formatAttachment(attachment, client);
+            }
         }
 
         // Handle embeds
         if (message.embeds.length > 0) {
-            message.embeds.forEach(embed => {
-                messageBody += this.formatEmbed(embed);
-            });
+            for (const embed of message.embeds) {
+                messageBody += await this.formatEmbed(embed, client);
+            }
         }
 
         return `
@@ -173,15 +182,16 @@ export default class TranscriptGenerator {
         `;
     }
 
-    private static formatAttachment(attachment: Attachment): string {
+    private static async formatAttachment(attachment: Attachment, client: Bot): Promise<string> {
         const isImage = attachment.contentType?.startsWith('image/');
         if (isImage) {
-            return `<div class="attachment"><a href="${attachment.url}" target="_blank">${this.escapeHtml(attachment.name || 'attachment')}</a><br><img src="${attachment.url}" alt="Attachment Image"></div>`;
+            const newUrl: string = await client.util.reuploadImage(attachment.url);
+            return `<div class="attachment"><a href="${newUrl}" target="_blank">${this.escapeHtml(attachment.name || 'attachment')}</a><br><img src="${newUrl}" alt="Attachment Image"></div>`;
         }
         return `<div class="attachment"><a href="${attachment.url}" target="_blank">Download ${this.escapeHtml(attachment.name || 'attachment')}</a></div>`;
     }
 
-    private static formatEmbed(embed: any): string {
+    private static async formatEmbed(embed: any, client: Bot): Promise<string> {
         let embedHtml = '<div class="embed">';
         if (embed.title) {
             embedHtml += `<div class="embed-title">${this.escapeHtml(embed.title)}</div>`;
@@ -191,6 +201,10 @@ export default class TranscriptGenerator {
         }
         if (embed.footer?.text) {
             embedHtml += `<div class="embed-footer">${this.escapeHtml(embed.footer.text)}</div>`;
+        }
+        if (embed.data?.type === 'image') {
+            const newUrl: string = await client.util.reuploadImage(embed.data.url);
+            embedHtml += `<div class="embed-img"><a href="${newUrl}" target="_blank">image</a><br><img src="${newUrl}" alt="Embedded Image"></div>`;
         }
         embedHtml += '</div>';
         return embedHtml;

@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -38,7 +38,7 @@ export default class UpdateBossKph extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction) {
         if (!interaction.inCachedGuild()) return;
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const boss = interaction.options.getString('boss', true);
         const newKph = interaction.options.getNumber('kph', true);

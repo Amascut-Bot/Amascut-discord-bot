@@ -1,11 +1,6 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, User } from 'discord.js';
-import { TrialParticipation } from '../../entity/TrialParticipation';
-import { Trial } from '../../entity/Trial';
-import { Reaper } from '../../entity/Reaper';
-import { ReaperParticipation } from '../../entity/ReaperParticipation';
-import { LearnerHour } from '../../entity/LearnerHour';
-import { LearnerHourParticipation } from '../../entity/LearnerHourParticipation';
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, User, MessageFlags } from 'discord.js';
+import { HostParticipation } from '../../entity/HostParticipation';
 
 export default class GivePoints extends BotInteraction {
     get name() {
@@ -23,8 +18,21 @@ export default class GivePoints extends BotInteraction {
     get featureOptions() {
         const assignOptions: any = {
             'Trial Team': 'trial',
-            'Reaper': 'reaper',
+            'Lore Book Crew': 'lorebook',
             'Teacher': 'teacher',
+        }
+        const options: any = [];
+        Object.keys(assignOptions).forEach((key: string) => {
+            options.push({ name: key, value: assignOptions[key] })
+        })
+        return options;
+    }
+
+    get typeOptions() {
+        const assignOptions: any = {
+            'Host': 'host',
+            'Participation': 'participation',
+            'Both': 'both',
         }
         const options: any = [];
         Object.keys(assignOptions).forEach((key: string) => {
@@ -40,82 +48,40 @@ export default class GivePoints extends BotInteraction {
             .addStringOption((option) => option.setName('team').setDescription('Team').addChoices(
                 ...this.featureOptions
             ).setRequired(true))
+            .addStringOption((option) => option.setName('type').setDescription('Type').addChoices(
+                ...this.typeOptions
+            ).setRequired(true))
             .addUserOption((option) => option.setName('user').setDescription('User').setRequired(true))
-            .addIntegerOption((option) => option.setName('quantity').setDescription('Quantity of points').setRequired(true))
+            .addIntegerOption((option) => option.setName('quantity').setDescription('Quantity of points').setRequired(true));
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const team: string = interaction.options.getString('team', true);
+        const type: string = interaction.options.getString('type', true);
         const user: User = interaction.options.getUser('user', true);
         const quantity: number = interaction.options.getInteger('quantity', true);
 
         const { dataSource } = this.client;
         const { colours } = this.client.util;
 
-        if (team === 'trial') {
-            const repository = dataSource.getRepository(Trial);
-            const placeholder = new Trial();
-            placeholder.host = 'Placeholder';
-            placeholder.link = 'Placeholder';
-            placeholder.trialee = 'Placeholder';
-            placeholder.role = 'Placeholder';
-            const newPlaceholder = await repository.save(placeholder);
+        const template = new HostParticipation();
+        template.user = user.id;
+        template.host = type === 'host' || type === 'both' ? 1 : 0;
+        template.participate = type === 'participation' || type === 'both' ? 1 : 0;
+        template.type = team === 'teacher' ? 0 : team === 'lorebook' ? 1 : team === 'trial' ? 2 : -1;
 
-            const newData: any = [...Array(quantity)].map(() => ({
-                participant: user.id,
-                role: 'Placeholder',
-                trial: newPlaceholder
-            }));
-
-            await dataSource
-                .createQueryBuilder()
-                .insert()
-                .into(TrialParticipation)
-                .values(newData)
-                .execute();
+        const newData: HostParticipation[] = [];
+        for (let index = 0; index < quantity; index++) {
+            newData.push(template);
         }
 
-        if (team === 'reaper') {
-            const reaperRepo = dataSource.getRepository(Reaper);
-            const placeholder = new Reaper();
-            placeholder.host = 'Placeholder';
-            placeholder.link = 'Placeholder';
-            placeholder.recipient = 'Placeholder';
-            const newPlaceholder = await reaperRepo.save(placeholder);
-
-            const newData: any = [...Array(quantity)].map(() => ({
-                participant: user.id,
-                reaper: newPlaceholder
-            }));
-
-            await dataSource
-                .createQueryBuilder()
-                .insert()
-                .into(ReaperParticipation)
-                .values(newData)
-                .execute();
-        }
-
-        if (team === 'teacher') {
-            const teacherRepo = dataSource.getRepository(LearnerHour);
-            const placeholder = new LearnerHour();
-            placeholder.host = 'Placeholder';
-            placeholder.link = 'Placeholder';
-            const newPlaceholder = await teacherRepo.save(placeholder);
-
-            const newData: any = [...Array(quantity)].map(() => ({
-                participant: user.id,
-                learnerHour: newPlaceholder
-            }));
-
-            await dataSource
-                .createQueryBuilder()
-                .insert()
-                .into(LearnerHourParticipation)
-                .values(newData)
-                .execute();
-        }
+        await dataSource
+            .createQueryBuilder()
+            .insert()
+            .into(HostParticipation)
+            .values(newData)
+            .execute();
 
         const replyEmbed = new EmbedBuilder()
             .setTitle('Points successfully granted!')
