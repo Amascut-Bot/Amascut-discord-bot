@@ -113,8 +113,13 @@ export default class HostHandler {
         // make sure users dont contain the learners
         const fillers = users.filter(x => !learners.includes(x) && !hosts.includes(x));
 
-        //await this.saveLearnerHour(message!.first()!.url, interaction.user.id, users);
-        await HostHandler.saveHost(this.client, type, message?.first()?.url ?? null, hosts, fillers);
+        if (type === 0 || type === 1) {
+            for (let index = 0; index < learners.length; index++) {
+                await HostHandler.saveHost(this.client, type, message?.first()?.url ?? null, hosts, fillers);
+            }
+        } else {
+            await HostHandler.saveHost(this.client, type, message?.first()?.url ?? null, hosts, fillers);
+        }
 
         // post summary
         const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book' : type === 2 ? 'Trial' : 'Undefined';
