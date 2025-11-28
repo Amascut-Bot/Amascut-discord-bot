@@ -123,7 +123,7 @@ export default class HostHandler {
 
         // post summary
         const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book' : type === 2 ? 'Trial' : 'Undefined';
-        const attendingTypeLabel = type === 0 ? 'Learners' : type === 1 ? 'Participants' : type === 2 ? 'Trialees' : 'Undefined';
+        const attendingTypeLabel = type === 0 ? 'Learners' : type === 1 ? 'Learners' : type === 2 ? 'Trialees' : 'Undefined';
 
         const summary = interaction.fields.getTextInputValue("summary");
         const summaryContainer = this.client.cv2.getContainerBuilder(null, `${hostTypeLabel} hosted by <@${interaction.user.id}> - Summary`);
@@ -253,7 +253,6 @@ export default class HostHandler {
 
                         //edge case: card CAN not contain a learner yet, but always has a host
                         if ((typeSelect === 'learner' && !containerJson.includes('Learner:'))
-                            || (typeSelect === 'participant' && !containerJson.includes('Participant:'))
                             || (typeSelect === 'trialee' && !containerJson.includes('Trialee:'))
                          ) {
                             containerJson = containerJson.replace('Host:', `${newValue}\\nHost:`);
@@ -557,8 +556,8 @@ export default class HostHandler {
             const learnerSelect = modalInteraction.fields.getSelectedUsers('learner_select', true);
             const summaryInput = modalInteraction.fields.getTextInputValue('summary');
 
-            const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book' : type === 2 ? 'Trial' : 'Undefined';
-            const attendingTypeLabel = type === 0 ? 'Learners' : type === 1 ? 'Participants' : type === 2 ? 'Trialees' : 'Undefined';
+            const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book Kill' : type === 2 ? 'Trial' : 'Undefined';
+            const attendingTypeLabel = type === 0 ? 'Learners' : type === 1 ? 'Learners' : type === 2 ? 'Trialees' : 'Undefined';
 
             const container = this.client.cv2.getContainerBuilder(null, `${hostTypeLabel} hosted by <@${interaction.user.id}> - Summary`);
             const hosts = `### Hosts:\n${hostSelect.map(x => `<@${x.id}>`).join('\n')}`;
@@ -611,7 +610,7 @@ export default class HostHandler {
         const hosts: string[] = [];
         const learners: string[] = [];
 
-        const regex = /([\w ]+):\s*(`empty`|<@!?[0-9]+>)(?:\s*&?\s*(`empty`|<@!?[0-9]+>))*/g;
+        const regex = /([\w ]+):\s*(`empty`|<@!?[0-9]+>)\s*(`empty`|<@!?[0-9]+>)?\s*(`empty`|<@!?[0-9]+>)?\s*(`empty`|<@!?[0-9]+>)?\s*(`empty`|<@!?[0-9]+>)?/g;
         for (const match of hostJson.matchAll(regex)) {
             let label = match[1].trim();
             const value = match[2].trim();
@@ -633,7 +632,7 @@ export default class HostHandler {
                  if (value5 && !hosts.includes(value5)) hosts.push(value5);
             }
 
-            if (label === 'learner' || label === 'trialee' || label === 'participant') {
+            if (label === 'learner' || label === 'trialee') {
                 if (!learners.includes(value)) learners.push(value);
                  if (value2 && !learners.includes(value2)) learners.push(value2);
                  if (value3 && !learners.includes(value3)) learners.push(value3);
@@ -766,7 +765,7 @@ export default class HostHandler {
                 let text = '';
 
                 if (time) text += `Time: <t:${time}:F>\n`;
-                if (users) text += `${type === 0 ? 'Learner' : type === 1 ? 'Participant' : type === 2 ? 'Trialee' : 'Undefined'}: <@${users.join('>, <@')}>\n`;
+                if (users) text += `${type === 0 ? 'Learner' : type === 1 ? 'Learner' : type === 2 ? 'Trialee' : 'Undefined'}: <@${users.join('>, <@')}>\n`;
                 text += `Host: <@${hosts?.join('>, <@')}>`;
 
                 teacherContainer.addTextDisplayComponents(builder => builder.setContent(text)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
@@ -822,7 +821,7 @@ export default class HostHandler {
                 const typeOptions = [
                     new StringSelectMenuOptionBuilder().setLabel('Host').setValue('host'),
                     new StringSelectMenuOptionBuilder().setLabel('Filler').setValue('filler'),
-                    new StringSelectMenuOptionBuilder().setLabel(`${type === 0 ? 'Learner' : type === 1 ? 'Participant' : type === 2 ? 'Trialee' : 'Undefined'}`).setValue('learner'),
+                    new StringSelectMenuOptionBuilder().setLabel(`${type === 0 ? 'Learner' : type === 1 ? 'Learner' : type === 2 ? 'Trialee' : 'Undefined'}`).setValue('learner'),
                 ];
 
                 const typeSelect = new StringSelectMenuBuilder()
