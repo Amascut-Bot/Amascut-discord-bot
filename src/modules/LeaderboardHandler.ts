@@ -155,7 +155,7 @@ export default class LeaderboardHandler {
                     inline: true
                 },
                 {
-                    name: `Fillers`,// ${i * chunkSize + 1}-${i * chunkSize + participantSlice.length}`,
+                    name: `Participants`,// ${i * chunkSize + 1}-${i * chunkSize + participantSlice.length}`,
                     value: participantText || "*No more participants*",
                     inline: true
                 }
