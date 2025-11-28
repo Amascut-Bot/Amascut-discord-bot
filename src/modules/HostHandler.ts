@@ -129,7 +129,7 @@ export default class HostHandler {
         const summaryContainer = this.client.cv2.getContainerBuilder(null, `${hostTypeLabel} hosted by <@${interaction.user.id}> - Summary`);
 
         const teachersText = `### Hosts:\n${hosts.map(x => `<@${x}>`).join('\n')}`;
-        const fillersText = `### Fillers:\n${fillers.map(x => `<@${x}>`).join('\n')}`;
+        const fillersText = `### Participants:\n${fillers.map(x => `<@${x}>`).join('\n')}`;
         const learnersText = `### ${attendingTypeLabel}:\n${learners.map(x => `<@${x}>`).join('\n')}`;
 
         summaryContainer.addTextDisplayComponents(t => t.setContent(teachersText))
@@ -525,7 +525,7 @@ export default class HostHandler {
             .setRequired(true)
             .setMaxValues(5);
 
-        modal.addLabelComponents(label => label.setLabel('Who were filling?').setUserSelectMenuComponent(fillerSelect));
+        modal.addLabelComponents(label => label.setLabel('Who were participating?').setUserSelectMenuComponent(fillerSelect));
 
         // Fillers
         const learnerSelect = new UserSelectMenuBuilder()
@@ -562,7 +562,7 @@ export default class HostHandler {
             const container = this.client.cv2.getContainerBuilder(null, `${hostTypeLabel} hosted by <@${interaction.user.id}> - Summary`);
             const hosts = `### Hosts:\n${hostSelect.map(x => `<@${x.id}>`).join('\n')}`;
             const hostsArray = hostSelect.map(x => x.id);
-            const fillers = `### Fillers:\n${fillerSelect.map(x => `<@${x.id}>`).join('\n')}`;
+            const fillers = `### Participants:\n${fillerSelect.map(x => `<@${x.id}>`).join('\n')}`;
             const fillersArray = fillerSelect.map(x => x.id);
             const learners = `### ${attendingTypeLabel}:\n${learnerSelect.map(x => `<@${x.id}>`).join('\n')}`;
             const learnersArray = learnerSelect.map(x => x.id);
@@ -820,7 +820,7 @@ export default class HostHandler {
 
                 const typeOptions = [
                     new StringSelectMenuOptionBuilder().setLabel('Host').setValue('host'),
-                    new StringSelectMenuOptionBuilder().setLabel('Filler').setValue('filler'),
+                    new StringSelectMenuOptionBuilder().setLabel('Participant').setValue('filler'),
                     new StringSelectMenuOptionBuilder().setLabel(`${type === 0 ? 'Learner' : type === 1 ? 'Learner' : type === 2 ? 'Trialee' : 'Undefined'}`).setValue('learner'),
                 ];
 
