@@ -2132,7 +2132,7 @@ export default class TicketHandler {
                 }
 
                 const messageContent = `${message.author.displayName}: ${message.content}`;
-                await thread?.send(attachments.length > 0 ? { content: messageContent, files: attachments } : { content: messageContent });
+                await thread?.send(attachments.length > 0 ? { content: messageContent, files: attachments, allowedMentions: { "parse": [] } } : { content: messageContent, allowedMentions: { "parse": [] } });
             }
         } else if ((message.channel.parent?.parentId === client.channelIds.ticketCategory || message.channel.parent?.parentId === client.channelIds.wipTicketCategory)) {
             // Message is sent in a report-channel-thread -> sync to channel
