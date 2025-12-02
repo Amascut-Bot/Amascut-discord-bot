@@ -563,12 +563,15 @@ export default class HostHandler {
             const attendingTypeLabel = type === 0 ? 'Learners' : type === 1 ? 'Learners' : type === 2 ? 'Trialees' : 'Undefined';
 
             const container = this.client.cv2.getContainerBuilder(null, `${hostTypeLabel} hosted by <@${interaction.user.id}> - Summary`);
-            const hosts = `### Hosts:\n${hostSelect.map(x => `<@${x.id}>`).join('\n')}`;
+
             const hostsArray = hostSelect.map(x => x.id);
-            const fillers = `### Participants:\n${fillerSelect.map(x => `<@${x.id}>`).join('\n')}`;
-            const fillersArray = fillerSelect.map(x => x.id);
-            const learners = `### ${attendingTypeLabel}:\n${learnerSelect.map(x => `<@${x.id}>`).join('\n')}`;
+            const hosts = `### Hosts:\n${hostsArray.map(x => `<@${x}>`).join('\n')}`;
+
             const learnersArray = learnerSelect.map(x => x.id);
+            const learners = `### ${attendingTypeLabel}:\n${learnersArray.map(x => `<@${x}>`).join('\n')}`;
+
+            const fillersArray = fillerSelect.map(x => x.id).filter(x => !learnersArray.includes(x) && !hostsArray.includes(x));
+            const fillers = `### Participants:\n${fillersArray.map(x => `<@${x}>`).join('\n')}`;
 
             container.addTextDisplayComponents(t => t.setContent(hosts))
                     .addTextDisplayComponents(t => t.setContent(fillers))
