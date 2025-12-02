@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ContainerBuilder, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuInteraction, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder, UserSelectMenuInteraction } from 'discord.js';
 import Bot from '../Bot';
+import * as uuid from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';
 import TicketHandler from './TicketHandler';
@@ -507,8 +508,10 @@ export default class HostHandler {
             }
         }
 
+        const genid = uuid.v4()
+
         const modal = new ModalBuilder()
-            .setCustomId('quickfinish-host-modal')
+            .setCustomId(`quickfinish-host-modal-${genid}`)
             .setTitle('finish host');
 
         // Hosts
@@ -546,7 +549,7 @@ export default class HostHandler {
 
         await interaction.showModal(modal);
 
-        const filter = (i: ModalSubmitInteraction) => i.customId === 'quickfinish-host-modal' && i.user.id === interaction.user.id;
+        const filter = (i: ModalSubmitInteraction) => i.customId === `quickfinish-host-modal-${genid}` && i.user.id === interaction.user.id;
 
         try {
             const modalInteraction = await interaction.awaitModalSubmit({ filter, time: 900_000 }); // 15 minutes
