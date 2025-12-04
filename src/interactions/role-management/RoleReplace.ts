@@ -75,6 +75,12 @@ export default class RoleReplace extends BotInteraction {
             });
         }
 
+        if (desiredRole.id === this.client.roleIds.honeypot) {
+            return interaction.editReply({
+                content: "You can't assign the honeypot role!"
+            });
+        }
+
         if (user) {
             if (!user.roles.cache.has(currentRole.id)) {
                 return interaction.editReply({ content: `${user.displayName} does not have the ${currentRole.name} role.` });
