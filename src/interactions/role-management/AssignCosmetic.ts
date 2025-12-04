@@ -40,8 +40,6 @@ export default class Pass extends BotInteraction {
             '2000% Enrage': 'enr2000',
             '4000% Enrage': 'enr4000',
             'the Lightbearer (Release week 2000%)': 'rw2000',
-            'the Sunforged (Release week 4000%)': 'rw4000',
-            'Release day 4k': 'rd4000',
             'Cat-Bound Initiate (100KC)': 'kc100',
             'Scarab-Marked Disciple (250KC)': 'kc250',
             'Whisperer of the Wanderer (500KC)': 'kc500',

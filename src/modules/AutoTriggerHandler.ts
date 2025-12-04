@@ -273,7 +273,12 @@ export default class AutoTriggerHandler {
 
         const adminChannelId = this.client.channelIds.ADMIN_CHANNEL;
         const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
+
+        const banChannelId = this.client.channelIds.autoBanLogs;
+        const banChannel = await this.client.channels.fetch(banChannelId) as TextChannel;
+
         let timeout = false;
+        let ban = false;
         let evidence = "";
         let reason = "No reason provided";
         let duration = "1d";
@@ -283,7 +288,7 @@ export default class AutoTriggerHandler {
             if (message.content.includes(keyword)) {
                 evidence = keyword;
                 reason = "Larry";
-                timeout = true;
+                ban = true;
                 break;
             }
 
@@ -291,15 +296,15 @@ export default class AutoTriggerHandler {
                 if (attachment.url.includes(keyword)) {
                     evidence = keyword;
                     reason = "Larry";
-                    timeout = true;
+                    ban = true;
                     break;
                 }
             }
         }
 
-        if (timeout) {
+        if (timeout || ban) {
             const container = this.client.cv2.getContainerBuilder(false, "Suspicious Account");
-            container.addTextDisplayComponents(builder => builder.setContent(`${message.member?.user.tag} (<@${message.member?.id}>) was automatically timeouted.\n\n**Evidence:** \`${evidence}\`\n\n**Reason:** \`${reason}\`\n\n**Reference:** ${message.url}`));
+            container.addTextDisplayComponents(builder => builder.setContent(`${message.member?.user.tag} (<@${message.member?.id}>) was automatically ${ban ? 'banned' : 'timeouted'}.\n\n**Evidence:** \`${evidence}\`\n\n**Reason:** \`${reason}\`\n\n**Reference:** ${message.url}`));
 
             if (message.content) {
                 container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
@@ -321,21 +326,31 @@ export default class AutoTriggerHandler {
                 container.addMediaGalleryComponents(mediaGalleryBuilder);
             }
 
-            await adminChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
+            if (ban) {
+                await banChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
 
-            const { timeout } = this.client.util;
-            const timeoutUser = timeout.bind(this.client.util);
-
-            if (await timeoutUser(null, message.member!, duration, reason)) {
-                this.client.logger.log({ message: `Automatically timeouted user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}` }, true);
+                await message.member!.ban({ reason: reason, deleteMessageSeconds: 604800 }).then(() => {
+                    this.client.logger.log({ message: `Automatically banned user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}` }, true)
+                }).catch((err) => {
+                    this.client.logger.error({ message: `Error banning user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}`, error: err.stack });
+                });
             } else {
-                this.client.logger.error({ message: `Automatically timeouted user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}`, error: null });
+                await adminChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
+
+                const { timeout } = this.client.util;
+                const timeoutUser = timeout.bind(this.client.util);
+
+                if (await timeoutUser(null, message.member!, duration, reason)) {
+                    this.client.logger.log({ message: `Automatically timeouted user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}` }, true);
+                } else {
+                    this.client.logger.error({ message: `Automatically timeouted user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}`, error: null });
+                }
             }
 
             try {
                 // Delete the channel after a short delay
                 setTimeout(async () => {
-                    await message.delete();
+                    await message.delete().catch(() => {});
                 }, 2500);
             } catch (error) {
                 //do nothing, message was already deleted

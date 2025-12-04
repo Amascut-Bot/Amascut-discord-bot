@@ -85,6 +85,12 @@ export default class RoleExtend extends BotInteraction {
             });
         }
 
+        if (desiredRole1.id === this.client.roleIds.honeypot || desiredRole2.id === this.client.roleIds.honeypot) {
+            return interaction.editReply({
+                content: "You can't assign the honeypot role!"
+            });
+        }
+
         const runIdentifier = `(Dry Run #${Date.now()})`;
         const executionIdentifier = `(Execution #${Date.now()})`;
         const identifier = dryRun ? runIdentifier : executionIdentifier;

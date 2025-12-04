@@ -145,7 +145,7 @@ export default class ButtonHandler {
 
         const roleObject = interaction.guild.roles.cache.get(roleIds[0]);
 
-        if (roleObject?.permissions.has('ManageRoles')) {
+        if (roleObject?.permissions.has('ManageRoles') || roleIds[0] === this.client.roleIds.honeypot) {
             return await interaction.editReply({embeds: [new EmbedBuilder()
                 .setColor(colours.discord.red)
                 .setDescription(`Unallowed Role-Assign!`)]});

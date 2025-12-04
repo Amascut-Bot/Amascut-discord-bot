@@ -73,6 +73,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             lorebookTicketsCategory: '1412871767932010547',
             trialHosts: '1411662134756118569',
             trialLounge: '1405664850469847122',
+            autoBanLogs: '1445441478318096598',
         }
     }
 
@@ -126,6 +127,9 @@ export function getChannels(guildId: string | undefined) : Channels {
             stagingEditorHub: '1389394110686953472',
             // Prod Guide Category
             editorHub: '1389410242210693212',
+
+            // Log Channels
+            autoBanLogs: '1445441478318096598',
         }
     }
 
@@ -209,6 +213,8 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             teamformingTimeout: '1405236128294109224',
             devourerFirstWeek: '1401274911594647626',
             devourerDayOne: '1401274865113370685',
+            honeypot: '1445441207298953287',
+            gatekeeper: '1445823416698540054',
 
             // KC Roles
             kc100: '1409628812915904652', // Cat-Bound Initiate
@@ -276,6 +282,8 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             member: '1389655724946100345',
             verified: '1390353573216387072',
             teamformingTimeout: '1404882562190413824',
+            honeypot: '1445441207298953287',
+            gatekeeper: '1445823416698540054',
 
             // KC Roles
             kc100: '1401429471692722292', // Cat-Bound Initiate

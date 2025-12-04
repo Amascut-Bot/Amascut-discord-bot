@@ -38,7 +38,7 @@ export default class GuildMemberAdd extends BotEvent {
         const oneWeek = 7 * 24 * 60 * 60 * 1000;
 
         if (accountAge < oneWeek) {
-            const adminChannel = await this.client.channels.fetch(this.client.channelIds.ADMIN_CHANNEL) as TextChannel;
+            const adminChannel = await this.client.channels.fetch(this.client.channelIds.uploadLogChannel) as TextChannel;
 
             if (adminChannel) {
                 const embed = new EmbedBuilder()
@@ -56,7 +56,7 @@ export default class GuildMemberAdd extends BotEvent {
             }
         }
 
-        const roleId = this.client.roleIds.member;
+        const roleId = accountAge < oneWeek ? this.client.roleIds.gatekeeper : this.client.roleIds.member;
         let role: Role | null | undefined;
 
         try {
