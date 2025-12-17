@@ -32,6 +32,13 @@ interface Hierarchy {
     [key: string]: string[];
 }
 
+interface AutomodResult {
+    reason: string
+    evidence: string
+    timeout: boolean
+    ban: boolean
+}
+
 export default class UtilityHandler {
     constructor(client: Bot) {
         this.client = client;
@@ -421,6 +428,30 @@ export default class UtilityHandler {
                 .addTextDisplayComponents(builder => builder.setContent(`Could not find any warnings for the specified filters:${filters.length > 0 ? filters : '\n- No filters provided'}`));
             return response;
         }
+    }
+
+    //#endregion
+
+    //#region Automod
+
+    private static readonly larryKeywords = [
+        'c8c5f8ae0b965884472f386dd74b7d83',
+    ];
+
+    public static checkAutomod(checkVal: string): AutomodResult {
+        const retVal: AutomodResult = { reason: "No reason provided", evidence: "", ban: false, timeout: false};
+
+        // Larry
+        for (const keyword of UtilityHandler.larryKeywords) {
+            if (checkVal.includes(keyword)) {
+                retVal.evidence = keyword;
+                retVal.reason = "Larry";
+                retVal.ban = true;
+                break;
+            }
+        }
+
+        return retVal;
     }
 
     //#endregion

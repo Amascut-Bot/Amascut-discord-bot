@@ -1,6 +1,7 @@
 import { MediaGalleryBuilder, Message, MessageFlags, SeparatorSpacingSize, TextChannel } from 'discord.js';
 import Bot from '../Bot';
 import { MessageShortcut } from '../entity/MessageShortcut';
+import UtilityHandler from './UtilityHandler';
 
 export default class AutoTriggerHandler {
     private client: Bot;
@@ -261,15 +262,11 @@ export default class AutoTriggerHandler {
 
     //#region Automod
 
-    private static readonly larryKeywords = [
-        'c8c5f8ae0b965884472f386dd74b7d83',
-    ];
-
     public async customAutomod(message: Message): Promise<boolean> {
         if (!message.inGuild()) return false;
         if (message.guildId !== process.env.GUILD_ID) return false;
 
-        if (await this.client.util.hasRolePermissionsMessage(this.client, ['admin', 'owner'], message)) return false;
+        //if (await this.client.util.hasRolePermissionsMessage(this.client, ['admin', 'owner'], message)) return false;
 
         const adminChannelId = this.client.channelIds.ADMIN_CHANNEL;
         const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
@@ -277,34 +274,21 @@ export default class AutoTriggerHandler {
         const banChannelId = this.client.channelIds.autoBanLogs;
         const banChannel = await this.client.channels.fetch(banChannelId) as TextChannel;
 
-        let timeout = false;
-        let ban = false;
-        let evidence = "";
-        let reason = "No reason provided";
         let duration = "1d";
 
-        // Larry
-        for (const keyword of AutoTriggerHandler.larryKeywords) {
-            if (message.content.includes(keyword)) {
-                evidence = keyword;
-                reason = "Larry";
-                ban = true;
-                break;
-            }
+        let automodResult = UtilityHandler.checkAutomod(message.content);
 
+        if (!(automodResult.ban || automodResult.timeout)) {
             for (const [_, attachment] of message.attachments) {
-                if (attachment.url.includes(keyword)) {
-                    evidence = keyword;
-                    reason = "Larry";
-                    ban = true;
-                    break;
-                }
+                automodResult = UtilityHandler.checkAutomod(attachment.url)
+
+                if (automodResult.ban || automodResult.timeout) break;
             }
         }
 
-        if (timeout || ban) {
+        if (automodResult.timeout || automodResult.ban) {
             const container = this.client.cv2.getContainerBuilder(false, "Suspicious Account");
-            container.addTextDisplayComponents(builder => builder.setContent(`${message.member?.user.tag} (<@${message.member?.id}>) was automatically ${ban ? 'banned' : 'timeouted'}.\n\n**Evidence:** \`${evidence}\`\n\n**Reason:** \`${reason}\`\n\n**Reference:** ${message.url}`));
+            container.addTextDisplayComponents(builder => builder.setContent(`${message.member?.user.tag} (<@${message.member?.id}>) was automatically ${automodResult.ban ? 'banned' : 'timeouted'}.\n\n**Evidence:** \`${automodResult.evidence}\`\n\n**Reason:** \`${automodResult.reason}\`\n\n**Reference:** ${message.url}`));
 
             if (message.content) {
                 container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
@@ -326,13 +310,13 @@ export default class AutoTriggerHandler {
                 container.addMediaGalleryComponents(mediaGalleryBuilder);
             }
 
-            if (ban) {
+            if (automodResult.ban) {
                 await banChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
 
-                await message.member!.ban({ reason: reason, deleteMessageSeconds: 604800 }).then(() => {
-                    this.client.logger.log({ message: `Automatically banned user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}` }, true)
+                await message.member!.ban({ reason: automodResult.reason, deleteMessageSeconds: 604800 }).then(() => {
+                    this.client.logger.log({ message: `Automatically banned user with id ${message.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}` }, true)
                 }).catch((err) => {
-                    this.client.logger.error({ message: `Error banning user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}`, error: err.stack });
+                    this.client.logger.error({ message: `Error banning user with id ${message.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}`, error: err.stack });
                 });
             } else {
                 await adminChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
@@ -340,10 +324,10 @@ export default class AutoTriggerHandler {
                 const { timeout } = this.client.util;
                 const timeoutUser = timeout.bind(this.client.util);
 
-                if (await timeoutUser(null, message.member!, duration, reason)) {
-                    this.client.logger.log({ message: `Automatically timeouted user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}` }, true);
+                if (await timeoutUser(null, message.member!, duration, automodResult.reason)) {
+                    this.client.logger.log({ message: `Automatically timeouted user with id ${message.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}` }, true);
                 } else {
-                    this.client.logger.error({ message: `Automatically timeouted user with id ${message.member?.id} for reason ${reason} with evidence ${evidence}`, error: null });
+                    this.client.logger.error({ message: `Automatically timeouted user with id ${message.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}`, error: null });
                 }
             }
 
@@ -355,7 +339,6 @@ export default class AutoTriggerHandler {
             } catch (error) {
                 //do nothing, message was already deleted
             }
-
         }
 
         return false;

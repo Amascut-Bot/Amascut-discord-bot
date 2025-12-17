@@ -635,6 +635,57 @@ export default class TicketHandler {
                     break;
             }
 
+            // customAutomod submission data before continue
+            if (ticketType === 'other') {
+                let automodResult = UtilityHandler.checkAutomod(formData.assistance);
+
+                if (automodResult.ban || automodResult.timeout) {
+                    // punish and dont continue with ticket creation
+                    if (automodResult.timeout || automodResult.ban) {
+                        const adminChannelId = this.client.channelIds.ADMIN_CHANNEL;
+                        const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
+
+                        const banChannelId = this.client.channelIds.autoBanLogs;
+                        const banChannel = await this.client.channels.fetch(banChannelId) as TextChannel;
+
+                        let duration = "1d";
+
+                        const container = this.client.cv2.getContainerBuilder(false, "Suspicious Account");
+                        container.addTextDisplayComponents(builder => builder.setContent(`${interaction.member?.user.tag} (<@${interaction.member?.id}>) was automatically ${automodResult.ban ? 'banned' : 'timeouted'}.\n\n**Evidence:** \`${automodResult.evidence}\`\n\n**Reason:** \`${automodResult.reason}\`\n\n**Reference:** ${formData.assistance}`));
+
+                        if (formData.assistance) {
+                            container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+                            container.addTextDisplayComponents(builder => builder.setContent('Message Content:'));
+                            container.addTextDisplayComponents(builder => builder.setContent(formData.assistance));
+                        }
+
+                        if (automodResult.ban) {
+                            await banChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
+
+                            await interaction.member!.ban({ reason: automodResult.reason, deleteMessageSeconds: 604800 }).then(() => {
+                                this.client.logger.log({ message: `Automatically banned user with id ${interaction.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}` }, true)
+                            }).catch((err) => {
+                                this.client.logger.error({ message: `Error banning user with id ${interaction.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}`, error: err.stack });
+                            });
+                        } else {
+                            await adminChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
+
+                            const { timeout } = this.client.util;
+                            const timeoutUser = timeout.bind(this.client.util);
+
+                            if (await timeoutUser(null, interaction.member!, duration, automodResult.reason)) {
+                                this.client.logger.log({ message: `Automatically timeouted user with id ${interaction.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}` }, true);
+                            } else {
+                                this.client.logger.error({ message: `Automatically timeouted user with id ${interaction.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}`, error: null });
+                            }
+                        }
+                    }
+
+                    await interaction.editReply('bye');
+                    return;
+                }
+            }
+
             const ticketNumber = await this.getNextTicketNumber(ticketType);
 
             const ticketChannel = await this.createTicketChannel(

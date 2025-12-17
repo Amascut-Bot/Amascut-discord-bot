@@ -73,7 +73,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             lorebookTicketsCategory: '1412871767932010547',
             trialHosts: '1411662134756118569',
             trialLounge: '1405664850469847122',
-            autoBanLogs: '1445441478318096598',
+            autoBanLogs: '1450965697378386115',
         }
     }
 
