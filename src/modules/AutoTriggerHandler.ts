@@ -266,7 +266,7 @@ export default class AutoTriggerHandler {
         if (!message.inGuild()) return false;
         if (message.guildId !== process.env.GUILD_ID) return false;
 
-        //if (await this.client.util.hasRolePermissionsMessage(this.client, ['admin', 'owner'], message)) return false;
+        if (await this.client.util.hasRolePermissionsMessage(this.client, ['admin', 'owner'], message)) return false;
 
         const adminChannelId = this.client.channelIds.ADMIN_CHANNEL;
         const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
