@@ -436,6 +436,9 @@ export default class UtilityHandler {
 
     private static readonly larryKeywords = [
         'c8c5f8ae0b965884472f386dd74b7d83',
+        'https://cdn.discordapp.com/attachments/1448810146233978971/1448811713989447951/66c3ea4a17054804ffc2b1748f4f75aa.png?ex=693c9e8e&is=693b4d0e&hm=ac8bb72ccc16af6a5a4786772942abc4a04be392e0f5cdd58d62343cd4e9f4a1&',
+        '66c3ea4a17054804ffc2b1748f4f75aa',
+        '1448810146233978971'
     ];
 
     public static checkAutomod(checkVal: string): AutomodResult {
