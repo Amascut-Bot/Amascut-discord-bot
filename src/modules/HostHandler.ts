@@ -223,6 +223,11 @@ export default class HostHandler {
             const roles = this.client.tempSubmissionData.get(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_role_${userIdSubmit}`);
             const typeSelect = this.client.tempSubmissionData.get(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_type_${userIdSubmit}`)[0];
 
+            // flush the tempSubmissionData so nothing is cached anymore
+            this.client.tempSubmissionData.delete(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_user_${userIdSubmit}`);
+            this.client.tempSubmissionData.delete(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_role_${userIdSubmit}`);
+            this.client.tempSubmissionData.delete(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_type_${userIdSubmit}`);
+
             // fetch previous message, that contains the host
             const message = await interaction.channel!.messages.fetch({
                 limit: 1,
@@ -277,7 +282,7 @@ export default class HostHandler {
             }
         }
 
-        return interaction.editReply('You need to choose a role and user first!');
+        return interaction.editReply('You need to choose a role, user and type first!');
     }
 
     private async handleHostAssign(interaction: Interaction, id: string, message: Message<boolean>, user: string | null = null) {
