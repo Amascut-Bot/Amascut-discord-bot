@@ -931,6 +931,10 @@ export default class TicketHandler {
             if (isLoreBookCrew) return true;
         }
 
+        if (channel.name.startsWith('clearance')) {
+            return false;
+        }
+
         const userPermissions = channel.permissionOverwrites.cache.get(interaction.user.id);
 
         return userPermissions !== undefined;
