@@ -33,12 +33,14 @@ export default class InteractionHandler extends EventEmitter {
     build() {
         if (this.built) return this;
         const dirs = readdirSync(`${this.client.location}/src/interactions`, { withFileTypes: true });
+        const contextDirs = readdirSync(`${this.client.location}/src/context_interactions`, { withFileTypes: true });
         const name = this.constructor.name;
         const commands = this.commands;
         const client = this.client;
         let cmds: Dirent[] = [];
 
         walk();
+        contextWalk();
 
         async function walk() {
             if (!dirs.length) return;
@@ -59,6 +61,33 @@ export default class InteractionHandler extends EventEmitter {
             return new Promise(async (resolve) => {
                 if (command.isFile()) {
                     const interaction = await import(`${client.location}/src/interactions/${dir}/${command.name}`);
+                    const Command: BotInteraction = new interaction.default(client);
+                    commands.set(Command.name, Command);
+                    client.logger.log({ message: `Command '${Command.name}' loaded`, handler: name, uid: `(@${Command.uid})` }, true);
+                }
+                resolve(!0);
+            });
+        }
+
+        async function contextWalk() {
+            if (!contextDirs.length) return;
+            cmds = readdirSync(`${client.location}/src/context_interactions/${contextDirs[0].name}`, { withFileTypes: true }).filter((file) => file.name.endsWith('.ts'));
+            await contextLoad(contextDirs[0].name);
+            (contextDirs as Dirent[]).shift();
+            contextWalk();
+        }
+
+        async function contextLoad(dir: string) {
+            if (!cmds.length) return;
+            await contextActuallyLoad(dir, cmds[0]);
+            (cmds as Dirent[]).shift();
+            await contextLoad(dir);
+        }
+
+        async function contextActuallyLoad(dir: string, command: Dirent) {
+            return new Promise(async (resolve) => {
+                if (command.isFile()) {
+                    const interaction = await import(`${client.location}/src/context_interactions/${dir}/${command.name}`);
                     const Command: BotInteraction = new interaction.default(client);
                     commands.set(Command.name, Command);
                     client.logger.log({ message: `Command '${Command.name}' loaded`, handler: name, uid: `(@${Command.uid})` }, true);
@@ -109,7 +138,7 @@ export default class InteractionHandler extends EventEmitter {
             }
         }
 
-        if (interaction.isChatInputCommand()) {
+        if (interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
             try {
                 const command = this.commands.get(interaction.commandName);
                 if (!command) return;

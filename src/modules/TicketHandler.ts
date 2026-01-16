@@ -1,4 +1,4 @@
-import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, FileUploadBuilder, GuildMember, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, OverwriteType, PermissionFlagsBits, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User, UserSelectMenuBuilder } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, FileUploadBuilder, GuildMember, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, OverwriteType, PermissionFlagsBits, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, ThreadAutoArchiveDuration, User, UserContextMenuCommandInteraction, UserSelectMenuBuilder } from 'discord.js';
 import Bot from '../Bot';
 import axios from 'axios';
 import TranscriptGenerator from './TranscriptGenerator';
@@ -23,6 +23,12 @@ export default class TicketHandler {
         if (interaction.isChatInputCommand()) {
             switch (interaction.commandName) {
                 case 'create-clearance-ticket': this.handleCreateClearanceTicket(interaction as ChatInputCommandInteraction); break;
+            }
+        }
+
+        if (interaction.isContextMenuCommand()) {
+            switch (interaction.commandName) {
+                case 'create clearance ticket': this.handleContextCreateClearanceTicket(interaction as UserContextMenuCommandInteraction); break;
             }
         }
 
@@ -743,6 +749,64 @@ export default class TicketHandler {
             const reportedUser: User = interaction.options.getUser('reporteduser', true);
             const rsn: string = interaction.options.getString('rsn', true);
             const description: string = interaction.options.getString('description', true);
+
+            const formData: any = {};
+            formData.rsn = rsn;
+            formData.discordid = reportedUser.id;
+            formData.description = description;
+
+            const ticketNumber = await this.getNextTicketNumber('clearance');
+
+            const ticketChannel = await this.createTicketChannel(
+                interaction.guild,
+                'clearance',
+                reportedUser.id,
+                ticketNumber,
+                null
+            );
+
+            if (!ticketChannel) {
+                await interaction.editReply({
+                    content: 'Failed to create ticket channel. Please try again or contact an administrator.'
+                });
+                return;
+            }
+
+            await this.sendTicketWelcomeMessage(
+                ticketChannel,
+                interaction.user.id,
+                'clearance',
+                formData
+            );
+
+            await this.saveTicketSubmit(interaction.user.id, ticketChannel.id, 'clearance');
+
+            await interaction.editReply({
+                content: `Your ticket has been created! Please check <#${ticketChannel.id}> for further assistance.`
+            });
+
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Failed to handle ticket clearance creation',
+                error,
+                handler: 'TicketHandler'
+            });
+
+            await interaction.editReply({
+                content: 'An error occurred while creating your ticket. Please try again or contact an administrator.'
+            });
+        }
+    }
+
+    private async handleContextCreateClearanceTicket(interaction: UserContextMenuCommandInteraction): Promise<void> {
+        if (!interaction.inCachedGuild()) return;
+
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        try {
+            const reportedUser: User = interaction.targetUser;
+            const rsn: string = reportedUser.displayName;
+            const description: string = 'clearance';
 
             const formData: any = {};
             formData.rsn = rsn;
