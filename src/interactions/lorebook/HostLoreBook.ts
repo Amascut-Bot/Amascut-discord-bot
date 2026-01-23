@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, MessageFlags, User } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, MessageFlags } from 'discord.js';
 import HostHandler from '../../modules/HostHandler';
 
 export default class HostLoreBook extends BotInteraction {
@@ -19,7 +19,6 @@ export default class HostLoreBook extends BotInteraction {
         return new SlashCommandBuilder()
             .setName(this.name)
             .setDescription(this.description)
-            .addUserOption((option) => option.setName('lorebook').setDescription('Person to host for').setRequired(true))
             .addStringOption((option) => option.setName('message').setDescription('Add a Message').setRequired(false));
     }
 
@@ -27,11 +26,11 @@ export default class HostLoreBook extends BotInteraction {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const message: string | null = interaction.options.getString('message', false);
-        const learner: User = interaction.options.getUser('lorebook', true);
+        const formattedMessage = message ? `## Lorebook\\n${message}` : null;
 
         const learnerHostChannel = await interaction.guild?.channels.fetch(this.client.channelIds.learnerHosts) as TextChannel;
 
-        const success = await HostHandler.postHost(learnerHostChannel, 'nm', message, [learner.id], [interaction.user.id], null, 1);
+        const success = await HostHandler.postHost(learnerHostChannel, 'nm', formattedMessage, null, [interaction.user.id], null, 1);
 
         const container = this.client.cv2.getContainerBuilder(success, "Host card creation");
         container.addTextDisplayComponents(builder => builder.setContent(success ? "Your host has been successfully created!" : "Your host could not be created!"));
