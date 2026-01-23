@@ -1,4 +1,4 @@
-import { ActivityType, ApplicationCommandDataResolvable, ContextMenuCommandBuilder, SlashCommandBuilder } from 'discord.js';
+import { ActivityType, ApplicationCommandDataResolvable } from 'discord.js';
 import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import TempChannelManager from '../modules/TempVCHandler';
@@ -104,14 +104,8 @@ export default class ClientReady extends BotEvent {
 
     private async buildCommands() {
         let data: ApplicationCommandDataResolvable[] = [];
-        let slashData: SlashCommandBuilder[] = [];
-        let contextData: ContextMenuCommandBuilder[] = [];
 
-        await this.getCommands(slashData);
-        await this.getContextCommands(contextData);
-
-        data.push(...slashData);
-        data.push(...contextData);
+        await this.getCommands(data);
 
         // guild commands
         const guild = this.client.guilds.cache.find(guild => guild.id === process.env.GUILD_ID);
@@ -120,12 +114,23 @@ export default class ClientReady extends BotEvent {
         let res = await guild!.commands.set(data).catch((e) => e);
         if (res instanceof Error) return this.client.logger.error({ error: res.stack, handler: this.constructor.name });
 
-        let header = `Deploying (**${slashData.length.toLocaleString()}**) guild slash commands.`;
-        let outputLines = slashData.map((command) => `${command.default_member_permissions === '0' ? '-' : '+'} ${command.name} - '${command.description}'`);
-        await this.sendSplitResponse(logChannel, header, outputLines);
+        let header = `Deploying (**${data.length.toLocaleString()}**) guild commands.`;
+        let outputLines = data.map((command) => {
+            let text = '';
+            if ('default_member_permissions' in command) {
+                text += command.default_member_permissions === '0' ? '-' : '+';
+            }
 
-        header = `Deploying (**${contextData.length.toLocaleString()}**) guild context commands.`;
-        outputLines = contextData.map((command) => `${command.default_member_permissions === '0' ? '-' : '+'} ${command.name}`);
+            if ('name' in command) {
+                text += ` ${command.name}`;
+            }
+
+            if ('description' in command) {
+                text += ` - '${command.description}'`;
+            }
+
+            return text;
+        });
         return await this.sendSplitResponse(logChannel, header, outputLines);
     }
 
@@ -168,37 +173,9 @@ export default class ClientReady extends BotEvent {
                             const Command: BotInteraction = new interactionModule.default(this.client);
                             if (Command.slashData) {
                                 data.push(Command.slashData);
+                            } else {
+                                data.push(Command.contextCommandData);
                             }
-                        })
-                        .catch(err => {
-                            this.client.logger.error({
-                                handler: this.constructor.name,
-                                message: `Failed to load command: ${commandFile.name}`,
-                                error: err.stack
-                            });
-                        })
-                );
-            }
-        }
-        await Promise.all(commandPromises);
-    }
-
-    private async getContextCommands(data: any[]) {
-        const commandPromises = [];
-        const directories = readdirSync(`${this.client.location}/src/context_interactions`, { withFileTypes: true });
-
-        for (const directory of directories) {
-            if (!directory.isDirectory()) continue;
-            const commandFiles = readdirSync(`${this.client.location}/src/context_interactions/${directory.name}`, { withFileTypes: true });
-
-            for (const commandFile of commandFiles) {
-                if (!commandFile.isFile() || !commandFile.name.endsWith('.ts')) continue;
-
-                commandPromises.push(
-                    import(`${this.client.location}/src/context_interactions/${directory.name}/${commandFile.name}`)
-                        .then(interactionModule => {
-                            const Command: BotInteraction = new interactionModule.default(this.client);
-                            data.push(Command.contextCommandData);
                         })
                         .catch(err => {
                             this.client.logger.error({

@@ -42,7 +42,7 @@ export default class ContextEditMessage extends BotInteraction {
             .setMaxValues(1);
 
         modal.addLabelComponents(label => label
-            .setLabel('File (ignores content)')
+            .setLabel('File')
             .setFileUploadComponent(fileUpload)
         );
 
