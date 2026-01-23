@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ContainerBuilder, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuInteraction, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder, UserSelectMenuInteraction } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, StringSelectMenuInteraction, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder, UserSelectMenuInteraction } from 'discord.js';
 import Bot from '../Bot';
 import * as uuid from 'uuid';
 import * as fs from 'fs';
@@ -88,31 +88,19 @@ export default class HostHandler {
     private async handleHostFinishByType(interaction: ModalSubmitInteraction, hostMessageId: string, type: number) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        // get current host card & clean it
+        const hostSelect = interaction.fields.getSelectedUsers('host_select', true);
+        const fillerSelect = interaction.fields.getSelectedUsers('filler_select', true);
+        const learnerSelect = interaction.fields.getSelectedUsers('learner_select', true);
+        const summary = interaction.fields.getTextInputValue('summary');
+
+        const hosts = hostSelect.map(x => x.id);
+        const learners = learnerSelect.map(x => x.id);
+        const fillers = fillerSelect.map(x => x.id).filter(x => !learners.includes(x) && !hosts.includes(x));
+
         const message = await interaction.channel!.messages.fetch({
             limit: 1,
             before: interaction.message!.id
         });
-        const container: ContainerBuilder = ComponentsV2Utils.cleanContainer(message!.first()!.components[0]);
-        const controlContainer = ComponentsV2Utils.cleanContainer(interaction.message?.components[0]);
-
-        let containerJson = JSON.stringify(container, null, 2);
-        let controlContainerJson = JSON.stringify(controlContainer, null, 2);
-
-        // give points
-        const hostData = HostHandler.getHostData(containerJson);
-        const hostData2 = HostHandler.getHostData(controlContainerJson);
-
-        const users: string[] = (hostData[1] as string[]).map(x => x.slice(2, -1));
-        const hosts: string[] = (hostData2[2] as string[]).map(x => x.slice(2, -1));
-        const learners: string[] = (hostData2[3] as string[]).map(x => x.slice(2, -1));
-
-        if (!users.includes(interaction.user.id)) {
-            users.push(interaction.user.id);
-        }
-
-        // make sure users dont contain the learners
-        const fillers = users.filter(x => !learners.includes(x) && !hosts.includes(x));
 
         if (type === 0 || type === 1) {
             for (let index = 0; index < learners.length; index++) {
@@ -122,11 +110,9 @@ export default class HostHandler {
             await HostHandler.saveHost(this.client, type, message?.first()?.url ?? null, hosts, fillers);
         }
 
-        // post summary
         const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book' : type === 2 ? 'Trial' : 'Undefined';
         const attendingTypeLabel = type === 0 ? 'Learners' : type === 1 ? 'Learners' : type === 2 ? 'Trialees' : 'Undefined';
 
-        const summary = interaction.fields.getTextInputValue("summary");
         const summaryContainer = this.client.cv2.getContainerBuilder(null, `${hostTypeLabel} hosted by <@${interaction.user.id}> - Summary`);
 
         const teachersText = `### Hosts:\n${hosts.map(x => `<@${x}>`).join('\n')}`;
@@ -151,7 +137,6 @@ export default class HostHandler {
             allowedMentions: { "parse": [] }
         });
 
-        // disable Host
         await HostHandler.disableHost(interaction.message!);
 
         await interaction.editReply('Learner hour finished!');
@@ -455,15 +440,34 @@ export default class HostHandler {
             .setCustomId(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_finish_${interaction.message.id}`)
             .setTitle('Summary');
 
+        const hostSelect = new UserSelectMenuBuilder()
+            .setCustomId('host_select')
+            .setRequired(true)
+            .setMaxValues(5);
+
+        modal.addLabelComponents(label => label.setLabel('Who were hosting?').setUserSelectMenuComponent(hostSelect));
+
+        const fillerSelect = new UserSelectMenuBuilder()
+            .setCustomId('filler_select')
+            .setRequired(true)
+            .setMaxValues(5);
+
+        modal.addLabelComponents(label => label.setLabel('Who were participating?').setUserSelectMenuComponent(fillerSelect));
+
+        const learnerSelect = new UserSelectMenuBuilder()
+            .setCustomId('learner_select')
+            .setRequired(true)
+            .setMaxValues(5);
+
+        modal.addLabelComponents(label => label.setLabel('Who were learning / getting book / trialing?').setUserSelectMenuComponent(learnerSelect));
+
         const summaryInput = new TextInputBuilder()
             .setCustomId('summary')
             .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true);
+            .setRequired(true)
+            .setMaxLength(4000);
 
-        modal.addLabelComponents(label => label
-            .setLabel('Please summarize the hour')
-            .setTextInputComponent(summaryInput)
-        );
+        modal.addLabelComponents(label => label.setLabel('Summarize the hour').setTextInputComponent(summaryInput));
 
         await interaction.showModal(modal);
     }
@@ -763,25 +767,7 @@ export default class HostHandler {
         if (hostJson) {
             const hostContainer = JSON.parse(hostJson);
 
-            await channel.send(
-                { components: [hostContainer], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } }
-            );
-
             if (hosts !== null) {
-                const teacherContainer = new ContainerBuilder()
-                    .setAccentColor(10454367)
-                    .addTextDisplayComponents(builder => builder.setContent(`${type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book Kill' : type === 2 ? 'Trial' : 'Undefined'} Control Panel`))
-                    .addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
-
-                let text = '';
-
-                if (time) text += `Time: <t:${time}:F>\n`;
-                if (users) text += `${type === 0 ? 'Learner' : type === 1 ? 'Learner' : type === 2 ? 'Trialee' : 'Undefined'}: <@${users.join('>, <@')}>\n`;
-                text += `Host: <@${hosts?.join('>, <@')}>`;
-
-                teacherContainer.addTextDisplayComponents(builder => builder.setContent(text)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
-
-                // Disable Buttons:
                 const finishButton = new ButtonBuilder()
                     .setCustomId(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_finish`)
                     .setLabel('Finish')
@@ -792,69 +778,17 @@ export default class HostHandler {
                     .setLabel('Disband')
                     .setStyle(ButtonStyle.Danger);
 
-                teacherContainer.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(finishButton, disbandButton)).addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
-
-                //doesnt work bc of 40 components limit
-                const userSelect = new UserSelectMenuBuilder()
-                    .setCustomId(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_select_user`)
-                    .setPlaceholder('Select a user to sign up');
-
-                const roleOptions = [
-                    new StringSelectMenuOptionBuilder().setLabel('Base').setValue('base'),
-                    new StringSelectMenuOptionBuilder().setLabel('West in').setValue('westin'),
-                    new StringSelectMenuOptionBuilder().setLabel('West out').setValue('westout'),
-                    new StringSelectMenuOptionBuilder().setLabel('East in').setValue('eastin'),
-                    new StringSelectMenuOptionBuilder().setLabel('East out').setValue('eastout'),
-                    new StringSelectMenuOptionBuilder().setLabel('South Charge').setValue('southcharge'),
-                    new StringSelectMenuOptionBuilder().setLabel('Solo Charge 1').setValue('solocharge1'),
-                    new StringSelectMenuOptionBuilder().setLabel('Solo Charge 2').setValue('solocharge2'),
-                    new StringSelectMenuOptionBuilder().setLabel('Dogs').setValue('dogs'),
-                    new StringSelectMenuOptionBuilder().setLabel('Green 1').setValue('green1'),
-                    new StringSelectMenuOptionBuilder().setLabel('Green 2').setValue('green2'),
-                ];
-
-                if (mode !== 'nm') {
-                    roleOptions.push(new StringSelectMenuOptionBuilder().setLabel('Glyphs').setValue('glyphs'));
-
-                    if (mode === '2000') {
-                        roleOptions.push(new StringSelectMenuOptionBuilder().setLabel('Backup Glyphs').setValue('backupglyphs'));
-                    } else {
-                        roleOptions.push(new StringSelectMenuOptionBuilder().setLabel('Jumper').setValue('jumper'));
-                    }
+                const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(finishButton, disbandButton);
+                
+                if (hostContainer.components) {
+                    hostContainer.components.push({ type: 14, spacing: 1 });
+                    hostContainer.components.push(actionRow.toJSON());
                 }
-
-                const roleSelect = new StringSelectMenuBuilder()
-                    .setCustomId(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_select_role`)
-                    .setPlaceholder('Select a role to sign the user up')
-                    .addOptions(roleOptions)
-                    .setMaxValues(5);
-
-                const typeOptions = [
-                    new StringSelectMenuOptionBuilder().setLabel('Host').setValue('host'),
-                    new StringSelectMenuOptionBuilder().setLabel('Participant').setValue('filler'),
-                    new StringSelectMenuOptionBuilder().setLabel(`${type === 0 ? 'Learner' : type === 1 ? 'Learner' : type === 2 ? 'Trialee' : 'Undefined'}`).setValue('learner'),
-                ];
-
-                const typeSelect = new StringSelectMenuBuilder()
-                    .setCustomId(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_select_type`)
-                    .setPlaceholder('Select a type to sign the user up')
-                    .addOptions(typeOptions);
-
-                teacherContainer.addActionRowComponents(new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(userSelect));
-                teacherContainer.addActionRowComponents(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(roleSelect));
-                teacherContainer.addActionRowComponents(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(typeSelect));
-
-                const submitSelectButton = new ButtonBuilder()
-                    .setCustomId(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_submit_select`)
-                    .setLabel('Submit Assign')
-                    .setStyle(ButtonStyle.Primary);
-
-                teacherContainer.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(submitSelectButton));
-
-                await channel.send(
-                    { components: [teacherContainer], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } }
-                );
             }
+
+            await channel.send(
+                { components: [hostContainer], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } }
+            );
 
             return true;
         } else {
