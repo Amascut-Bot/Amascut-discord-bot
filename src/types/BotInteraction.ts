@@ -1,4 +1,4 @@
-import { ApplicationCommandOption, SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder, SlashCommandOptionsOnlyBuilder, ChatInputCommandInteraction, AutocompleteInteraction } from 'discord.js';
+import { ApplicationCommandOption, SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder, SlashCommandOptionsOnlyBuilder, ChatInputCommandInteraction, AutocompleteInteraction, ContextMenuCommandBuilder, ContextMenuCommandInteraction } from 'discord.js';
 import * as uuid from 'uuid';
 import Bot from '../Bot';
 
@@ -10,8 +10,9 @@ export default interface BotInteraction {
     get name(): string;
     get description(): string;
     get slashData(): SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder | SlashCommandOptionsOnlyBuilder | Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
+    get contextCommandData(): ContextMenuCommandBuilder;
     get permissions(): ApplicationCommandOption[] | string;
-    run(interaction: ChatInputCommandInteraction): Promise<any>;
+    run(interaction: ChatInputCommandInteraction | ContextMenuCommandInteraction): Promise<any>;
     autocomplete?(interaction: AutocompleteInteraction): Promise<any>;
 }
 

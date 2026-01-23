@@ -1,4 +1,4 @@
-import { ActivityType, SlashCommandBuilder } from 'discord.js';
+import { ActivityType, ApplicationCommandDataResolvable } from 'discord.js';
 import Bot from '../Bot';
 import BotEvent from '../types/BotEvent';
 import TempChannelManager from '../modules/TempVCHandler';
@@ -103,16 +103,34 @@ export default class ClientReady extends BotEvent {
     //#region Command Building
 
     private async buildCommands() {
-        let data: SlashCommandBuilder[] = [];
+        let data: ApplicationCommandDataResolvable[] = [];
+
         await this.getCommands(data);
 
         // guild commands
         const guild = this.client.guilds.cache.find(guild => guild.id === process.env.GUILD_ID);
         const logChannel = await guild?.channels.fetch(this.client.channelIds.uploadLogChannel);
+
         let res = await guild!.commands.set(data).catch((e) => e);
         if (res instanceof Error) return this.client.logger.error({ error: res.stack, handler: this.constructor.name });
-        const header = `Deploying (**${data.length.toLocaleString()}**) guild slash commands.`;
-        const outputLines = data.map((command) => `${command.default_member_permissions === '0' ? '-' : '+'} ${command.name} - '${command.description}'`);
+
+        let header = `Deploying (**${data.length.toLocaleString()}**) guild commands.`;
+        let outputLines = data.map((command) => {
+            let text = '';
+            if ('default_member_permissions' in command) {
+                text += command.default_member_permissions === '0' ? '-' : '+';
+            }
+
+            if ('name' in command) {
+                text += ` ${command.name}`;
+            }
+
+            if ('description' in command) {
+                text += ` - '${command.description}'`;
+            }
+
+            return text;
+        });
         return await this.sendSplitResponse(logChannel, header, outputLines);
     }
 
@@ -155,6 +173,8 @@ export default class ClientReady extends BotEvent {
                             const Command: BotInteraction = new interactionModule.default(this.client);
                             if (Command.slashData) {
                                 data.push(Command.slashData);
+                            } else {
+                                data.push(Command.contextCommandData);
                             }
                         })
                         .catch(err => {

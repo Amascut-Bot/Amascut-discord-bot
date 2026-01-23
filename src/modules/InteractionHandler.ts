@@ -66,6 +66,7 @@ export default class InteractionHandler extends EventEmitter {
                 resolve(!0);
             });
         }
+
         return this;
     }
 
@@ -109,7 +110,7 @@ export default class InteractionHandler extends EventEmitter {
             }
         }
 
-        if (interaction.isChatInputCommand()) {
+        if (interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
             try {
                 const command = this.commands.get(interaction.commandName);
                 if (!command) return;
