@@ -786,9 +786,9 @@ export default class HostHandler {
                 }
             }
 
-            await channel.send(
+                await channel.send(
                 { components: [hostContainer], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } }
-            );
+                );
 
             return true;
         } else {
