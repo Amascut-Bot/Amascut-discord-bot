@@ -25,6 +25,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             uploadLogChannel: '1391860641916260488',
             botAssetChannel: '1391860641916260488',
             TICKET_TRANSCRIPT_CHANNEL: '1397705706358050948',
+            VOUCH_TRANSCRIPT_CHANNEL: `1464685914637734103`,
             MUSIC_CHANNEL: '1399769752246816841',
             CUTE_PETS_CHANNEL: '1391860639063871579',
             LOG_CHANNEL_ID: '1391860640674484228',
@@ -51,6 +52,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialLounge: '1405664850469847122',
             autoBanLogs: '1450965697378386115',
             trialeeTicketsCategory: '1412871767932010547',
+            vouchTicketsCategory: `1464678728410992844`,
             vodSubmissions: `1464589392843767860`,
             vodReview: `1464589425932632155`
         }

@@ -1043,13 +1043,37 @@ export default class TicketHandler {
         const ticketEmbedMessage = messages.find(msg =>
             msg.author.id === this.client.user?.id &&
             msg.embeds.length > 0 &&
-            msg.embeds[0].title?.includes('Ticket') &&
+            (msg.embeds[0].title?.includes('Ticket') || msg.embeds[0].title?.includes('Vouch')) &&
             !msg.embeds[0].title?.includes('Closed') &&
             msg.embeds[0].fields && msg.embeds[0].fields.length > 0
         );
         const originalTicketEmbed = ticketEmbedMessage?.embeds[0];
 
         let forumTitle = `${ticketType}-${ticketOpener}`;
+
+        if (ticketType === 'vouch' && originalTicketEmbed?.fields) {
+            const voucherField = originalTicketEmbed.fields.find(field => field.name === 'Voucher');
+            const rsnField = originalTicketEmbed.fields.find(field => field.name === 'RSN');
+
+            if (voucherField) {
+                const voucherIdMatch = voucherField.value.match(/<@(\d+)>/);
+                if (voucherIdMatch) {
+                    const voucherId = voucherIdMatch[1];
+                    try {
+                        const guildUser = await channel.guild.members.fetch(voucherId);
+                        ticketOpener = guildUser.user.username;
+                    } catch {
+                        ticketOpener = `User ID: ${voucherId}`;
+                    }
+                }
+            }
+
+            if (rsnField && rsnField.value) {
+                forumTitle = `Vouch-${ticketOpener}-${rsnField.value}`;
+            } else {
+                forumTitle = `Vouch-${ticketOpener}`;
+            }
+        }
 
         if (ticketType === 'report' && originalTicketEmbed?.fields) {
             const reportedUserField = originalTicketEmbed.fields.find(field =>
@@ -1084,7 +1108,11 @@ export default class TicketHandler {
                 { name: 'Message Count', value: messageArray.length.toString(), inline: false }
             );
 
-        const forumChannel = await channel.guild.channels.fetch(this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL);
+        const transcriptChannelId = ticketType === 'vouch' 
+            ? this.client.channelIds.VOUCH_TRANSCRIPT_CHANNEL 
+            : this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL;
+
+        const forumChannel = await channel.guild.channels.fetch(transcriptChannelId);
         if (!forumChannel || !forumChannel.isThreadOnly()) {
             throw new Error('Could not find or access the forum channel.');
         }

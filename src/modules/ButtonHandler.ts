@@ -3,6 +3,7 @@ import Bot from '../Bot';
 import TicketHandler from './TicketHandler';
 import LeaderboardHandler from './LeaderboardHandler';
 import HostHandler from './HostHandler';
+import VouchHandler from './VouchHandler';
 
 // ===============================
 // MAIN CLASS
@@ -39,6 +40,11 @@ export default class ButtonHandler {
 
         if (id.startsWith('leaderboard_')) {
             new LeaderboardHandler(this.client, interaction.customId, interaction);
+            return;
+        }
+
+        if (id.startsWith('vouch_')) {
+            new VouchHandler(this.client, interaction.customId, interaction);
             return;
         }
 
