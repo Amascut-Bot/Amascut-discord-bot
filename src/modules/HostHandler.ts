@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, StringSelectMenuInteraction, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder, UserSelectMenuInteraction } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, StringSelectMenuInteraction, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder, UserSelectMenuInteraction } from 'discord.js';
 import Bot from '../Bot';
 import * as uuid from 'uuid';
 import * as fs from 'fs';
@@ -77,6 +77,8 @@ export default class HostHandler {
             case 'host_trial_select_role': this.handleHostStringselectByType(interaction as StringSelectMenuInteraction, 2); break;
             case 'host_trial_select_type': this.handleHostStringselectByType(interaction as StringSelectMenuInteraction, 2); break;
             case 'host_trial_submit_select': this.handleHostAssignByType(interaction, 2); break;
+            case 'host_trial_pass': this.passHost(interaction as ButtonInteraction<'cached'>); break;
+            case 'host_trial_fail': this.failHost(interaction as ButtonInteraction<'cached'>); break;
             case 'host_trial_finish': this.finishHost(interaction as ButtonInteraction<'cached'>, 2); break;
             case 'host_trial_disband': this.disbandHost(interaction, 2); break;
             case 'host_trial_quickfinish': this.quickFinishHost(interaction, 2); break;
@@ -411,6 +413,179 @@ export default class HostHandler {
             return await interaction.editReply('Host was disbanded!');
         } else {
             return await interaction.editReply('Host could not be disbanded because the host message was not found!');
+        }
+    }
+
+    private async passHost(interaction: ButtonInteraction<'cached'>) {
+        if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
+            return await interaction.reply({ content: 'This action can only be used by Trial Team Members!', flags: MessageFlags.Ephemeral });
+        }
+
+        const container = ComponentsV2Utils.cleanContainer(interaction.message.components[0]);
+        const containerJson = JSON.stringify(container, null, 2);
+        
+        const enrageMatch = containerJson.match(/Enrage Mode - (\d+)% Enrage/);
+        if (!enrageMatch) {
+            return await interaction.reply({ content: 'Could not determine enrage mode from host card.', flags: MessageFlags.Ephemeral });
+        }
+
+        const enrage = enrageMatch[1];
+        let roleKey: string;
+
+        if (enrage === '500') {
+            roleKey = 'elite500';
+        } else if (enrage === '750') {
+            roleKey = 'elite750';
+        } else if (enrage === '1000') {
+            roleKey = 'elite1000';
+        } else if (enrage === '2000') {
+            roleKey = 'elite2000';
+        } else {
+            return await interaction.reply({ content: `Invalid enrage: ${enrage}%. Must be 500%, 750%, 1000%, or 2000%.`, flags: MessageFlags.Ephemeral });
+        }
+
+        const genid = uuid.v4();
+
+        const modal = new ModalBuilder()
+            .setCustomId(`host_trial_pass_${genid}`)
+            .setTitle(`Pass Trial - ${enrage}% Enrage`);
+
+        const userSelect = new UserSelectMenuBuilder()
+            .setCustomId('trialed_user')
+            .setRequired(true)
+            .setMaxValues(1);
+
+        modal.addLabelComponents(label => label.setLabel('Who passed?').setUserSelectMenuComponent(userSelect));
+
+        await interaction.showModal(modal);
+
+        const filter = (i: ModalSubmitInteraction) => i.customId === `host_trial_pass_${genid}` && i.user.id === interaction.user.id;
+
+        try {
+            const modalInteraction = await interaction.awaitModalSubmit({ filter, time: 900_000 });
+            await modalInteraction.deferReply({ flags: MessageFlags.Ephemeral });
+
+            const user = modalInteraction.fields.getSelectedUsers('trialed_user', true).first()!;
+            const member = await interaction.guild?.members.fetch(user.id);
+
+            const trialedRoleId = this.client.roleIds[roleKey];
+            const coverTagId = this.client.roleIds.elite;
+
+            const hierarchy = ['elite500', 'elite750', 'elite1000', 'elite2000'];
+            const roleIndex = hierarchy.indexOf(roleKey);
+            const lowerRoles = hierarchy.slice(0, roleIndex);
+
+            const rolesToAdd = [trialedRoleId, coverTagId];
+            for (const lowerRole of lowerRoles) {
+                rolesToAdd.push(this.client.roleIds[lowerRole]);
+            }
+
+            await member?.roles.add(rolesToAdd);
+
+            const trialedRoleObject = await interaction.guild?.roles.fetch(trialedRoleId);
+            const { colours } = this.client.util;
+
+            const confirmationChannel = this.client.channelIds.roleConfirmations 
+                ? await this.client.channels.fetch(this.client.channelIds.roleConfirmations) as TextChannel
+                : null;
+
+            let messageUrl = '';
+            if (confirmationChannel) {
+                const embed = new EmbedBuilder()
+                    .setAuthor({ 
+                        name: interaction.user.username, 
+                        iconURL: interaction.user.avatarURL() || undefined 
+                    })
+                    .setTimestamp()
+                    .setColor(trialedRoleObject?.hexColor || colours.discord.green)
+                    .setDescription(`Congratulations to <@${user.id}> on achieving ${this.client.roles[roleKey]}!`);
+
+                const message = await confirmationChannel.send({ embeds: [embed] });
+                messageUrl = message.url;
+            }
+
+            const logChannelId = this.client.channelIds.botRoleLog;
+            if (logChannelId) {
+                const logChannel = await this.client.channels.fetch(logChannelId) as TextChannel;
+                const logEmbed = new EmbedBuilder()
+                    .setTimestamp()
+                    .setColor(trialedRoleObject?.hexColor || colours.discord.green)
+                    .setDescription(`${this.client.roles[roleKey]} and ${this.client.roles.elite} were assigned to <@${user.id}> by <@${interaction.user.id}>.\n${messageUrl ? `**Message**: ${messageUrl}` : ''}`);
+
+                const buttonRow = new ActionRowBuilder<ButtonBuilder>()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('rejectRoleAssign')
+                            .setLabel('Reject Approval')
+                            .setStyle(ButtonStyle.Danger)
+                    );
+
+                await logChannel.send({ embeds: [logEmbed], components: [buttonRow] });
+            }
+
+            await modalInteraction.editReply(`${this.client.roles[roleKey]} and ${this.client.roles.elite} have been assigned to <@${user.id}>!`);
+        } catch (err) {
+            this.client.logger.error({ message: 'Pass host error:', error: err });
+        }
+    }
+
+    private async failHost(interaction: ButtonInteraction<'cached'>) {
+        if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
+            return await interaction.reply({ content: 'This action can only be used by Trial Team Members!', flags: MessageFlags.Ephemeral });
+        }
+
+        const genid = uuid.v4();
+
+        const modal = new ModalBuilder()
+            .setCustomId(`host_trial_fail_${genid}`)
+            .setTitle('Fail Trial');
+
+        const userSelect = new UserSelectMenuBuilder()
+            .setCustomId('trialed_user')
+            .setRequired(true)
+            .setMaxValues(1);
+
+        modal.addLabelComponents(label => label.setLabel('Who failed?').setUserSelectMenuComponent(userSelect));
+
+        const noteInput = new TextInputBuilder()
+            .setCustomId('note')
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder('Optional note about the failure')
+            .setRequired(false);
+
+        modal.addLabelComponents(label => label.setLabel('Note (optional)').setTextInputComponent(noteInput));
+
+        await interaction.showModal(modal);
+
+        const filter = (i: ModalSubmitInteraction) => i.customId === `host_trial_fail_${genid}` && i.user.id === interaction.user.id;
+
+        try {
+            const modalInteraction = await interaction.awaitModalSubmit({ filter, time: 900_000 });
+            await modalInteraction.deferReply({ flags: MessageFlags.Ephemeral });
+
+            const user = modalInteraction.fields.getSelectedUsers('trialed_user', true).first()!;
+            const note = modalInteraction.fields.getTextInputValue('note');
+
+            const { colours } = this.client.util;
+
+            const logChannelId = this.client.channelIds.botRoleLog;
+            if (logChannelId) {
+                const logChannel = await this.client.channels.fetch(logChannelId) as TextChannel;
+                const failEmbed = new EmbedBuilder()
+                    .setAuthor({ 
+                        name: interaction.user.username, 
+                        iconURL: interaction.user.avatarURL() || undefined 
+                    })
+                    .setTimestamp()
+                    .setColor(colours.discord.red)
+                    .setDescription(`<@${user.id}> failed their trial. Reason: ${note || 'No reason provided.'}\nRecorded by: <@${interaction.user.id}>`);
+
+                await logChannel.send({ embeds: [failEmbed] });
+            }
+
+            await modalInteraction.editReply(`Trial failure recorded for <@${user.id}>.`);
+        } catch (err) {
+            this.client.logger.error({ message: 'Fail host error:', error: err });
         }
     }
 
@@ -768,17 +943,37 @@ export default class HostHandler {
             const hostContainer = JSON.parse(hostJson);
 
             if (hosts !== null) {
+                const typeLabel = type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined';
+                
+                const buttons: ButtonBuilder[] = [];
+
+                if (type === 2) {
+                    const passButton = new ButtonBuilder()
+                        .setCustomId(`host_trial_pass`)
+                        .setLabel('Pass')
+                        .setStyle(ButtonStyle.Success);
+
+                    const failButton = new ButtonBuilder()
+                        .setCustomId(`host_trial_fail`)
+                        .setLabel('Fail')
+                        .setStyle(ButtonStyle.Danger);
+
+                    buttons.push(passButton, failButton);
+                }
+
                 const finishButton = new ButtonBuilder()
-                    .setCustomId(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_finish`)
+                    .setCustomId(`host_${typeLabel}_finish`)
                     .setLabel('Finish')
-                    .setStyle(ButtonStyle.Success);
+                    .setStyle(ButtonStyle.Primary);
 
                 const disbandButton = new ButtonBuilder()
-                    .setCustomId(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_disband`)
+                    .setCustomId(`host_${typeLabel}_disband`)
                     .setLabel('Disband')
-                    .setStyle(ButtonStyle.Danger);
+                    .setStyle(ButtonStyle.Secondary);
 
-                const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(finishButton, disbandButton);
+                buttons.push(finishButton, disbandButton);
+
+                const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons);
                 
                 if (hostContainer.components) {
                     hostContainer.components.push({ type: 14, spacing: 1 });
