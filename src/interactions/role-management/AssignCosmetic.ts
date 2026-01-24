@@ -18,7 +18,7 @@ export default class Pass extends BotInteraction {
     }
 
     get permissions() {
-        return 'ADMIN';
+        return 'ADMIN_TRIAL_TEAM';
     }
 
     get hierarchy(): Hierarchy {
