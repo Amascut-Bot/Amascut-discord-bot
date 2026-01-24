@@ -9,30 +9,6 @@ export interface Roles {
 export function getChannels(guildId: string | undefined) : Channels {
     let result = {} as Channels;
 
-    //AGOD Bot Testing (Alex)
-    if (guildId === '856557117832691752') {
-        result =  {
-            TWITCH_NOTIFICATION_CHANNEL: '000000000000000000',
-            roleConfirmations: '000000000000000000',
-            achievementsAndLogs: '000000000000000000',
-            botRoleLog: '000000000000000000',
-            reportLog: '000000000000000000',
-            tempVCCategory: '000000000000000000',
-            tempVCCreate: '000000000000000000',
-            dpmCalc: '000000000000000000',
-            trialScheduling: '000000000000000000',
-            reaperScheduling: '000000000000000000',
-            reaperSquad: '000000000000000000',
-            uploadLogChannel: '000000000000000000',
-            botAssetChannel: '000000000000000000',
-            TICKET_TRANSCRIPT_CHANNEL: '1397705706358050948',
-            MUSIC_CHANNEL: '000000000000000000',
-            CUTE_PETS_CHANNEL: '000000000000000000',
-            LOG_CHANNEL_ID: '000000000000000000',
-            ADMIN_CHANNEL: '000000000000000000',
-        }
-    }
-
     //AGOD Bot Testing (Patze)
     if (guildId === '1391860635347849367') {
         result = {
@@ -74,6 +50,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialHosts: '1411662134756118569',
             trialLounge: '1405664850469847122',
             autoBanLogs: '1450965697378386115',
+            trialeeTicketsCategory: '1412871767932010547',
         }
     }
 
@@ -123,6 +100,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialApplications: '1389392070820630611',
             trialLounge: '1416027312369172481',
             vodReview: '1416026842753798276',
+            trialeeTicketsCategory: '1464336828206415923',
             // Staging Guide Category
             stagingEditorHub: '1389394110686953472',
             // Prod Guide Category
@@ -139,57 +117,6 @@ export function getChannels(guildId: string | undefined) : Channels {
 export function getRoles(guildId: string | undefined, stripRole: boolean = false) : Roles {
     let result = {} as Roles;
 
-    //AGOD Bot Testing (Alex)
-    if (guildId === '856557117832691752') {
-        result = {
-            owner: '885457712710828043',
-            admin: '00000000000000000',
-            duoMaster: '00000000000000000',
-            threeSevenMaster: '00000000000000000',
-            master: '00000000000000000',
-            solakAddict: '00000000000000000',
-            trialTeam: '00000000000000000',
-            duoRootskips: '000000000000000000',
-            threeSevenRootskips: '000000000000000000',
-            rootskips: '0000000000000000000',
-            noRealm: '000000000000000000',
-            duoExperienced: '000000000000000000',
-            threeSevenExperienced: '000000000000000000',
-            experienced: '000000000000000000',
-            teacher: '000000000000000000',
-            learner: '000000000000000000',
-            community: '000000000000000000',
-            booster: '000000000000000000',
-            nitroBooster: '000000000000000000',
-            cosmetic: '000000000000000000',
-            participant: '000000000000000000',
-            reaper: '00000000000000000',
-            tank: '000000000000000000',
-            dps: '000000000000000000',
-            support: '000000000000000000',
-            learnerOfTheWeek: '000000000000000000',
-            staff: '000000000000000000',
-            moderator: '000000000000000000',
-            solak: '000000000000000000',
-            tempRole: '000000000000000000',
-            tankNotNeeded: '000000000000000000',
-            dpsNotNeeded: '000000000000000000',
-            supportNotNeeded: '000000000000000000',
-            learners: '000000000000000000',
-            learnersNotNeeded: '000000000000000000',
-            adept: '000000000000000000',
-            mastery: '000000000000000000',
-            extreme: '000000000000000000',
-            CONTENT_CREATOR_ROLE: '00000000000000000',
-            LIVE_ROLE: '00000000000000000',
-            TWITCH_NOTIFICATION_ROLE: '00000000000000000',
-            MEOW_ROLE: '00000000000000000',
-            serverAnnouncements: '000000000000000000',
-            goodMorning: '000000000000000000',
-            member: '000000000000000000',
-        }
-    }
-
     //AGOD Bot Testing (Patze)
     if (guildId === '1391860635347849367') {
         result = {
@@ -197,6 +124,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             owner: '1391860635507363886',
             admin: '1391860635507363883',
             trialTeam: '1391860635347849375',
+            trialTeamTryout: '1391860635347849375',
             reaper: '1391860635347849374',
             teacher: '1412871872374116463',
             helperLearner: '1412871872374116463',
@@ -215,6 +143,12 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             devourerDayOne: '1401274865113370685',
             honeypot: '1445441207298953287',
             gatekeeper: '1445823416698540054',
+
+            // Trialed Roles
+            elite: '1464337843651608696',
+            elite2000: '1464337925524160738',
+            elite1000: '1464337906159190016',
+            elite500: '1464337875503022135',
 
             // KC Roles
             kc100: '1409628812915904652', // Cat-Bound Initiate
@@ -266,6 +200,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             owner: '1389387255386341386',
             admin: '1389526658167603230',
             trialTeam: '1390444778738684065',
+            trialTeamTryout: '1436750954585264380',
             reaper: '1390444833537130568',
             teacher: '1412881470673916077',
             helperLearner: '1404509333185892422',
@@ -284,6 +219,12 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             teamformingTimeout: '1404882562190413824',
             honeypot: '1445441207298953287',
             gatekeeper: '1445823416698540054',
+
+            // Trialed Roles
+            elite: '1462534403589800200',
+            elite2000: '1462529648326869184',
+            elite1000: '1462529561551175844',
+            elite500: '1462529277198205216',
 
             // KC Roles
             kc100: '1401429471692722292', // Cat-Bound Initiate
