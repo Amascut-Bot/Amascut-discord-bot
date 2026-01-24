@@ -19,7 +19,7 @@ export default class AssignMatchmaking extends BotInteraction {
     }
 
     get hierarchy() {
-        return ['elite500', 'elite1000', 'elite2000'];
+        return ['elite500', 'elite750', 'elite1000', 'elite2000'];
     }
 
     get slashData() {
@@ -36,6 +36,7 @@ export default class AssignMatchmaking extends BotInteraction {
 
         const options = {
             'Elite 500': 'elite500',
+            'Elite 750': 'elite750',
             'Elite 1000': 'elite1000',
             'Elite 2000': 'elite2000'
         };
