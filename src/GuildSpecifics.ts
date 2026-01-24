@@ -51,6 +51,8 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialLounge: '1405664850469847122',
             autoBanLogs: '1450965697378386115',
             trialeeTicketsCategory: '1412871767932010547',
+            vodSubmissions: `1464589392843767860`,
+            vodReview: `1464589425932632155`
         }
     }
 
@@ -99,6 +101,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialHosts: '1441933810873667734',
             trialApplications: '1389392070820630611',
             trialLounge: '1416027312369172481',
+            vodSubmissions: '0000000000000000000',
             vodReview: '1416026842753798276',
             trialeeTicketsCategory: '1464336828206415923',
             // Staging Guide Category
@@ -148,6 +151,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             elite: '1464337843651608696',
             elite2000: '1464337925524160738',
             elite1000: '1464337906159190016',
+            elite750: '1464587228930900130',
             elite500: '1464337875503022135',
 
             // KC Roles

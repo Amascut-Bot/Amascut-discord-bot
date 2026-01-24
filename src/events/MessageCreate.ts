@@ -1,4 +1,4 @@
-import { Message, MessageType } from 'discord.js';
+import { EmbedBuilder, Message, MessageType } from 'discord.js';
 import BotEvent from '../types/BotEvent';
 import TicketHandler from '../modules/TicketHandler';
 
@@ -57,6 +57,75 @@ export default class MessageCreate extends BotEvent {
 
         // Handle URL reactions
         if (await this.client.urlReactionHandler.handleURLReactions(message)) {
+            return;
+        }
+
+        // Handle VOD submissions
+        if (message.channel.id === this.client.channelIds.vodSubmissions) {
+            try {
+                const vodReviewChannel = await this.client.channels.fetch(this.client.channelIds.vodReview);
+                if (!vodReviewChannel || !('send' in vodReviewChannel)) {
+                    this.client.logger.error({
+                        message: 'VOD review channel not found or cannot send messages',
+                        handler: this.constructor.name,
+                        error: new Error('Invalid channel type')
+                    });
+                    return;
+                }
+
+                const urls: string[] = [];
+                const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+
+                let contentWithoutUrls = message.content || '';
+                if (message.content) {
+                    const extractedUrls = message.content.match(urlRegex) || [];
+                    urls.push(...extractedUrls);
+                    contentWithoutUrls = message.content.replace(urlRegex, '').trim();
+                }
+
+                if (message.attachments.size > 0) {
+                    for (const [_, attachment] of message.attachments) {
+                        const reuploaded = await this.client.util.reuploadImage(attachment.url, attachment.name);
+                        urls.push(reuploaded);
+                    }
+                }
+
+                const vodEmbed = new EmbedBuilder()
+                    .setTitle('Vod:')
+                    .setColor(this.client.color)
+                    .setDescription(contentWithoutUrls || 'No description provided')
+                    .setFooter({ 
+                        text: `Author: @${message.author.username}`,
+                    })
+                    .setTimestamp(message.createdAt);
+
+                if (message.author.avatarURL()) {
+                    vodEmbed.setAuthor({
+                        name: message.author.displayName,
+                        iconURL: message.author.avatarURL() || undefined
+                    });
+                }
+
+                await vodReviewChannel.send({ embeds: [vodEmbed] });
+
+                if (urls.length > 0) {
+                    await vodReviewChannel.send(urls.join('\n\n'));
+                }
+
+                await message.delete();
+
+                this.client.logger.log({
+                    message: `Forwarded VOD submission from ${message.author.tag} to review channel`,
+                    handler: this.constructor.name
+                }, true);
+
+            } catch (error) {
+                this.client.logger.error({
+                    message: `Failed to forward VOD submission from ${message.author.tag}`,
+                    handler: this.constructor.name,
+                    error: error as Error
+                });
+            }
             return;
         }
 

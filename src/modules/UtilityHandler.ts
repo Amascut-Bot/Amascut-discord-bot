@@ -227,7 +227,7 @@ export default class UtilityHandler {
         return pattern.test(timeString);
     }
 
-    public async reuploadImage(url: string): Promise<string> {
+    public async reuploadImage(url: string, filename?: string): Promise<string> {
         console.log(`--- DEBUG: Entered reuploadImage function for URL: ${url}`);
 
         const assetChannelId = this.client.channelIds.botAssetChannel;
@@ -257,9 +257,10 @@ export default class UtilityHandler {
                 throw new Error(`Failed to fetch image: ${response.statusText}`);
             }
 
-            const attachment = new AttachmentBuilder(Buffer.from(response.data, 'binary'), { name: 'image.png' });
+            const attachmentName = filename || 'image.png';
+            const attachment = new AttachmentBuilder(Buffer.from(response.data, 'binary'), { name: attachmentName });
 
-            console.log(`--- DEBUG: Sending attachment to Discord channel...`);
+            console.log(`--- DEBUG: Sending attachment to Discord channel with name: ${attachmentName}...`);
             const message = await botAssetChannel.send({ files: [attachment] });
             const newUrl = message.attachments.first()!.url;
 
