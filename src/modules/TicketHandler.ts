@@ -657,7 +657,7 @@ export default class TicketHandler {
         // presetkc
         const fileUpload = new FileUploadBuilder()
             .setCustomId('attachment')
-            .setRequired(true);
+            .setRequired(false);
 
         modal.addLabelComponents(label => label
             .setLabel('Please provide your preset and kc')
@@ -1216,8 +1216,8 @@ export default class TicketHandler {
                 { name: 'Message Count', value: messageArray.length.toString(), inline: false }
             );
 
-        const transcriptChannelId = ticketType === 'vouch' 
-            ? this.client.channelIds.VOUCH_TRANSCRIPT_CHANNEL 
+        const transcriptChannelId = ticketType === 'vouch'
+            ? this.client.channelIds.VOUCH_TRANSCRIPT_CHANNEL
             : this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL;
 
         const forumChannel = await channel.guild.channels.fetch(transcriptChannelId);
@@ -2253,19 +2253,7 @@ export default class TicketHandler {
                         new ButtonBuilder()
                             .setCustomId('host_learner_post_500')
                             .setLabel('Host 500%')
-                            .setStyle(ButtonStyle.Secondary),
-                        // new ButtonBuilder()
-                        //     .setCustomId('host_learner_post_750')
-                        //     .setLabel('Host 750%')
-                        //     .setStyle(ButtonStyle.Secondary),
-                        // new ButtonBuilder()
-                        //     .setCustomId('host_learner_post_1000')
-                        //     .setLabel('Host 1000%')
-                        //     .setStyle(ButtonStyle.Secondary),
-                        // new ButtonBuilder()
-                        //     .setCustomId('host_learner_post_2000')
-                        //     .setLabel('Host 2000%')
-                        //     .setStyle(ButtonStyle.Secondary),
+                            .setStyle(ButtonStyle.Secondary)
                     ]
                 ));
                 container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(

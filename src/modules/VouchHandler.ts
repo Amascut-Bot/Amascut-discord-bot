@@ -46,22 +46,22 @@ export default class VouchHandler {
             const firstVouch = vouches[0];
             const member = await interaction.guild?.members.fetch(interaction.user.id);
             const userRoleIds = member?.roles.cache.map(r => r.id) || [];
-            
-            const hierarchy = ['elite500', 'elite750', 'elite1000', 'elite2000'];
+
+            const hierarchy = ['elite500', 'elite1000', 'elite2000'];
             const roleIndex = hierarchy.indexOf(firstVouch.role);
-            const hasRoleOrHigher = hierarchy.slice(roleIndex).some(role => 
+            const hasRoleOrHigher = hierarchy.slice(roleIndex).some(role =>
                 userRoleIds.includes(this.client.roleIds[role])
             );
 
             if (!hasRoleOrHigher) {
-                return await interaction.followUp({ 
-                    content: `You must have ${this.client.roles[firstVouch.role]} or higher to vote on this vouch.`, 
-                    flags: MessageFlags.Ephemeral 
+                return await interaction.followUp({
+                    content: `You must have ${this.client.roles[firstVouch.role]} or higher to vote on this vouch.`,
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
             let existingVote = await voteRepository.findOne({ where: { vouchId: firstVouch.id, voterId: interaction.user.id } });
-            
+
             if (existingVote) {
                 existingVote.vote = voteType;
                 await voteRepository.save(existingVote);
@@ -80,7 +80,7 @@ export default class VouchHandler {
 
             const embed = interaction.message.embeds[0];
             const updatedEmbed = EmbedBuilder.from(embed);
-            
+
             const voteFieldIndex = updatedEmbed.data.fields?.findIndex(f => f.name === 'Votes');
             if (voteFieldIndex !== undefined && voteFieldIndex !== -1 && updatedEmbed.data.fields) {
                 updatedEmbed.data.fields[voteFieldIndex].value = `✅ ${approveCount} | ❌ ${rejectCount}`;
@@ -111,21 +111,21 @@ export default class VouchHandler {
             const member = await interaction.guild?.members.fetch(vouch.vouchee);
             if (!member) return;
 
-            const hierarchy = ['elite500', 'elite750', 'elite1000', 'elite2000'];
+            const hierarchy = ['elite500', 'elite1000', 'elite2000'];
             const roleIndex = hierarchy.indexOf(vouch.role);
             const rolesToAdd = [this.client.roleIds[vouch.role], this.client.roleIds.elite];
-            
+
             hierarchy.slice(0, roleIndex).forEach(role => rolesToAdd.push(this.client.roleIds[role]));
             await member.roles.add(rolesToAdd);
 
             const roleObject = await interaction.guild?.roles.fetch(this.client.roleIds[vouch.role]);
 
             let messageUrl = '';
-            const confirmChannel = this.client.channelIds.roleConfirmations 
+            const confirmChannel = this.client.channelIds.roleConfirmations
                 ? await this.client.channels.fetch(this.client.channelIds.roleConfirmations) as TextChannel : null;
-            
+
             if (confirmChannel) {
-                const msg = await confirmChannel.send({ 
+                const msg = await confirmChannel.send({
                     embeds: [new EmbedBuilder()
                         .setColor(roleObject?.hexColor || this.client.color)
                         .setDescription(`Congratulations to <@${vouch.vouchee}> on achieving ${this.client.roles[vouch.role]}!`)
@@ -134,12 +134,12 @@ export default class VouchHandler {
                 messageUrl = msg.url;
             }
 
-            const logChannel = this.client.channelIds.botRoleLog 
+            const logChannel = this.client.channelIds.botRoleLog
                 ? await this.client.channels.fetch(this.client.channelIds.botRoleLog) as TextChannel : null;
-            
+
             if (logChannel) {
                 const voucherList = vouches.map(v => `<@${v.voucher}>`).join(', ');
-                await logChannel.send({ 
+                await logChannel.send({
                     embeds: [new EmbedBuilder()
                         .setColor(roleObject?.hexColor || this.client.color)
                         .setDescription(`${this.client.roles[vouch.role]} and ${this.client.roles.elite} assigned to <@${vouch.vouchee}> via vouch by ${voucherList}.${messageUrl ? `\n**Message**: ${messageUrl}` : ''}`)
@@ -162,9 +162,9 @@ export default class VouchHandler {
 
             const closeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(closeButton);
 
-            await interaction.message.edit({ 
-                embeds: [EmbedBuilder.from(interaction.message.embeds[0]).setColor(0x00ff00).setTitle('Elite Role Vouch - APPROVED')], 
-                components: [closeRow] 
+            await interaction.message.edit({
+                embeds: [EmbedBuilder.from(interaction.message.embeds[0]).setColor(0x00ff00).setTitle('Elite Role Vouch - APPROVED')],
+                components: [closeRow]
             });
         } catch (error) {
             this.client.logger.error({ message: 'Failed to approve vouch', error, handler: this.constructor.name });
