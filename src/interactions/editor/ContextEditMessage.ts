@@ -6,7 +6,7 @@ import UploadHandler from '../../modules/UploadHandler';
 export default class ContextEditMessage extends BotInteraction {
 
     get name() {
-        return 'edit message';
+        return 'Edit Message';
     }
 
     get permissions() {

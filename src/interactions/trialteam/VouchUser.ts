@@ -25,7 +25,6 @@ export default class VouchUser extends BotInteraction {
             .addStringOption(option => option.setName('role').setDescription('Elite role').setRequired(true)
                 .addChoices(
                     { name: 'Elite 500', value: 'elite500' },
-                    { name: 'Elite 750', value: 'elite750' },
                     { name: 'Elite 1000', value: 'elite1000' },
                     { name: 'Elite 2000', value: 'elite2000' }
                 ))
@@ -50,10 +49,10 @@ export default class VouchUser extends BotInteraction {
 
         const member = await interaction.guild?.members.fetch(interaction.user.id);
         const userRoleIds = member?.roles.cache.map(r => r.id) || [];
-        
-        const hierarchy = ['elite500', 'elite750', 'elite1000', 'elite2000'];
+
+        const hierarchy = ['elite500', 'elite1000', 'elite2000'];
         const roleIndex = hierarchy.indexOf(roleKey);
-        const hasRoleOrHigher = hierarchy.slice(roleIndex).some(role => 
+        const hasRoleOrHigher = hierarchy.slice(roleIndex).some(role =>
             userRoleIds.includes(this.client.roleIds[role])
         );
 
@@ -62,14 +61,14 @@ export default class VouchUser extends BotInteraction {
         }
 
         const vouchRepository = this.client.dataSource.getRepository(Vouch);
-        
-        const existingVouch = await vouchRepository.findOne({ 
-            where: { 
-                voucher: interaction.user.id, 
-                vouchee: targetUser.id, 
+
+        const existingVouch = await vouchRepository.findOne({
+            where: {
+                voucher: interaction.user.id,
+                vouchee: targetUser.id,
                 role: roleKey,
                 status: 'pending'
-            } 
+            }
         });
 
         if (existingVouch) {
@@ -89,11 +88,11 @@ export default class VouchUser extends BotInteraction {
         const REQUIRED_VOUCHES = 2;
 
         // Get all pending vouches for this user
-        const allVouchesForUser = await vouchRepository.find({ 
-            where: { 
+        const allVouchesForUser = await vouchRepository.find({
+            where: {
                 vouchee: targetUser.id,
                 status: 'pending'
-            } 
+            }
         });
 
         // Find the highest tier that qualifies (has 2+ vouches) and doesn't have a ticket yet
@@ -103,7 +102,7 @@ export default class VouchUser extends BotInteraction {
         // Loop from highest to lowest (reverse)
         for (let i = roleIndex; i >= 0; i--) {
             const checkRole = hierarchy[i];
-            
+
             // Count vouches that are for the checkRole or any role higher in hierarchy
             const qualifyingVouches = allVouchesForUser.filter(v => {
                 const vouchRoleIndex = hierarchy.indexOf(v.role);
@@ -111,10 +110,10 @@ export default class VouchUser extends BotInteraction {
             });
 
             // Check if ticket already exists for this specific role
-            const existingTicketForRole = allVouchesForUser.some(v => 
+            const existingTicketForRole = allVouchesForUser.some(v =>
                 v.ticketRole === checkRole
             );
-            
+
             if (qualifyingVouches.length >= REQUIRED_VOUCHES && !existingTicketForRole) {
                 highestQualifyingRole = checkRole;
                 qualifyingVouchesForTicket = qualifyingVouches.slice(0, REQUIRED_VOUCHES);
@@ -126,7 +125,7 @@ export default class VouchUser extends BotInteraction {
         if (highestQualifyingRole) {
             await this.createVouchTicket(interaction, targetUser, highestQualifyingRole, qualifyingVouchesForTicket);
         }
-        
+
         await interaction.editReply(`Vouch submitted for <@${targetUser.id}> - ${this.client.roles[roleKey]}`);
     }
 
@@ -220,9 +219,9 @@ export default class VouchUser extends BotInteraction {
             await vouchRepository.save(vouch);
         }
 
-        await interaction.followUp({ 
-            content: `Vouch ticket created for <@${targetUser.id}>: <#${ticketChannel.id}>`, 
-            flags: MessageFlags.Ephemeral 
+        await interaction.followUp({
+            content: `Vouch ticket created for <@${targetUser.id}>: <#${ticketChannel.id}>`,
+            flags: MessageFlags.Ephemeral
         });
     }
 }

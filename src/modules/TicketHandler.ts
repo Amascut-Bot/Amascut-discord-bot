@@ -53,6 +53,7 @@ export default class TicketHandler {
             case 'ticket:create_support': this.handleTicketSupport(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_teacher': this.handleTicketTeacher(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_trialteam': this.handleTicketTrialTeam(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_trialee': this.handleTicketTrialee(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close': this.handleTicketClose(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_confirm': this.handleTicketCloseConfirm(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction as ButtonInteraction<'cached'>); break;
@@ -301,12 +302,8 @@ export default class TicketHandler {
                 new StringSelectMenuOptionBuilder().setLabel('Normal Mode').setValue('nm'),
                 new StringSelectMenuOptionBuilder().setLabel('100% Enrage').setValue('100'),
                 new StringSelectMenuOptionBuilder().setLabel('500% Enrage').setValue('500'),
-                new StringSelectMenuOptionBuilder().setLabel('750% Enrage').setValue('750'),
-                new StringSelectMenuOptionBuilder().setLabel('1000% Enrage').setValue('1000'),
-                new StringSelectMenuOptionBuilder().setLabel('2000% Enrage').setValue('2000'),
-                new StringSelectMenuOptionBuilder().setLabel('4000% Enrage').setValue('4000'),
             ])
-            .setMaxValues(7);
+            .setMaxValues(3);
 
         modal.addLabelComponents(label => label
             .setLabel('What do you want to learn? (Select any)')
@@ -354,6 +351,16 @@ export default class TicketHandler {
         modal.addLabelComponents(label => label
             .setLabel('Why are you applying for this role?')
             .setTextInputComponent(reasonsInput)
+        );
+
+        // presetkc
+        const fileUpload = new FileUploadBuilder()
+            .setCustomId('attachment')
+            .setRequired(false);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Please provide your preset and kc')
+            .setFileUploadComponent(fileUpload)
         );
 
         await interaction.showModal(modal);
@@ -428,6 +435,16 @@ export default class TicketHandler {
         modal.addLabelComponents(label => label
             .setLabel('Why are you applying for this role?')
             .setTextInputComponent(reasonsInput)
+        );
+
+        // presetkc
+        const fileUpload = new FileUploadBuilder()
+            .setCustomId('attachment')
+            .setRequired(false);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Please provide your preset and kc')
+            .setFileUploadComponent(fileUpload)
         );
 
         await interaction.showModal(modal);
@@ -574,6 +591,82 @@ export default class TicketHandler {
         await interaction.showModal(modal);
     }
 
+    private async handleTicketTrialee(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_trialee_${interaction.user.id}`)
+            .setTitle('Trial Request');
+
+        // RSN
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Timezone
+        const timezoneInput = new TextInputBuilder()
+            .setCustomId('timezone')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        modal.addLabelComponents(label => label
+            .setLabel('When are you available ingame (in Game Time)?')
+            .setTextInputComponent(timezoneInput)
+        );
+
+        // Goals
+        const assistanceInput = new TextInputBuilder()
+            .setCustomId('secretword')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        modal.addLabelComponents(label => label
+            .setLabel('What is the secret word?')
+            .setTextInputComponent(assistanceInput)
+        );
+
+        // Tier
+        const tierSelect = new StringSelectMenuBuilder()
+            .setCustomId('tier')
+            .addOptions([
+                new StringSelectMenuOptionBuilder().setLabel('Elite - 500% Enrage').setValue('elite500'),
+                new StringSelectMenuOptionBuilder().setLabel('Elite - 1000% Enrage').setValue('elite1000'),
+                new StringSelectMenuOptionBuilder().setLabel('Elite - 2000% Enrage').setValue('elite2000'),
+
+                // new StringSelectMenuOptionBuilder().setLabel('Master - 500% Enrage').setValue('master500'),
+                // new StringSelectMenuOptionBuilder().setLabel('Master - 1000% Enrage').setValue('master1000'),
+                // new StringSelectMenuOptionBuilder().setLabel('Master - 2000% Enrage').setValue('master2000'),
+
+                // new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 500% Enrage').setValue('gm500'),
+                // new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 1000% Enrage').setValue('gm1000'),
+                // new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 2000% Enrage').setValue('gm2000'),
+            ])
+            .setMaxValues(1);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Which tier do you want to trial for?')
+            .setStringSelectMenuComponent(tierSelect)
+        );
+
+        // presetkc
+        const fileUpload = new FileUploadBuilder()
+            .setCustomId('attachment')
+            .setRequired(false);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Please provide your preset and kc')
+            .setFileUploadComponent(fileUpload)
+        );
+
+        await interaction.showModal(modal);
+    }
+
     private async handleTicketModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
         if (!interaction.inCachedGuild()) return;
 
@@ -619,6 +712,7 @@ export default class TicketHandler {
                 case 'lorebook':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
+                    formData.attachment = interaction.fields.getUploadedFiles('attachment');
                     break;
                 case 'lorebookkill':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
@@ -626,6 +720,7 @@ export default class TicketHandler {
                 case 'support':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
+                    formData.attachment = interaction.fields.getUploadedFiles('attachment');
                     break;
                 case 'teacher':
                     formData.timezone = interaction.fields.getTextInputValue('timezone');
@@ -638,6 +733,12 @@ export default class TicketHandler {
                     formData.reasons = interaction.fields.getTextInputValue('reasons');
                     formData.attachment = interaction.fields.getUploadedFiles('attachment');
                     formData.enrage = interaction.fields.getStringSelectValues('enrage');
+                    break;
+                case 'trialee':
+                    formData.timezone = interaction.fields.getTextInputValue('timezone');
+                    formData.secretword = interaction.fields.getTextInputValue('secretword');
+                    formData.tier = interaction.fields.getStringSelectValues('tier')[0];
+                    formData.attachment = interaction.fields.getUploadedFiles('attachment');
                     break;
             }
 
@@ -859,6 +960,7 @@ export default class TicketHandler {
     //#endregion
 
     //#region CLOSE HANDLERS
+
     private async handleTicketClose(interaction: ButtonInteraction<'cached'>): Promise<void> {
         const channelName = interaction.channel?.name;
         if (!channelName || !channelName.includes('-')) {
@@ -995,6 +1097,11 @@ export default class TicketHandler {
             if (isLoreBookCrew) return true;
         }
 
+        if (channel.name.startsWith('trialee')) {
+            const isTrialTeam = await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'trialTeamTryout'], interaction);
+            if (isTrialTeam) return true;
+        }
+
         if (channel.name.startsWith('clearance')) {
             return false;
         }
@@ -1007,6 +1114,7 @@ export default class TicketHandler {
     //#endregion
 
     //#region SUPPORT TEAM CONTROLS
+
     private async logTicketToForum(channel: TextChannel, user: any, logReason: string): Promise<string | null> {
         const messages = await UtilityHandler.readAllMessages(channel);
         const messageArray = Array.from(messages.values());
@@ -1108,8 +1216,8 @@ export default class TicketHandler {
                 { name: 'Message Count', value: messageArray.length.toString(), inline: false }
             );
 
-        const transcriptChannelId = ticketType === 'vouch' 
-            ? this.client.channelIds.VOUCH_TRANSCRIPT_CHANNEL 
+        const transcriptChannelId = ticketType === 'vouch'
+            ? this.client.channelIds.VOUCH_TRANSCRIPT_CHANNEL
             : this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL;
 
         const forumChannel = await channel.guild.channels.fetch(transcriptChannelId);
@@ -1475,6 +1583,7 @@ export default class TicketHandler {
     //#endregion
 
     //#region TRANSCRIPT SYSTEM
+
     public static async findTicketOpener(channel: TextChannel, client: Bot): Promise<string | null> {
         const messages = await UtilityHandler.readAllMessages(channel);
         const welcomeMessage = messages.find(msg =>
@@ -1689,6 +1798,7 @@ export default class TicketHandler {
     //#endregion
 
     //#region Utilities
+
     public async getNextTicketNumber(ticketType: string): Promise<number> {
         const ticketNumbersPath = path.join(process.cwd(), 'ticket-numbers.json');
 
@@ -1729,6 +1839,7 @@ export default class TicketHandler {
             const parentCategoryId =
                 ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory
                 : ticketType === 'lorebookkill' ? this.client.channelIds.lorebookTicketsCategory
+                : ticketType === 'trialee' ? this.client.channelIds.trialeeTicketsCategory
                 : isStaffTicket ? this.client.channelIds.staffTicketsCategory
                 : isClearanceTicket ? this.client.channelIds.wipTicketCategory
                 : this.client.channelIds.ticketCategory;
@@ -1738,6 +1849,8 @@ export default class TicketHandler {
             const ownerRoleId = this.client.roleIds.owner;
             const teacherRoleId = this.client.roleIds.teacher;
             const lorebookRoleId = this.client.roleIds.lorebook;
+            const trialTeamRoleId = this.client.roleIds.trialTeam;
+            const trialTeamTryoutRoleId = this.client.roleIds.trialTeamTryout;
 
             // Create the channel with proper permissions
             const channel: TextChannel = await guild.channels.create({
@@ -1829,6 +1942,34 @@ export default class TicketHandler {
                 );
             }
 
+            if (ticketType === 'trialee') {
+                await channel.permissionOverwrites.create(
+                    trialTeamRoleId,
+                    {
+                        ViewChannel: true,
+                        SendMessages: true,
+                        ReadMessageHistory: true,
+                        AttachFiles: true,
+                        EmbedLinks: true,
+                        ManageMessages: true,
+                        ManageChannels: true,
+                    }
+                );
+
+                await channel.permissionOverwrites.create(
+                    trialTeamTryoutRoleId,
+                    {
+                        ViewChannel: true,
+                        SendMessages: true,
+                        ReadMessageHistory: true,
+                        AttachFiles: true,
+                        EmbedLinks: true,
+                        ManageMessages: true,
+                        ManageChannels: true,
+                    }
+                );
+            }
+
             if (isStaffTicket || isReportTicket || isClearanceTicket) {
                 const adminRole = this.client.roles.admin;
                 const ownerRole = this.client.roles.owner;
@@ -1902,6 +2043,7 @@ export default class TicketHandler {
             const ownerRole = this.client.roles.owner;
             const teacherRole = this.client.roles.teacher;
             const lorebookRole = this.client.roles.lorebook;
+            const trialTeamRole = this.client.roles.trialTeam;
             const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
 
             // Create welcome message
@@ -1917,6 +2059,10 @@ export default class TicketHandler {
 
             if (ticketType === 'clearance') {
                 welcomeMessage = 'Your clearance ticket has been created.';
+            }
+
+            if (ticketType === 'trialee') {
+                welcomeMessage = `<@${userId}>, your ticket has been created. A member of the ${trialTeamRole} will be with you shortly.`;
             }
 
             // Create embed with form data using fields for better organization
@@ -2046,6 +2192,14 @@ export default class TicketHandler {
 
                     urls = urls.concat(formData.reasons.match(urlRegex) || []);
                     break;
+                case 'trialee':
+                    embed.addFields(
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'When are you available ingame (in Game Time)?', value: `\`\`\`${formData.timezone}\`\`\``, inline: false },
+                        { name: 'What is the secret word?', value: `\`\`\`${formData.secretword}\`\`\``, inline: false },
+                        { name: 'Which tier do you want to trial for?', value: `\`\`\`${formData.tier}\`\`\``, inline: false },
+                    );
+                    break;
             }
 
             if (formData.attachment) {
@@ -2099,19 +2253,7 @@ export default class TicketHandler {
                         new ButtonBuilder()
                             .setCustomId('host_learner_post_500')
                             .setLabel('Host 500%')
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId('host_learner_post_750')
-                            .setLabel('Host 750%')
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId('host_learner_post_1000')
-                            .setLabel('Host 1000%')
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId('host_learner_post_2000')
-                            .setLabel('Host 2000%')
-                            .setStyle(ButtonStyle.Secondary),
+                            .setStyle(ButtonStyle.Secondary)
                     ]
                 ));
                 container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -2148,6 +2290,40 @@ export default class TicketHandler {
                             .setStyle(ButtonStyle.Secondary),
                         new ButtonBuilder()
                             .setCustomId('host_lorebook_quickfinish')
+                            .setLabel('Finish an host')
+                            .setStyle(ButtonStyle.Secondary)
+                    ]
+                ));
+
+                await channel.send({
+                    components: [container],
+                    flags: MessageFlags.IsComponentsV2,
+                    allowedMentions: { 'parse': [] }
+                });
+            }
+
+            if (ticketType === 'trialee') {
+                const container = this.client.cv2.getContainerBuilder(null, '### Trial Team Controls');
+                container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    [
+                        new ButtonBuilder()
+                            .setCustomId('host_trial_post_500')
+                            .setLabel('Host 500%')
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId('host_trial_post_1000')
+                            .setLabel('Host 1000%')
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId('host_trial_post_2000')
+                            .setLabel('Host 2000%')
+                            .setStyle(ButtonStyle.Secondary),
+                    ]
+                ));
+                container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    [
+                        new ButtonBuilder()
+                            .setCustomId('host_trial_quickfinish')
                             .setLabel('Finish an host')
                             .setStyle(ButtonStyle.Secondary)
                     ]
@@ -2217,6 +2393,8 @@ export default class TicketHandler {
                 ticketObject.ticketType = 9;
             case 'lorebookkill':
                 ticketObject.ticketType = 10;
+            case 'trialee':
+                ticketObject.ticketType = 11;
         }
 
         await ticketRepository.save(ticketObject);
@@ -2262,7 +2440,7 @@ export default class TicketHandler {
 
     //#region MessageSync
 
-    public static async SyncMessage(client: Bot, message: Message<true>) {
+    public static async syncMessage(client: Bot, message: Message<true>) {
         if ((message.channel.parentId === client.channelIds.ticketCategory || message.channel.parentId === client.channelIds.wipTicketCategory)) {
             // Message is sent in a report-channel -> sync to thread
             const threads = await (message.channel as TextChannel).threads.fetch();

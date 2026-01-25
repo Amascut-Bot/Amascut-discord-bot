@@ -423,7 +423,7 @@ export default class HostHandler {
 
         const container = ComponentsV2Utils.cleanContainer(interaction.message.components[0]);
         const containerJson = JSON.stringify(container, null, 2);
-        
+
         const enrageMatch = containerJson.match(/Enrage Mode - (\d+)% Enrage/);
         if (!enrageMatch) {
             return await interaction.reply({ content: 'Could not determine enrage mode from host card.', flags: MessageFlags.Ephemeral });
@@ -434,14 +434,12 @@ export default class HostHandler {
 
         if (enrage === '500') {
             roleKey = 'elite500';
-        } else if (enrage === '750') {
-            roleKey = 'elite750';
         } else if (enrage === '1000') {
             roleKey = 'elite1000';
         } else if (enrage === '2000') {
             roleKey = 'elite2000';
         } else {
-            return await interaction.reply({ content: `Invalid enrage: ${enrage}%. Must be 500%, 750%, 1000%, or 2000%.`, flags: MessageFlags.Ephemeral });
+            return await interaction.reply({ content: `Invalid enrage: ${enrage}%. Must be 500%, 1000%, or 2000%.`, flags: MessageFlags.Ephemeral });
         }
 
         const genid = uuid.v4();
@@ -471,7 +469,7 @@ export default class HostHandler {
             const trialedRoleId = this.client.roleIds[roleKey];
             const coverTagId = this.client.roleIds.elite;
 
-            const hierarchy = ['elite500', 'elite750', 'elite1000', 'elite2000'];
+            const hierarchy = ['elite500', 'elite1000', 'elite2000'];
             const roleIndex = hierarchy.indexOf(roleKey);
             const lowerRoles = hierarchy.slice(0, roleIndex);
 
@@ -485,16 +483,16 @@ export default class HostHandler {
             const trialedRoleObject = await interaction.guild?.roles.fetch(trialedRoleId);
             const { colours } = this.client.util;
 
-            const confirmationChannel = this.client.channelIds.roleConfirmations 
+            const confirmationChannel = this.client.channelIds.roleConfirmations
                 ? await this.client.channels.fetch(this.client.channelIds.roleConfirmations) as TextChannel
                 : null;
 
             let messageUrl = '';
             if (confirmationChannel) {
                 const embed = new EmbedBuilder()
-                    .setAuthor({ 
-                        name: interaction.user.username, 
-                        iconURL: interaction.user.avatarURL() || undefined 
+                    .setAuthor({
+                        name: interaction.user.username,
+                        iconURL: interaction.user.avatarURL() || undefined
                     })
                     .setTimestamp()
                     .setColor(trialedRoleObject?.hexColor || colours.discord.green)
@@ -572,9 +570,9 @@ export default class HostHandler {
             if (logChannelId) {
                 const logChannel = await this.client.channels.fetch(logChannelId) as TextChannel;
                 const failEmbed = new EmbedBuilder()
-                    .setAuthor({ 
-                        name: interaction.user.username, 
-                        iconURL: interaction.user.avatarURL() || undefined 
+                    .setAuthor({
+                        name: interaction.user.username,
+                        iconURL: interaction.user.avatarURL() || undefined
                     })
                     .setTimestamp()
                     .setColor(colours.discord.red)
@@ -944,7 +942,7 @@ export default class HostHandler {
 
             if (hosts !== null) {
                 const typeLabel = type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined';
-                
+
                 const buttons: ButtonBuilder[] = [];
 
                 if (type === 2) {
@@ -974,7 +972,7 @@ export default class HostHandler {
                 buttons.push(finishButton, disbandButton);
 
                 const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons);
-                
+
                 if (hostContainer.components) {
                     hostContainer.components.push({ type: 14, spacing: 1 });
                     hostContainer.components.push(actionRow.toJSON());

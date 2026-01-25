@@ -19,7 +19,7 @@ export default class AssignMatchmaking extends BotInteraction {
     }
 
     get hierarchy() {
-        return ['elite500', 'elite750', 'elite1000', 'elite2000'];
+        return ['elite500', 'elite1000', 'elite2000'];
     }
 
     get slashData() {
@@ -36,7 +36,6 @@ export default class AssignMatchmaking extends BotInteraction {
 
         const options = {
             'Elite 500': 'elite500',
-            'Elite 750': 'elite750',
             'Elite 1000': 'elite1000',
             'Elite 2000': 'elite2000'
         };
@@ -50,7 +49,7 @@ export default class AssignMatchmaking extends BotInteraction {
 
     async run(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        
+
         const targetUser: User = interaction.options.getUser('user', true);
         const roleKey: string = interaction.options.getString('role', true);
         const { colours } = this.client.util;
@@ -61,7 +60,7 @@ export default class AssignMatchmaking extends BotInteraction {
         const trialedRoleId = this.client.roleIds[roleKey];
         const coverTagId = this.client.roleIds[this.coverTag];
         const trialedRoleObject = await interaction.guild?.roles.fetch(trialedRoleId) as Role;
-        
+
         if (!trialedRoleObject) {
             return await interaction.editReply({ content: 'Role not found.' });
         }
@@ -78,28 +77,28 @@ export default class AssignMatchmaking extends BotInteraction {
                 .setTitle('Role assign failed')
                 .setColor(colours.discord.red)
                 .setDescription(`<@${targetUser.id}> already has this role or a higher role.`);
-            
+
             return await interaction.editReply({ embeds: [embed] });
         }
 
         const rolesToAdd = [trialedRoleId, coverTagId];
-        
+
         for (const lowerRole of lowerRoles) {
             rolesToAdd.push(this.client.roleIds[lowerRole]);
         }
 
         await member?.roles.add(rolesToAdd);
 
-        const confirmationChannel = this.client.channelIds.roleConfirmations 
+        const confirmationChannel = this.client.channelIds.roleConfirmations
             ? await this.client.channels.fetch(this.client.channelIds.roleConfirmations) as TextChannel
             : null;
 
         let messageUrl = '';
         if (confirmationChannel) {
             const embed = new EmbedBuilder()
-                .setAuthor({ 
-                    name: interaction.user.username, 
-                    iconURL: interaction.user.avatarURL() || undefined 
+                .setAuthor({
+                    name: interaction.user.username,
+                    iconURL: interaction.user.avatarURL() || undefined
                 })
                 .setTimestamp()
                 .setColor(trialedRoleObject.hexColor)

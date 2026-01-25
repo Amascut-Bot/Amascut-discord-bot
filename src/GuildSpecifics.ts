@@ -153,7 +153,6 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             elite: '1464337843651608696',
             elite2000: '1464337925524160738',
             elite1000: '1464337906159190016',
-            elite750: '1464587228930900130',
             elite500: '1464337875503022135',
 
             // KC Roles
