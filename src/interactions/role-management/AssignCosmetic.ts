@@ -69,14 +69,6 @@ export default class Pass extends BotInteraction {
         return options;
     }
 
-    private isVerifiedEligible(role: string) : Boolean {
-        const verifiedRoles: string[] = ['enr500', 'enr1000', 'enr2000', 'enr4000', 'rd500', 'rd1000', 'rd2000', 'rd4000', 'rw500', 'rw1000', 'rw2000', 'rw4000', 'firstDevourer'];
-
-        if (verifiedRoles.includes(role)) return true;
-
-        return false;
-    }
-
     get slashData() {
         return new SlashCommandBuilder()
             .setName(this.name)
@@ -132,14 +124,6 @@ export default class Pass extends BotInteraction {
         const roleId = this.client.roleIds[role];
         if (!hasHigherRole(role)) {
             await user?.roles.add(roleId);
-
-            // if role qualifies for verified automatically assign aswell
-            if (this.isVerifiedEligible(role)) {
-                const verifiedId = this.client.roleIds.verified;
-                if (!userRoles.includes(verifiedId)) {
-                    await user?.roles.add(verifiedId);
-                }
-            }
         }
         embedColour = roleObject.colors.primaryColor ?? this.client.color;
         if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
