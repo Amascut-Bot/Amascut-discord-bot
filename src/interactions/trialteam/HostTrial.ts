@@ -18,7 +18,6 @@ export default class HostTrial extends BotInteraction {
     get enrageOptions() {
         const enrage: any = {
             'Enrage Mode - 500%': '500',
-            'Enrage Mode - 750%': '750',
             'Enrage Mode - 1000%': '1000',
             'Enrage Mode - 2000%': '2000',
         }

@@ -386,7 +386,7 @@ export default class HostHandler {
             return;
         }
 
-        await interaction.deferReply();
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         if (type === 0) {
             //check if user is teacher, admin or owner
@@ -851,8 +851,9 @@ export default class HostHandler {
 
         if (message) {
             // disable controls
-            await ComponentsV2Utils.disableControls(message.first()!);
-            await ComponentsV2Utils.disableControls(hostMessage);
+            //await ComponentsV2Utils.disableControls(message.first()!);
+            //await ComponentsV2Utils.disableControls(hostMessage);
+            await message.first()!.delete();
 
             return true;
         }

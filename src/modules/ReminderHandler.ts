@@ -21,12 +21,12 @@ export default class ReminderHandler {
     }
 
     public startReminders() {
-        cron.schedule('*/30 * * * *', () => {
+        cron.schedule('*/2 * * *', () => {
             this.sendHourlyReminders();
             this.sendSurveyReminders(); // Uncomment when needed
         });
         this.client.logger.log({
-            message: 'Voice channel reminder system started (30-minute intervals)',
+            message: 'Voice channel reminder system started (2-hour intervals)',
             handler: this.constructor.name
         }, true);
     }
@@ -34,12 +34,10 @@ export default class ReminderHandler {
     private async sendHourlyReminders() {
         const channels = this.client.channelIds;
         const targetChannels = [
-            channels.reminderChannel1,
-            channels.reminderChannel3,
-            channels.reminderChannel4,
-            channels.reminderChannel5,
-            channels.reminderChannel6,
-            channels.reminderChannel7,
+            channels.casualTeams,
+            channels.trialedTeams,
+            channels.keepsOnly,
+            channels.combatAchievements,
         ].filter(Boolean);
 
         for (const channelId of targetChannels) {
@@ -106,9 +104,7 @@ export default class ReminderHandler {
     private async sendSurveyReminders() {
         const channels = this.client.channelIds;
         const targetChannels = [
-            channels.reminderChannel1,
-            channels.reminderChannel3,
-            channels.reminderChannel4
+            channels.casualTeams,
         ].filter(Boolean);
 
         for (const channelId of targetChannels) {

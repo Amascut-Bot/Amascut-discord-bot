@@ -94,7 +94,7 @@ export default class MessageCreate extends BotEvent {
                     .setTitle('Vod:')
                     .setColor(this.client.color)
                     .setDescription(contentWithoutUrls || 'No description provided')
-                    .setFooter({ 
+                    .setFooter({
                         text: `Author: @${message.author.username}`,
                     })
                     .setTimestamp(message.createdAt);
@@ -161,7 +161,7 @@ export default class MessageCreate extends BotEvent {
 
         // Report-Message-Sync
         if (message.channel.name.toLowerCase().startsWith('report') || message.channel.name.toLowerCase().startsWith('clearance')) {
-            await TicketHandler.SyncMessage(this.client, message);
+            await TicketHandler.syncMessage(this.client, message);
         }
     }
 }
