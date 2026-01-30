@@ -2320,14 +2320,6 @@ export default class TicketHandler {
                             .setStyle(ButtonStyle.Secondary),
                     ]
                 ));
-                container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
-                    [
-                        new ButtonBuilder()
-                            .setCustomId('host_trial_quickfinish')
-                            .setLabel('Finish an host')
-                            .setStyle(ButtonStyle.Secondary)
-                    ]
-                ));
 
                 await channel.send({
                     components: [container],
