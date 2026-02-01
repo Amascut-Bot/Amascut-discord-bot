@@ -200,7 +200,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             // Staff Roles
             owner: '1389387255386341386',
             admin: '1389526658167603230',
-            trialTeam: '1390444778738684065',
+            trialTeam: '1436786514922311831',
             trialTeamTryout: '1436750954585264380',
             reaper: '1390444833537130568',
             teacher: '1412881470673916077',
