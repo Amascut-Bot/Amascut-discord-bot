@@ -330,7 +330,7 @@ export default class HostHandler {
                 const embed = new EmbedBuilder()
                     .setAuthor({
                         name: host.displayName,
-                        iconURL: host.avatarURL() || undefined
+                        iconURL: host.user.avatarURL() || undefined
                     })
                     .setTimestamp()
                     .setColor(trialedRoleObject?.hexColor || colours.discord.green)
