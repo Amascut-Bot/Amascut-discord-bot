@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, StringSelectMenuInteraction, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder, UserSelectMenuInteraction } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, GuildMember, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, StringSelectMenuBuilder, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder } from 'discord.js';
 import Bot from '../Bot';
 import * as uuid from 'uuid';
 import * as fs from 'fs';
@@ -57,31 +57,16 @@ export default class HostHandler {
         }
 
         switch (id) {
-            case 'host_learner_select_user': this.handleHostUserselectByType(interaction as UserSelectMenuInteraction, 0); break;
-            case 'host_learner_select_role': this.handleHostStringselectByType(interaction as StringSelectMenuInteraction, 0); break;
-            case 'host_learner_select_type': this.handleHostStringselectByType(interaction as StringSelectMenuInteraction, 0); break;
-            case 'host_learner_submit_select': this.handleHostAssignByType(interaction, 0); break;
             case 'host_learner_finish': this.finishHost(interaction as ButtonInteraction<'cached'>, 0); break;
             case 'host_learner_disband': this.disbandHost(interaction, 0); break;
             case 'host_learner_quickfinish': this.quickFinishHost(interaction, 0); break;
 
-            case 'host_lorebook_select_user': this.handleHostUserselectByType(interaction as UserSelectMenuInteraction, 1); break;
-            case 'host_lorebook_select_role': this.handleHostStringselectByType(interaction as StringSelectMenuInteraction, 1); break;
-            case 'host_lorebook_select_type': this.handleHostStringselectByType(interaction as StringSelectMenuInteraction, 1); break;
-            case 'host_lorebook_submit_select': this.handleHostAssignByType(interaction, 1); break;
             case 'host_lorebook_finish': this.finishHost(interaction as ButtonInteraction<'cached'>, 1); break;
             case 'host_lorebook_disband': this.disbandHost(interaction, 1); break;
             case 'host_lorebook_quickfinish': this.quickFinishHost(interaction, 1); break;
 
-            case 'host_trial_select_user': this.handleHostUserselectByType(interaction as UserSelectMenuInteraction, 2); break;
-            case 'host_trial_select_role': this.handleHostStringselectByType(interaction as StringSelectMenuInteraction, 2); break;
-            case 'host_trial_select_type': this.handleHostStringselectByType(interaction as StringSelectMenuInteraction, 2); break;
-            case 'host_trial_submit_select': this.handleHostAssignByType(interaction, 2); break;
-            case 'host_trial_pass': this.passHost(interaction as ButtonInteraction<'cached'>); break;
-            case 'host_trial_fail': this.failHost(interaction as ButtonInteraction<'cached'>); break;
             case 'host_trial_finish': this.finishHost(interaction as ButtonInteraction<'cached'>, 2); break;
             case 'host_trial_disband': this.disbandHost(interaction, 2); break;
-            case 'host_trial_quickfinish': this.quickFinishHost(interaction, 2); break;
         }
     }
 
@@ -95,21 +80,26 @@ export default class HostHandler {
         const learnerSelect = interaction.fields.getSelectedUsers('learner_select', true);
         const summary = interaction.fields.getTextInputValue('summary');
 
+        const pass = type === 2 ? interaction.fields.getStringSelectValues('trial_pass_select')[0] === 'pass' : false;
+
         const hosts = hostSelect.map(x => x.id);
         const learners = learnerSelect.map(x => x.id);
         const fillers = fillerSelect.map(x => x.id).filter(x => !learners.includes(x) && !hosts.includes(x));
 
-        const message = await interaction.channel!.messages.fetch({
-            limit: 1,
-            before: interaction.message!.id
-        });
+        const message = interaction.message;
 
         if (type === 0 || type === 1) {
             for (let index = 0; index < learners.length; index++) {
-                await HostHandler.saveHost(this.client, type, message?.first()?.url ?? null, hosts, fillers);
+                await HostHandler.saveHost(this.client, type, message!.url ?? null, hosts, fillers);
             }
         } else {
-            await HostHandler.saveHost(this.client, type, message?.first()?.url ?? null, hosts, fillers);
+            if (pass) {
+                const trialee = await interaction.guild!.members.fetch(learners[0]);
+                await this.passHost(interaction.member as GuildMember, message!, trialee);
+            }
+            // recording fails is not necessary
+
+            await HostHandler.saveHost(this.client, type, message!.url ?? null, hosts, fillers);
         }
 
         const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book' : type === 2 ? 'Trial' : 'Undefined';
@@ -119,7 +109,7 @@ export default class HostHandler {
 
         const teachersText = `### Hosts:\n${hosts.map(x => `<@${x}>`).join('\n')}`;
         const fillersText = `### Participants:\n${fillers.map(x => `<@${x}>`).join('\n')}`;
-        const learnersText = `### ${attendingTypeLabel}:\n${learners.map(x => `<@${x}>`).join('\n')}`;
+        const learnersText = `### ${attendingTypeLabel}:\n${learners.map(x => `<@${x}>`).join('\n')}${type === 2 ? pass ? '(passed)' : '(failed)' : ''}`;
 
         summaryContainer.addTextDisplayComponents(t => t.setContent(teachersText))
                 .addTextDisplayComponents(t => t.setContent(fillersText))
@@ -141,136 +131,12 @@ export default class HostHandler {
 
         await HostHandler.disableHost(interaction.message!);
 
-        await interaction.editReply('Learner hour finished!');
+        await interaction.editReply(`${hostTypeLabel} finished!`);
     }
 
     //#endregion
 
     //#region Signup Handlers
-
-    private async handleHostUserselectByType(interaction: UserSelectMenuInteraction, type: number) {
-        await interaction.deferUpdate();
-
-        const userIds: string[] = interaction.values;
-        const userIdSubmit: string = interaction.user.id;
-
-        this.client.tempSubmissionData?.set(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_user_${userIdSubmit}`, userIds);
-    }
-
-    private async handleHostStringselectByType(interaction: StringSelectMenuInteraction, type: number) {
-        await interaction.deferUpdate();
-
-        const roles: string[] = interaction.values;
-        const userIdSubmit: string = interaction.user.id;
-
-        if (interaction.customId === `host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_select_role`) {
-            this.client.tempSubmissionData?.set(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_role_${userIdSubmit}`, roles);
-        } else if (interaction.customId === `host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_select_type`) {
-            this.client.tempSubmissionData?.set(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_type_${userIdSubmit}`, roles);
-        }
-    }
-
-    private async handleHostAssignByType(interaction: Interaction, type: number) {
-        if (!('deferReply' in interaction && 'editReply' in interaction && 'message' in interaction)) {
-            return;
-        }
-
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-        if (type === 0) {
-            //check if user is teacher, admin or owner
-            if (!await this.client.util.hasRolePermissions(this.client, ['teacher', 'admin', 'owner'], interaction)) {
-                return await interaction.editReply('This action can only be used by Teachers!');
-            }
-        }
-
-        if (type === 1) {
-            //check if user is lore book crew, teacher, admin or owner
-            if (!await this.client.util.hasRolePermissions(this.client, ['lorebook', 'teacher', 'admin', 'owner'], interaction)) {
-                return await interaction.editReply('This action can only be used by Lore Book Crew and Teachers!');
-            }
-        }
-
-        if (type === 2) {
-            //check if user is trial team, admin or owner
-            if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
-                return await interaction.editReply('This action can only be used by Trial Team Members!');
-            }
-        }
-
-        const container = ComponentsV2Utils.cleanContainer(interaction.message!.components[0]);
-
-        //check submissionData
-        const userIdSubmit: string = interaction.user.id;
-
-        if (this.client.tempSubmissionData?.has(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_role_${userIdSubmit}`)
-            && this.client.tempSubmissionData?.has(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_user_${userIdSubmit}`)
-            && this.client.tempSubmissionData?.has(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_type_${userIdSubmit}`)) {
-            const user = this.client.tempSubmissionData.get(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_user_${userIdSubmit}`)[0];
-            const roles = this.client.tempSubmissionData.get(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_role_${userIdSubmit}`);
-            const typeSelect = this.client.tempSubmissionData.get(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_type_${userIdSubmit}`)[0];
-
-            // flush the tempSubmissionData so nothing is cached anymore
-            this.client.tempSubmissionData.delete(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_user_${userIdSubmit}`);
-            this.client.tempSubmissionData.delete(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_role_${userIdSubmit}`);
-            this.client.tempSubmissionData.delete(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_type_${userIdSubmit}`);
-
-            // fetch previous message, that contains the host
-            const message = await interaction.channel!.messages.fetch({
-                limit: 1,
-                before: interaction.message?.id
-            });
-
-            if (message) {
-                for (const role of roles) {
-                    await this.handleHostAssign(interaction, role, message.first()!, user);
-                }
-
-                let containerJson = JSON.stringify(container, null, 2);
-
-                if (typeSelect === 'host' || typeSelect === 'learner') {
-                    // update the control-panel
-                    const containerData = HostHandler.getHostData(containerJson);
-                    const data: Map<string, string> = containerData[0] as Map<string, string>;
-                    const userMention: string = `<@${user}>`;
-
-                    if (data.get(typeSelect)?.includes(userMention)) {
-                        // remove teacher / learner from host
-                        const oldValue = `${HostHandler.keyToLabel(typeSelect)}: ${data.get(typeSelect)}`.trim();
-                        const newValue = oldValue.replace(userMention, '');
-                        containerJson = containerJson.replace(oldValue, newValue);
-                    } else {
-                        // add teacher / learner to host
-                        const oldValue = `${HostHandler.keyToLabel(typeSelect)}: ${data.get(typeSelect) ? data.get(typeSelect): ''}`.trim();
-                        const newValue = `${oldValue} ${userMention}`;
-
-                        //edge case: card CAN not contain a learner yet, but always has a host
-                        if ((typeSelect === 'learner' && !containerJson.includes('Learner:'))
-                            || (typeSelect === 'trialee' && !containerJson.includes('Trialee:'))
-                         ) {
-                            containerJson = containerJson.replace('Host:', `${newValue}\\nHost:`);
-                        } else {
-                            containerJson = containerJson.replace(oldValue, newValue);
-                        }
-                    }
-                }
-
-                const newContainer = JSON.parse(containerJson);
-
-                const containers = [];
-                containers.push(newContainer);
-
-                // Reset Panel
-                return await interaction.message!.edit({
-                    components: containers,
-                    flags: MessageFlags.IsComponentsV2,
-                    allowedMentions: { 'parse': [] }
-                });
-            }
-        }
-
-        return interaction.editReply('You need to choose a role, user and type first!');
-    }
 
     private async handleHostAssign(interaction: Interaction, id: string, message: Message<boolean>, user: string | null = null) {
         if (!('deferReply' in interaction && 'editReply' in interaction && 'message' in interaction)) {
@@ -416,17 +282,13 @@ export default class HostHandler {
         }
     }
 
-    private async passHost(interaction: ButtonInteraction<'cached'>) {
-        if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
-            return await interaction.reply({ content: 'This action can only be used by Trial Team Members!', flags: MessageFlags.Ephemeral });
-        }
-
-        const container = ComponentsV2Utils.cleanContainer(interaction.message.components[0]);
+    private async passHost(host: GuildMember, message: Message, member: GuildMember) : Promise<string|undefined> {
+        const container = ComponentsV2Utils.cleanContainer(message.components[0]);
         const containerJson = JSON.stringify(container, null, 2);
 
         const enrageMatch = containerJson.match(/Enrage Mode - (\d+)% Enrage/);
         if (!enrageMatch) {
-            return await interaction.reply({ content: 'Could not determine enrage mode from host card.', flags: MessageFlags.Ephemeral });
+            return 'Could not determine enrage mode from host card.';
         }
 
         const enrage = enrageMatch[1];
@@ -439,33 +301,10 @@ export default class HostHandler {
         } else if (enrage === '2000') {
             roleKey = 'elite2000';
         } else {
-            return await interaction.reply({ content: `Invalid enrage: ${enrage}%. Must be 500%, 1000%, or 2000%.`, flags: MessageFlags.Ephemeral });
+            return `Invalid enrage: ${enrage}%. Must be 500%, 1000%, or 2000%.`;
         }
 
-        const genid = uuid.v4();
-
-        const modal = new ModalBuilder()
-            .setCustomId(`host_trial_pass_${genid}`)
-            .setTitle(`Pass Trial - ${enrage}% Enrage`);
-
-        const userSelect = new UserSelectMenuBuilder()
-            .setCustomId('trialed_user')
-            .setRequired(true)
-            .setMaxValues(1);
-
-        modal.addLabelComponents(label => label.setLabel('Who passed?').setUserSelectMenuComponent(userSelect));
-
-        await interaction.showModal(modal);
-
-        const filter = (i: ModalSubmitInteraction) => i.customId === `host_trial_pass_${genid}` && i.user.id === interaction.user.id;
-
         try {
-            const modalInteraction = await interaction.awaitModalSubmit({ filter, time: 900_000 });
-            await modalInteraction.deferReply({ flags: MessageFlags.Ephemeral });
-
-            const user = modalInteraction.fields.getSelectedUsers('trialed_user', true).first()!;
-            const member = await interaction.guild?.members.fetch(user.id);
-
             const trialedRoleId = this.client.roleIds[roleKey];
             const coverTagId = this.client.roleIds.elite;
 
@@ -479,8 +318,7 @@ export default class HostHandler {
             }
 
             await member?.roles.add(rolesToAdd);
-
-            const trialedRoleObject = await interaction.guild?.roles.fetch(trialedRoleId);
+            const trialedRoleObject = await member.guild?.roles.fetch(trialedRoleId);
             const { colours } = this.client.util;
 
             const confirmationChannel = this.client.channelIds.roleConfirmations
@@ -491,12 +329,12 @@ export default class HostHandler {
             if (confirmationChannel) {
                 const embed = new EmbedBuilder()
                     .setAuthor({
-                        name: interaction.user.username,
-                        iconURL: interaction.user.avatarURL() || undefined
+                        name: host.displayName,
+                        iconURL: host.avatarURL() || undefined
                     })
                     .setTimestamp()
                     .setColor(trialedRoleObject?.hexColor || colours.discord.green)
-                    .setDescription(`Congratulations to <@${user.id}> on achieving ${this.client.roles[roleKey]}!`);
+                    .setDescription(`Congratulations to <@${member.id}> on achieving ${this.client.roles[roleKey]}!`);
 
                 const message = await confirmationChannel.send({ embeds: [embed] });
                 messageUrl = message.url;
@@ -508,7 +346,7 @@ export default class HostHandler {
                 const logEmbed = new EmbedBuilder()
                     .setTimestamp()
                     .setColor(trialedRoleObject?.hexColor || colours.discord.green)
-                    .setDescription(`${this.client.roles[roleKey]} and ${this.client.roles.elite} were assigned to <@${user.id}> by <@${interaction.user.id}>.\n${messageUrl ? `**Message**: ${messageUrl}` : ''}`);
+                    .setDescription(`${this.client.roles[roleKey]} and ${this.client.roles.elite} were assigned to <@${member.id}> by <@${host.user.id}>.\n${messageUrl ? `**Message**: ${messageUrl}` : ''}`);
 
                 const buttonRow = new ActionRowBuilder<ButtonBuilder>()
                     .addComponents(
@@ -521,69 +359,9 @@ export default class HostHandler {
                 await logChannel.send({ embeds: [logEmbed], components: [buttonRow] });
             }
 
-            await modalInteraction.editReply(`${this.client.roles[roleKey]} and ${this.client.roles.elite} have been assigned to <@${user.id}>!`);
+            return `${this.client.roles[roleKey]} and ${this.client.roles.elite} have been assigned to <@${member.id}>!`;
         } catch (err) {
             this.client.logger.error({ message: 'Pass host error:', error: err });
-        }
-    }
-
-    private async failHost(interaction: ButtonInteraction<'cached'>) {
-        if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
-            return await interaction.reply({ content: 'This action can only be used by Trial Team Members!', flags: MessageFlags.Ephemeral });
-        }
-
-        const genid = uuid.v4();
-
-        const modal = new ModalBuilder()
-            .setCustomId(`host_trial_fail_${genid}`)
-            .setTitle('Fail Trial');
-
-        const userSelect = new UserSelectMenuBuilder()
-            .setCustomId('trialed_user')
-            .setRequired(true)
-            .setMaxValues(1);
-
-        modal.addLabelComponents(label => label.setLabel('Who failed?').setUserSelectMenuComponent(userSelect));
-
-        const noteInput = new TextInputBuilder()
-            .setCustomId('note')
-            .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('Optional note about the failure')
-            .setRequired(false);
-
-        modal.addLabelComponents(label => label.setLabel('Note (optional)').setTextInputComponent(noteInput));
-
-        await interaction.showModal(modal);
-
-        const filter = (i: ModalSubmitInteraction) => i.customId === `host_trial_fail_${genid}` && i.user.id === interaction.user.id;
-
-        try {
-            const modalInteraction = await interaction.awaitModalSubmit({ filter, time: 900_000 });
-            await modalInteraction.deferReply({ flags: MessageFlags.Ephemeral });
-
-            const user = modalInteraction.fields.getSelectedUsers('trialed_user', true).first()!;
-            const note = modalInteraction.fields.getTextInputValue('note');
-
-            const { colours } = this.client.util;
-
-            const logChannelId = this.client.channelIds.botRoleLog;
-            if (logChannelId) {
-                const logChannel = await this.client.channels.fetch(logChannelId) as TextChannel;
-                const failEmbed = new EmbedBuilder()
-                    .setAuthor({
-                        name: interaction.user.username,
-                        iconURL: interaction.user.avatarURL() || undefined
-                    })
-                    .setTimestamp()
-                    .setColor(colours.discord.red)
-                    .setDescription(`<@${user.id}> failed their trial. Reason: ${note || 'No reason provided.'}\nRecorded by: <@${interaction.user.id}>`);
-
-                await logChannel.send({ embeds: [failEmbed] });
-            }
-
-            await modalInteraction.editReply(`Trial failure recorded for <@${user.id}>.`);
-        } catch (err) {
-            this.client.logger.error({ message: 'Fail host error:', error: err });
         }
     }
 
@@ -632,7 +410,30 @@ export default class HostHandler {
             .setRequired(true)
             .setMaxValues(5);
 
-        modal.addLabelComponents(label => label.setLabel('Who were learning / getting book / trialing?').setUserSelectMenuComponent(learnerSelect));
+        if (type === 0) {
+            modal.addLabelComponents(label => label.setLabel('Who were learning?').setUserSelectMenuComponent(learnerSelect));
+        } else if (type === 1) {
+            modal.addLabelComponents(label => label.setLabel('Who were getting book?').setUserSelectMenuComponent(learnerSelect));
+        } else if (type === 2) {
+            modal.addLabelComponents(label => label.setLabel('Who was trialing?').setUserSelectMenuComponent(learnerSelect));
+
+            const passSelect = new StringSelectMenuBuilder()
+                .setCustomId('trial_pass_select')
+                .setRequired(true)
+                .setMaxValues(1)
+                .addOptions(
+                    {
+                        label: 'Pass',
+                        value: 'pass'
+                    },
+                    {
+                        label: 'Fail',
+                        value: 'fail'
+                    }
+                );
+
+            modal.addLabelComponents(label => label.setLabel('Did they pass or fail?').setStringSelectMenuComponent(passSelect));
+        }
 
         const summaryInput = new TextInputBuilder()
             .setCustomId('summary')
@@ -844,21 +645,12 @@ export default class HostHandler {
     }
 
     private static async disableHost(hostMessage: Message<boolean>): Promise<boolean> {
-        const message = await hostMessage.channel!.messages.fetch({
-            limit: 1,
-            before: hostMessage.id
-        });
+        // disable controls
+        //await ComponentsV2Utils.disableControls(message.first()!);
+        //await ComponentsV2Utils.disableControls(hostMessage);
+        await hostMessage.delete();
 
-        if (message) {
-            // disable controls
-            //await ComponentsV2Utils.disableControls(message.first()!);
-            //await ComponentsV2Utils.disableControls(hostMessage);
-            await message.first()!.delete();
-
-            return true;
-        }
-
-        return false;
+        return true;
     }
 
     static get roleCombinationBlacklist(): RoleIntersection {
@@ -945,20 +737,6 @@ export default class HostHandler {
                 const typeLabel = type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined';
 
                 const buttons: ButtonBuilder[] = [];
-
-                if (type === 2) {
-                    const passButton = new ButtonBuilder()
-                        .setCustomId(`host_trial_pass`)
-                        .setLabel('Pass')
-                        .setStyle(ButtonStyle.Success);
-
-                    const failButton = new ButtonBuilder()
-                        .setCustomId(`host_trial_fail`)
-                        .setLabel('Fail')
-                        .setStyle(ButtonStyle.Danger);
-
-                    buttons.push(passButton, failButton);
-                }
 
                 const finishButton = new ButtonBuilder()
                     .setCustomId(`host_${typeLabel}_finish`)
