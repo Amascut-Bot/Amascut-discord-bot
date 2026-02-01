@@ -100,7 +100,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialHosts: '1441933810873667734',
             trialApplications: '1389392070820630611',
             trialLounge: '1416027312369172481',
-            vodSubmissions: '0000000000000000000',
+            vodSubmissions: '1466832311629906015',
             vodReview: '1416026842753798276',
             trialeeTicketsCategory: '1464336828206415923',
             // Staging Guide Category
