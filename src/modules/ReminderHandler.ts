@@ -21,9 +21,9 @@ export default class ReminderHandler {
     }
 
     public startReminders() {
-        cron.schedule('*/2 * * *', () => {
-            this.sendHourlyReminders();
-            this.sendSurveyReminders(); // Uncomment when needed
+        cron.schedule('0 */2 * * *', async () => {
+            await this.sendHourlyReminders();
+            await this.sendSurveyReminders(); // Uncomment when needed
         });
         this.client.logger.log({
             message: 'Voice channel reminder system started (2-hour intervals)',
