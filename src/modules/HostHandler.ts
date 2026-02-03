@@ -321,8 +321,8 @@ export default class HostHandler {
             const trialedRoleObject = await member.guild?.roles.fetch(trialedRoleId);
             const { colours } = this.client.util;
 
-            const confirmationChannel = this.client.channelIds.roleConfirmations
-                ? await this.client.channels.fetch(this.client.channelIds.roleConfirmations) as TextChannel
+            const confirmationChannel = this.client.channelIds.achievements
+                ? await this.client.channels.fetch(this.client.channelIds.achievements) as TextChannel
                 : null;
 
             let messageUrl = '';
@@ -340,7 +340,7 @@ export default class HostHandler {
                 messageUrl = message.url;
             }
 
-            const logChannelId = this.client.channelIds.botRoleLog;
+            const logChannelId = this.client.channelIds.roleAssignLogs;
             if (logChannelId) {
                 const logChannel = await this.client.channels.fetch(logChannelId) as TextChannel;
                 const logEmbed = new EmbedBuilder()

@@ -268,7 +268,7 @@ export default class AutoTriggerHandler {
 
         if (await this.client.util.hasRolePermissionsMessage(this.client, ['admin', 'owner'], message)) return false;
 
-        const adminChannelId = this.client.channelIds.ADMIN_CHANNEL;
+        const adminChannelId = this.client.channelIds.admin;
         const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
 
         const banChannelId = this.client.channelIds.autoBanLogs;

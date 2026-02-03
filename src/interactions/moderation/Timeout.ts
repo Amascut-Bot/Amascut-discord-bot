@@ -52,7 +52,7 @@ export default class TimeoutCommand extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        const adminChannelId = this.client.channelIds.ADMIN_CHANNEL;
+        const adminChannelId = this.client.channelIds.admin;
 
         if (interaction.channel?.id === adminChannelId) {
             await interaction.deferReply();

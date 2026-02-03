@@ -2,7 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, 
 import BotInteraction from "../../types/BotInteraction";
 import Bot from "../../Bot";
 
-const LOG_CHANNEL_ID = '1045192967754883172';
+const reactionRoleLog = '1045192967754883172';
 
 export default class RoleExtend extends BotInteraction {
 
@@ -156,7 +156,7 @@ export default class RoleExtend extends BotInteraction {
 
     private async sendLog(interaction: ChatInputCommandInteraction, currentRole: Role, desiredRole1: Role, desiredRole2: Role, member: GuildMember, isMass: boolean, isDryRun: boolean, identifier: string) {
         try {
-            const logChannel = await this.client.channels.fetch(LOG_CHANNEL_ID) as TextChannel;
+            const logChannel = await this.client.channels.fetch(reactionRoleLog) as TextChannel;
             if (!logChannel) return;
 
             const dryRunText = isDryRun ? `[DRY RUN] ` : '';
