@@ -793,6 +793,17 @@ export default class TicketHandler {
                 }
             }
 
+            // sit non reading nerds
+            if (ticketType === 'trialee') {
+                const secretWord = formData.secretword.toLowerCase().trim();
+                if (!secretWord.includes('meow')) {
+                    await interaction.editReply({
+                        content: 'The secret word you provided is incorrect. Please read the channel and try again.'
+                    });
+                    return;
+                }
+            }
+
             const ticketNumber = await this.getNextTicketNumber(ticketType);
 
             const ticketChannel = await this.createTicketChannel(
@@ -1852,6 +1863,8 @@ export default class TicketHandler {
             const trialTeamRoleId = this.client.roleIds.trialTeam;
             const trialTeamTryoutRoleId = this.client.roleIds.trialTeamTryout;
 
+            const member = await guild.members.fetch(userId);
+
             // Create the channel with proper permissions
             const channel: TextChannel = await guild.channels.create({
                 name: channelName,
@@ -1968,13 +1981,31 @@ export default class TicketHandler {
                         ManageChannels: true,
                     }
                 );
+
+                // give user the notify role for trialees
+                switch (formData.tier) {
+                    case 'elite500':
+                        await member.roles.add(this.client.roleIds.elite500trialee).catch(() => {});
+                        break;
+
+                    case 'elite1000':
+                        await member.roles.add(this.client.roleIds.elite1000trialee).catch(() => {});
+                        break;
+
+                    case 'elite2000':
+                        await member.roles.add(this.client.roleIds.elite2000trialee).catch(() => {});
+                        break;
+
+                    default:
+                        break;
+                }
             }
 
             if (isStaffTicket || isReportTicket || isClearanceTicket) {
                 const adminRole = this.client.roles.admin;
                 const ownerRole = this.client.roles.owner;
 
-                const member = await guild.members.fetch(userId);
+
                 const thread = await channel.threads.create({
                     name: isStaffTicket ? `Discussion - ${member.displayName}`
                     : isReportTicket ? `Report - ${member.displayName}`
