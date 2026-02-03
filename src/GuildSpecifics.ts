@@ -150,6 +150,9 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             elite2000: '1464337925524160738',
             elite1000: '1464337906159190016',
             elite500: '1464337875503022135',
+            elite2000trialee: '1468296795879772183',
+            elite1000trialee: '1468296820319981568',
+            elite500trialee: '1468296846488375472',
 
             // KC Roles
             kc100: '1409628812915904652', // Cat-Bound Initiate
@@ -225,6 +228,9 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             elite2000: '1462529648326869184',
             elite1000: '1462529561551175844',
             elite500: '1462529277198205216',
+            elite2000trialee: '1468293818884558981',
+            elite1000trialee: '1468293781513175082',
+            elite500trialee: '1468293751461122303',
 
             // KC Roles
             kc100: '1401429471692722292', // Cat-Bound Initiate
