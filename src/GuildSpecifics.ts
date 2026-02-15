@@ -16,8 +16,6 @@ export function getChannels(guildId: string | undefined) : Channels {
             achievements: '1391860638577594528',
             roleAssignLogs: '1391860640674484227',
             tempVCCategory: '1391860639584096317',
-            tempVCCategory2: '1391860639584096317',
-            tempVCCategory3: '1391860639584096317',
             tempVCCreate: '1391860639584096318',
             afkVC: '1391860639584096319',
             godLogs: '1391860641916260488',
@@ -122,12 +120,6 @@ export function getChannels(guildId: string | undefined) : Channels {
             tempVCCategory: '885457551397912598',
             tempVCCreate: '1389392880518566138',
             afkVC: '1389391295130374237',
-
-            // voice channels 2
-            tempVCCategory2: '1402375561887748216',
-
-            // voice channels 3
-            tempVCCategory3: '1403384312782389400',
 
             // editor hub
             editorHub: '1389394110686953472',

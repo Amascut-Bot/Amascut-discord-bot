@@ -205,13 +205,13 @@ export default class HostHandler {
     //#region Posting Handlers
 
     private async handleHostPostByType(interaction: Interaction, id: string, type: number) {
-        if (!('deferReply' in interaction && 'editReply' in interaction && 'message' in interaction)) {
+        if (!('deferReply' in interaction && 'editReply' in interaction && 'message' in interaction && 'showModal' in interaction && 'awaitModalSubmit' in interaction)) {
             return;
         }
 
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
         if (type === 0) {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
             //check if user is teacher, admin or owner
             if (!await this.client.util.hasRolePermissions(this.client, ['teacher', 'admin', 'owner'], interaction)) {
                 return await interaction.editReply('This action can only be used by Teachers!');
@@ -219,6 +219,8 @@ export default class HostHandler {
         }
 
         if (type === 1) {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
             //check if user is lore book crew, teacher, admin or owner
             if (!await this.client.util.hasRolePermissions(this.client, ['lorebook', 'teacher', 'admin', 'owner'], interaction)) {
                 return await interaction.editReply('This action can only be used by Lore Book Crew and Teachers!');
@@ -228,7 +230,7 @@ export default class HostHandler {
         if (type === 2) {
             //check if user is trial team, admin or owner
             if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
-                return await interaction.editReply('This action can only be used by Trial Team Members!');
+                return await interaction.reply('This action can only be used by Trial Team Members!');
             }
         }
 
@@ -241,8 +243,80 @@ export default class HostHandler {
                             : type === 2 ? await interaction.guild?.channels.fetch(this.client.channelIds.trialHosts) as TextChannel
                             : await interaction.guild?.channels.fetch(this.client.channelIds.learnerHosts) as TextChannel;
 
+        let message: string | null = null;
+
+        if (type === 2) {
+            // ask for time, trialee, and additional message
+            const genid = `host-message-modal-${uuid.v4()}`
+
+            const modal = new ModalBuilder()
+                .setCustomId(genid)
+                .setTitle('Create Host');
+
+            // Trialee
+            if (!learner) {
+                const trialeeSelect = new UserSelectMenuBuilder()
+                .setCustomId('trialee_select')
+                .setRequired(false)
+                .setMaxValues(1);
+
+                modal.addLabelComponents(label => label.setLabel('Who is the trialee? (optional)').setUserSelectMenuComponent(trialeeSelect));
+            }
+
+            // Time
+            const timeInput = new TextInputBuilder()
+                .setCustomId('time')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(false)
+                .setMaxLength(100);
+
+            modal.addLabelComponents(label => label.setLabel('When is the trial? (optional)').setTextInputComponent(timeInput));
+
+            // Message
+            const messageInput = new TextInputBuilder()
+                .setCustomId('message')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(false)
+                .setMaxLength(200);
+
+            modal.addLabelComponents(label => label.setLabel('Additional Message (optional)').setTextInputComponent(messageInput));
+
+            await interaction.showModal(modal);
+
+            const filter = (i: ModalSubmitInteraction) => i.customId === genid && i.user.id === interaction.user.id;
+
+            try {
+                const modalInteraction = await interaction.awaitModalSubmit({ filter, time: 900_000 }); // 15 minutes
+
+                const trialeeSelect = !learner ? modalInteraction.fields.getSelectedUsers('trialee_select', false) : null;
+                const timeInput = modalInteraction.fields.getTextInputValue('time');
+                const messageInput = modalInteraction.fields.getTextInputValue('message');
+
+                message = `Trial hosted by <@${interaction.user.id}>:\\n`;
+                if (trialeeSelect && trialeeSelect.size > 0) {
+                    message += `Trialee: <@${trialeeSelect.first()!.id}>\\n`;
+                } else {
+                    message += `Trialee: <@${learner}>\\n`;
+                }
+
+                if (timeInput) message += `Time: ${timeInput}\\n`;
+                if (messageInput) message += `Message: ${messageInput}\\n`;
+
+                message = message.trim();
+
+                await HostHandler.postHost(hostChannel!, id, message, learner ? [learner] : null, [interaction.user.id], null, type);
+
+                return await modalInteraction.reply({ content: `Host card successfully created! Head over to <#${hostChannel.id}> to find your host.`, flags: MessageFlags.Ephemeral });
+            } catch (err) {
+                await interaction.editReply('Host creation cancelled.');
+
+                return;
+            }
+        }
+
+
         //set up the host card in it
-        await HostHandler.postHost(hostChannel!, id, null, learner ? [learner] : null, [interaction.user.id], null, type);
+        await HostHandler.postHost(hostChannel!, id, message, learner ? [learner] : null, [interaction.user.id], null, type);
 
         return await interaction.editReply(`Host card successfully created! Head over to <#${hostChannel.id}> to find your host.`);
     }
@@ -668,7 +742,8 @@ export default class HostHandler {
             "dogs": ["solocharge1", "solocharge2", "green1", "green2"],
             "jumper": ["glyphs"],
             "glyphs": ["jumper", "backupglyphs"],
-            "backupglyphs": ["glyphs"]
+            "backupglyphs": ["glyphs"],
+            "necromancer": [],
         }
     }
 
@@ -722,6 +797,8 @@ export default class HostHandler {
                 return "Trialee";
             case "participant":
                 return "Participant";
+            case "necromancer":
+                return "Necromancer";
             default:
                 return "";
         }
