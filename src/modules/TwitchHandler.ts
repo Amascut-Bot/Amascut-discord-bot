@@ -109,18 +109,18 @@ export default class TwitchHandler {
 
     private async sendLiveNotification(streamData: any, streamerInfo: MonitoredStreamer) {
         console.log(`--- DEBUG: Attempting to send notification for ${streamerInfo.displayName} ---`);
-        if (!this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL) {
-            this.client.logger.error({ message: 'TWITCH_NOTIFICATION_CHANNEL is not set in the environment variables.', error: new Error('TWITCH_NOTIFICATION_CHANNEL not set'), handler: this.constructor.name });
+        if (!this.client.channelIds.contentCreators) {
+            this.client.logger.error({ message: 'contentCreators is not set in the environment variables.', error: new Error('contentCreators not set'), handler: this.constructor.name });
             return;
         }
 
         try {
-            const channel = this.client.channels.cache.get(this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL);
+            const channel = this.client.channels.cache.get(this.client.channelIds.contentCreators);
             if (!channel) {
-                console.error(`--- DEBUG: Could not find channel with ID: ${this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL} ---`);
+                console.error(`--- DEBUG: Could not find channel with ID: ${this.client.channelIds.contentCreators} ---`);
                 this.client.logger.error({
                     message: 'Twitch notifications channel not found.',
-                    error: new Error(`Channel ID: ${this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL}`),
+                    error: new Error(`Channel ID: ${this.client.channelIds.contentCreators}`),
                     handler: 'TwitchHandler'
                 });
                 return;
@@ -220,7 +220,7 @@ export default class TwitchHandler {
                 return;
             }
 
-            const channel = this.client.channels.cache.get(this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL) as TextChannel;
+            const channel = this.client.channels.cache.get(this.client.channelIds.contentCreators) as TextChannel;
             if (!channel) {
                 console.error(`--- DEBUG: Could not find notification channel ---`);
                 return;
@@ -511,7 +511,7 @@ export default class TwitchHandler {
 
             container.addMediaGalleryComponents(footerThumbnail);
 
-            const channel = this.client.channels.cache.get(this.client.channelIds.TWITCH_NOTIFICATION_CHANNEL) as TextChannel;
+            const channel = this.client.channels.cache.get(this.client.channelIds.contentCreators) as TextChannel;
             if (!channel) return;
 
             // Update or create the dashboard message

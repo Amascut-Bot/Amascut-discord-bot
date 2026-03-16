@@ -1,6 +1,6 @@
 import Bot from '../Bot';
 import * as cron from 'node-cron';
-import { TextChannel, MessageFlags, ContainerBuilder, TextDisplayBuilder } from 'discord.js';
+import { TextChannel, MessageFlags, ContainerBuilder, TextDisplayBuilder, SeparatorSpacingSize } from 'discord.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -22,8 +22,8 @@ export default class ReminderHandler {
 
     public startReminders() {
         cron.schedule('0 */2 * * *', async () => {
-            await this.sendHourlyReminders();
-            await this.sendSurveyReminders(); // Uncomment when needed
+            await this.sendMyvcReminders();
+            await this.sendKeepsReminders(); // Uncomment when needed
         });
         this.client.logger.log({
             message: 'Voice channel reminder system started (2-hour intervals)',
@@ -31,7 +31,7 @@ export default class ReminderHandler {
         }, true);
     }
 
-    private async sendHourlyReminders() {
+    private async sendMyvcReminders() {
         const channels = this.client.channelIds;
         const targetChannels = [
             channels.casualTeams,
@@ -77,6 +77,11 @@ export default class ReminderHandler {
 
                 container.addTextDisplayComponents(reminderText);
 
+                if (channelId === channels.trialedTeams) {
+                    container.addSeparatorComponents(sep => sep.setSpacing(SeparatorSpacingSize.Small))
+                        .addTextDisplayComponents(text => text.setContent(`**Note:** Teams formed via <#${channels.trialedTeams}> must be comprised of atleast 4 out of 5 trialed members. Group members recruited from this channel must be notified prior if the group will not meet this requirement.`));
+                }
+
                 const newMessage = await channel.send({
                     components: [container],
                     flags: MessageFlags.IsComponentsV2,
@@ -101,7 +106,7 @@ export default class ReminderHandler {
         }
     }
 
-    private async sendSurveyReminders() {
+    private async sendKeepsReminders() {
         const channels = this.client.channelIds;
         const targetChannels = [
             channels.casualTeams,
@@ -205,7 +210,7 @@ export default class ReminderHandler {
     }
 
     public async triggerReminders() {
-        await this.sendHourlyReminders();
-        await this.sendSurveyReminders(); // Uncomment when needed
+        await this.sendMyvcReminders();
+        await this.sendKeepsReminders(); // Uncomment when needed
     }
 }

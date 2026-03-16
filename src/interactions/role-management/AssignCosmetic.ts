@@ -165,7 +165,7 @@ export default class Pass extends BotInteraction {
             */
         });
 
-        const logChannel = await this.client.channels.fetch(this.client.channelIds.botRoleLog) as TextChannel;
+        const logChannel = await this.client.channels.fetch(this.client.channelIds.roleAssignLogs) as TextChannel;
         const buttonRow = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
                 new ButtonBuilder()

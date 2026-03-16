@@ -9,7 +9,7 @@ export default class URLReactionHandler {
     }
 
     async handleURLReactions(message: Message): Promise<boolean> {
-        if (message.channel.id !== this.client.channelIds.CUTE_PETS_CHANNEL && message.channel.id !== this.client.channelIds.achievementsAndLogs) {
+        if (message.channel.id !== this.client.channelIds.cutePets && message.channel.id !== this.client.channelIds.achievements) {
             return false;
         }
 
@@ -18,7 +18,7 @@ export default class URLReactionHandler {
         }
 
         try {
-            if (message.channel.id === this.client.channelIds.CUTE_PETS_CHANNEL) {
+            if (message.channel.id === this.client.channelIds.cutePets) {
                 await message.react('❤️');
 
                 const emojis = ['cute', 'bulbaOWO'];
@@ -31,7 +31,7 @@ export default class URLReactionHandler {
                     }
                 }
             }
-            else if (message.channel.id === this.client.channelIds.achievementsAndLogs) {
+            else if (message.channel.id === this.client.channelIds.achievements) {
                 const emojis = ['POGSLIDECOG', 'hypers'];
 
                 for (let index = 0; index < emojis.length; index++) {

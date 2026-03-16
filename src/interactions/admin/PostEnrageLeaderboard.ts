@@ -27,7 +27,7 @@ export default class PostEnrageLeaderboard extends BotInteraction {
         if (!interaction.inCachedGuild()) return interaction.editReply('Command only available in guilds!');
 
         // Repost Leaderboard
-        const leaderboardChannelId = this.client.channelIds.leaderboards;
+        const leaderboardChannelId = this.client.channelIds.hallOfFame;
         const leaderboardChannel = await interaction.guild!.channels.fetch(leaderboardChannelId) as TextChannel;
         await LeaderboardHandler.postLeaderboard(leaderboardChannel, this.client, interaction.guild!.id);
 

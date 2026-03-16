@@ -32,7 +32,7 @@ export default class Purge extends BotInteraction {
         const member: GuildMember = await interaction.member.fetch(true);
         const memberEditorRole = member.roles.cache.get(this.client.roleIds?.editor);
         const isAdmin = member.roles.cache.some(role => role.id === this.client.roleIds.owner || role.id === this.client.roleIds.admin);
-        const stagingCategory: string = this.client.channelIds.stagingEditorHub!;
+        const stagingCategory: string = this.client.channelIds.editorHub!;
         const targetChannel = (interaction.options.getChannel('channel', false) || interaction.channel) as TextChannel;
 
         // check if the channel has a parent, if not then crash :)

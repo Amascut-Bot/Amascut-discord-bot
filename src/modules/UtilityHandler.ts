@@ -136,12 +136,12 @@ export default class UtilityHandler {
 
     public categorizeChannel = (role: string) => {
         const overrides = {
-            roleConfirmations: [''],
+            achievements: [''],
         }
         if (this.categories.killCount.includes(role) || this.categories.collectionLog.includes(role) || this.categories.vanity.includes(role) || this.categories.enrage.includes(role)) {
-            return 'achievementsAndLogs'
-        } else if (overrides.roleConfirmations.includes(role)) {
-            return 'roleConfirmations'
+            return 'achievements'
+        } else if (overrides.achievements.includes(role)) {
+            return 'achievements'
         } else {
             return ''
         }
@@ -230,13 +230,13 @@ export default class UtilityHandler {
     public async reuploadImage(url: string, filename?: string): Promise<string> {
         console.log(`--- DEBUG: Entered reuploadImage function for URL: ${url}`);
 
-        const assetChannelId = this.client.channelIds.botAssetChannel;
+        const assetChannelId = this.client.channelIds.godImageStorage;
         console.log(`--- DEBUG: Read assetChannelId from this.channels. It is: ${assetChannelId}`);
 
         if (!assetChannelId || assetChannelId === 'YOUR_CHANNEL_ID_HERE') {
-            console.error('--- DEBUG: FATAL: botAssetChannel is not configured in the environment variables or is set to placeholder.');
+            console.error('--- DEBUG: FATAL: godImageStorage is not configured in the environment variables or is set to placeholder.');
             this.client.logger.error({
-                message: 'botAssetChannel is not configured!',
+                message: 'godImageStorage is not configured!',
                 error: new Error('Asset channel not set or is placeholder.'),
                 handler: 'UtilityHandler'
             });
@@ -245,8 +245,8 @@ export default class UtilityHandler {
 
         try {
             console.log(`--- DEBUG: Attempting to fetch channel ${assetChannelId}`);
-            const botAssetChannel = await this.client.channels.fetch(assetChannelId) as TextChannel;
-            if (!botAssetChannel) {
+            const godImageStorage = await this.client.channels.fetch(assetChannelId) as TextChannel;
+            if (!godImageStorage) {
                 throw new Error(`Could not find the asset channel with ID: ${assetChannelId}`);
             }
 
@@ -261,7 +261,7 @@ export default class UtilityHandler {
             const attachment = new AttachmentBuilder(Buffer.from(response.data, 'binary'), { name: attachmentName });
 
             console.log(`--- DEBUG: Sending attachment to Discord channel with name: ${attachmentName}...`);
-            const message = await botAssetChannel.send({ files: [attachment] });
+            const message = await godImageStorage.send({ files: [attachment] });
             const newUrl = message.attachments.first()!.url;
 
             console.log(`--- DEBUG: Successfully re-uploaded. New URL: ${newUrl}`);

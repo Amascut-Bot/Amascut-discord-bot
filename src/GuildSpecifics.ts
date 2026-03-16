@@ -12,26 +12,21 @@ export function getChannels(guildId: string | undefined) : Channels {
     //AGOD Bot Testing (Patze)
     if (guildId === '1391860635347849367') {
         result = {
-            TWITCH_NOTIFICATION_CHANNEL: '1391860639063871581',
-            roleConfirmations: '1391860638577594521',
-            achievementsAndLogs: '1391860638577594528',
-            botRoleLog: '1391860640674484227',
-            reportLog: '1391860641316343983',
+            contentCreators: '1391860639063871581',
+            achievements: '1391860638577594528',
+            roleAssignLogs: '1391860640674484227',
             tempVCCategory: '1391860639584096317',
-            tempVCCategory2: '1391860639584096317',
-            tempVCCategory3: '1391860639584096317',
             tempVCCreate: '1391860639584096318',
             afkVC: '1391860639584096319',
-            uploadLogChannel: '1391860641916260488',
-            botAssetChannel: '1391860641916260488',
-            TICKET_TRANSCRIPT_CHANNEL: '1397705706358050948',
+            godLogs: '1391860641916260488',
+            godImageStorage: '1391860641916260488',
+            tickets: '1397705706358050948',
             VOUCH_TRANSCRIPT_CHANNEL: `1464685914637734103`,
-            MUSIC_CHANNEL: '1399769752246816841',
-            CUTE_PETS_CHANNEL: '1391860639063871579',
-            LOG_CHANNEL_ID: '1391860640674484228',
-            ADMIN_CHANNEL: '1391860637369372764',
+            cutePets: '1391860639063871579',
+            reactionRoleLog: '1391860640674484228',
+            admin: '1391860637369372764',
             leaderboardSubmission: '1401295942027841686',
-            leaderboards: '1401296432916467847',
+            hallOfFame: '1401296432916467847',
             casualTeams: '1391860639584096316',
             trialedTeams: '1391860639584096316',
             keepsOnly: '1391860639584096316',
@@ -60,56 +55,90 @@ export function getChannels(guildId: string | undefined) : Channels {
     //Amascut, Goddess of Destruction
     if (guildId === '885457551397912596') {
         result = {
-            TWITCH_NOTIFICATION_CHANNEL: '1390391961172836494',
-            roleConfirmations: '1389393398829682739', //'1389392006891045116',
-            achievementsAndLogs: '1389393398829682739',
-            botRoleLog: '1402724855287255070',
-            reportLog: '1389416667393556640',
-            tempVCCategory: '885457551397912598',
-            tempVCCategory2: '1402375561887748216',
-            tempVCCategory3: '1403384312782389400',
-            tempVCCreate: '1389392880518566138',
-            afkVC: '1389391295130374237',
-            uploadLogChannel: '1389412380626255872',
-            botAssetChannel: '1389417236367933470',
-            TICKET_TRANSCRIPT_CHANNEL: '1390801555724308591',
-            MUSIC_CHANNEL: '1393623447212527769',
-            CUTE_PETS_CHANNEL: '1389643125408010290',
-            LOG_CHANNEL_ID: '1389413228794216648',
-            ADMIN_CHANNEL: '1389379617915408448',
-            leaderboardSubmission: '1401295523020935218',
-            leaderboards: '1401296202116501544',
-            casualTeams: '1403494299903066142',
-            trialedTeams: '1401385848993222866',
-            keepsOnly: '1413114658541539410',
-            combatAchievements: '1422202006793097328',
+            // no category
+
+            // open tickets
             ticketCategory: '1404278113784823849',
+
+            // work in progress tickets
             wipTicketCategory: '1404834663339528362',
+
+            // helper applications
             staffTicketsCategory: '1416098705127375068',
-            // Learner Section Channels
-            lorebookTicketsCategory: '1439305836873777333',
+
+            // admin chats
+            admin: '1389379617915408448',
+
+            // admin stuff
+            tickets: '1390801555724308591',
+
+            // important
+
+            // information
+            hallOfFame: '1401296202116501544',
+            vodSubmissions: '1466832311629906015',
+            trialApplications: '1389392070820630611',
+
+            // community
+            achievements: '1389393398829682739',
+            cutePets: '1389643125408010290',
+            contentCreators: '1390391961172836494',
+
+            // learner tickets
             learnerTicketsCategory: '1412878315395481782',
+
+            // lore book crew tickets
+            lorebookTicketsCategory: '1439305836873777333',
+
+            // learners corner
             learnerCategory: '1404510300715356232',
             learnerTempVCCreate: '1405678891565187112',
             learnerWaiting: '1405668159922503810',
             learnerTeaching: '1405338959063814227',
             learnerHosts: '1411429884571422922',
             teachersChat: '1404510586536202453',
-            // Trial Team Channels
+
+            // trialee tickets
+            trialeeTicketsCategory: '1464336828206415923',
+
+            // trial team
             trialCategory: '1416026683659780148',
             trialHosts: '1441933810873667734',
-            trialApplications: '1389392070820630611',
             trialLounge: '1416027312369172481',
-            vodSubmissions: '1466832311629906015',
             vodReview: '1416026842753798276',
-            trialeeTicketsCategory: '1464336828206415923',
-            // Staging Guide Category
-            stagingEditorHub: '1389394110686953472',
-            // Prod Guide Category
-            editorHub: '1389410242210693212',
 
-            // Log Channels
+            // guides
+            guides: '1389410242210693212',
+
+            // teamforming
+            casualTeams: '1403494299903066142',
+            trialedTeams: '1401385848993222866',
+            keepsOnly: '1413114658541539410',
+            combatAchievements: '1422202006793097328',
+
+            // voice channels
+            tempVCCategory: '885457551397912598',
+            tempVCCreate: '1389392880518566138',
+            afkVC: '1389391295130374237',
+
+            // editor hub
+            editorHub: '1389394110686953472',
+
+            // logs
+            roleAssignLogs: '1402724855287255070',
+            godLogs: '1389412380626255872',
+            godImageStorage: '1389417236367933470',
+            reactionRoleLog: '1389413228794216648',
             autoBanLogs: '1445441478318096598',
+
+            // the archives
+            leaderboardSubmission: '1401295523020935218',
+
+            // thersguy event (archived)
+
+            // event waiting area (archived)
+
+            // storage
         }
     }
 

@@ -67,7 +67,7 @@ export default class Download extends BotInteraction {
 
                 // Send log message
                 try {
-                    const logChannelId = this.client.channelIds.uploadLogChannel;
+                    const logChannelId = this.client.channelIds.godLogs;
                     const logChannel = await this.client.channels.fetch(logChannelId);
                     if (logChannel instanceof TextChannel) {
                         // Create a new attachment to be sent to the log channel
@@ -177,7 +177,7 @@ export default class Download extends BotInteraction {
 
             // Send log message
             try {
-                const logChannelId = this.client.channelIds.uploadLogChannel;
+                const logChannelId = this.client.channelIds.godLogs;
                 const logChannel = await this.client.channels.fetch(logChannelId);
                 if (logChannel instanceof TextChannel) {
                     // Create a new attachment to be sent to the log channel
