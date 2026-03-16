@@ -2081,11 +2081,11 @@ export default class TicketHandler {
             let welcomeMessage = `<@${userId}>, your ticket has been created. An ${isStaffTicket || ticketType === 'report' ? 'Admin' : adminRole} or ${isStaffTicket ? 'Owner' : ownerRole} will be with you shortly.`;
 
             if (ticketType === 'learner') {
-                welcomeMessage = `<@${userId}>, your ticket has been created. A ${teacherRole} will be with you shortly.`;
+                welcomeMessage = `<@${userId}>, your ticket has been created. Someone will be with you shortly.`;
             }
 
             if (ticketType === 'lorebookkill') {
-                welcomeMessage = `<@${userId}>, your ticket has been created. A ${lorebookRole} will be with you shortly.`;
+                welcomeMessage = `<@${userId}>, your ticket has been created. Someone will be with you shortly.`;
             }
 
             if (ticketType === 'clearance') {
