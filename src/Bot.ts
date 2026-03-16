@@ -118,7 +118,7 @@ export default class Bot extends Client {
 
     async logReactionRoleChange(member: GuildMember, role: Role, action: 'added' | 'removed') {
         try {
-            const logChannel = await this.channels.fetch(this.channelIds.LOG_CHANNEL_ID) as TextChannel;
+            const logChannel = await this.channels.fetch(this.channelIds.reactionRoleLog) as TextChannel;
             if (!logChannel) return;
 
             const preposition = action === 'added' ? 'to' : 'from';

@@ -172,7 +172,7 @@
     },
     {
       "type": 10,
-      "content": "Glyphs: `empty`\nBackup Glyphs: `empty`"
+      "content": "Glyphs: `empty`\nBackup Glyphs: `empty`\nNecromancer: `empty`"
     },
     {
       "type": 1,
@@ -193,6 +193,15 @@
           "emoji": {
 	          "name": "💠"
 		      }
+        },
+        {
+          "type": 2,
+          "style": 2,
+          "custom_id": "host_assign_necromancer",
+          "emoji": {
+            "name": "necromancy",
+            "id": "1148995625896120460"
+          }
         }
       ]
     }

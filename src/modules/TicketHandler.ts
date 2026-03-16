@@ -749,7 +749,7 @@ export default class TicketHandler {
                 if (automodResult.ban || automodResult.timeout) {
                     // punish and dont continue with ticket creation
                     if (automodResult.timeout || automodResult.ban) {
-                        const adminChannelId = this.client.channelIds.ADMIN_CHANNEL;
+                        const adminChannelId = this.client.channelIds.admin;
                         const adminChannel = await this.client.channels.fetch(adminChannelId) as TextChannel;
 
                         const banChannelId = this.client.channelIds.autoBanLogs;
@@ -1229,7 +1229,7 @@ export default class TicketHandler {
 
         const transcriptChannelId = ticketType === 'vouch'
             ? this.client.channelIds.VOUCH_TRANSCRIPT_CHANNEL
-            : this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL;
+            : this.client.channelIds.tickets;
 
         const forumChannel = await channel.guild.channels.fetch(transcriptChannelId);
         if (!forumChannel || !forumChannel.isThreadOnly()) {
@@ -1651,8 +1651,8 @@ export default class TicketHandler {
         client.logger.log({ message: `[Transcript] Received download request for post ${forumPostId}.`, handler: 'ButtonHandler' }, true);
 
         try {
-            client.logger.log({ message: `[Transcript] Fetching forum channel ${client.channelIds.TICKET_TRANSCRIPT_CHANNEL}...`, handler: 'ButtonHandler' }, true);
-            const forumChannel = await client.channels.fetch(client.channelIds.TICKET_TRANSCRIPT_CHANNEL);
+            client.logger.log({ message: `[Transcript] Fetching forum channel ${client.channelIds.tickets}...`, handler: 'ButtonHandler' }, true);
+            const forumChannel = await client.channels.fetch(client.channelIds.tickets);
             if (!forumChannel || !forumChannel.isThreadOnly()) {
                 await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
                 return;
@@ -1738,8 +1738,8 @@ export default class TicketHandler {
         this.client.logger.log({ message: `[Transcript] Received download request for post ${forumPostId}.`, handler: this.constructor.name }, true);
 
         try {
-            this.client.logger.log({ message: `[Transcript] Fetching forum channel ${this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL}...`, handler: this.constructor.name }, true);
-            const forumChannel = await this.client.channels.fetch(this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL);
+            this.client.logger.log({ message: `[Transcript] Fetching forum channel ${this.client.channelIds.tickets}...`, handler: this.constructor.name }, true);
+            const forumChannel = await this.client.channels.fetch(this.client.channelIds.tickets);
             if (!forumChannel || !forumChannel.isThreadOnly()) {
                 await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
                 return;

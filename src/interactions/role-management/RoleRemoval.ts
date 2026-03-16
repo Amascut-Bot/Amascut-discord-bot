@@ -2,7 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, 
 import BotInteraction from "../../types/BotInteraction";
 import Bot from "../../Bot";
 
-const LOG_CHANNEL_ID = '1390351711868158102';
+const reactionRoleLog = '1390351711868158102';
 
 export default class RoleRemoval extends BotInteraction {
 
@@ -124,7 +124,7 @@ export default class RoleRemoval extends BotInteraction {
 
     private async sendLog(interaction: ChatInputCommandInteraction, role: Role, member: GuildMember, isMass: boolean) {
         try {
-            const logChannel = await this.client.channels.fetch(LOG_CHANNEL_ID) as TextChannel;
+            const logChannel = await this.client.channels.fetch(reactionRoleLog) as TextChannel;
             if (!logChannel) return;
 
             const description = isMass

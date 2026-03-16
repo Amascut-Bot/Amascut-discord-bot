@@ -109,7 +109,7 @@ export default class ClientReady extends BotEvent {
 
         // guild commands
         const guild = this.client.guilds.cache.find(guild => guild.id === process.env.GUILD_ID);
-        const logChannel = await guild?.channels.fetch(this.client.channelIds.uploadLogChannel);
+        const logChannel = await guild?.channels.fetch(this.client.channelIds.godLogs);
 
         let res = await guild!.commands.set(data).catch((e) => e);
         if (res instanceof Error) return this.client.logger.error({ error: res.stack, handler: this.constructor.name });

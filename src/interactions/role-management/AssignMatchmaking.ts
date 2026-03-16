@@ -105,8 +105,8 @@ export default class AssignMatchmaking extends BotInteraction {
 
         await member?.roles.add(rolesToAdd);
 
-        const confirmationChannel = this.client.channelIds.roleConfirmations
-            ? await this.client.channels.fetch(this.client.channelIds.roleConfirmations) as TextChannel
+        const confirmationChannel = this.client.channelIds.achievements
+            ? await this.client.channels.fetch(this.client.channelIds.achievements) as TextChannel
             : null;
 
         let messageUrl = '';
@@ -124,7 +124,7 @@ export default class AssignMatchmaking extends BotInteraction {
             messageUrl = message.url;
         }
 
-        const logChannelId = this.client.channelIds.botRoleLog;
+        const logChannelId = this.client.channelIds.roleAssignLogs;
         const logChannel = logChannelId ? await this.client.channels.fetch(logChannelId) as TextChannel : null;
         if (logChannel) {
             const logEmbed = new EmbedBuilder()

@@ -41,7 +41,7 @@ export default class Warn extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        const adminChannelId = this.client.channelIds.ADMIN_CHANNEL;
+        const adminChannelId = this.client.channelIds.admin;
 
         if (interaction.channel?.id === adminChannelId) {
             await interaction.deferReply();
@@ -58,7 +58,7 @@ export default class Warn extends BotInteraction {
 
         const { dataSource } = this.client;
         const repository = dataSource.getRepository(Warning);
-        if (reportRef !== null && reportRef?.parentId !== this.client.channelIds.TICKET_TRANSCRIPT_CHANNEL && reportRef?.parentId !== this.client.channelIds.ticketCategory && reportRef?.parentId !== this.client.channelIds.wipTicketCategory) {
+        if (reportRef !== null && reportRef?.parentId !== this.client.channelIds.tickets && reportRef?.parentId !== this.client.channelIds.ticketCategory && reportRef?.parentId !== this.client.channelIds.wipTicketCategory) {
             const response = this.client.cv2.getContainerBuilder(false, this.name)
                 .addTextDisplayComponents(builder => builder.setContent('You can only use the report reference option in the ticket channel!'));
             return await interaction.editReply({ components: [response], flags: MessageFlags.IsComponentsV2 });

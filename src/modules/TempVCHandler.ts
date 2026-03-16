@@ -30,8 +30,8 @@ export default class TempChannelManager {
 
         try {
             const primaryCategory = await this.client.channels.fetch(channels.tempVCCategory);
-            const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
-            const tertiaryCategory = await this.client.channels.fetch(channels.tempVCCategory3);
+            // const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
+            // const tertiaryCategory = await this.client.channels.fetch(channels.tempVCCategory3);
             const learnerCategory = await this.client.channels.fetch(channels.learnerCategory);
 
             if (primaryCategory && primaryCategory.type === ChannelType.GuildCategory) {
@@ -42,21 +42,21 @@ export default class TempChannelManager {
                 }
             }
 
-            if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory) {
-                const secondaryVcs = await secondaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
+            // if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory) {
+            //     const secondaryVcs = await secondaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
 
-                for (const [_, vc] of secondaryVcs) {
-                    this.tempChannelIds.add(vc.id);
-                }
-            }
+            //     for (const [_, vc] of secondaryVcs) {
+            //         this.tempChannelIds.add(vc.id);
+            //     }
+            // }
 
-            if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory) {
-                const tertiaryVcs = await tertiaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
+            // if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory) {
+            //     const tertiaryVcs = await tertiaryCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
 
-                for (const [_, vc] of tertiaryVcs) {
-                    this.tempChannelIds.add(vc.id);
-                }
-            }
+            //     for (const [_, vc] of tertiaryVcs) {
+            //         this.tempChannelIds.add(vc.id);
+            //     }
+            // }
 
             if (learnerCategory && learnerCategory.type === ChannelType.GuildCategory) {
                 const learnerVcs = await learnerCategory.children.cache.filter(c => c.type === ChannelType.GuildVoice && !excludedChannels.includes(c.id));
@@ -144,15 +144,15 @@ export default class TempChannelManager {
                     return await this.createTempChannel(guild, channels.tempVCCategory, member, 'primary');
                 }
 
-                const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
-                if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory && secondaryCategory.children.cache.size < 50) {
-                    return await this.createTempChannel(guild, channels.tempVCCategory2, member, 'secondary');
-                }
+                // const secondaryCategory = await this.client.channels.fetch(channels.tempVCCategory2);
+                // if (secondaryCategory && secondaryCategory.type === ChannelType.GuildCategory && secondaryCategory.children.cache.size < 50) {
+                //     return await this.createTempChannel(guild, channels.tempVCCategory2, member, 'secondary');
+                // }
 
-                const tertiaryCategory = await this.client.channels.fetch(channels.tempVCCategory3);
-                if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory && tertiaryCategory.children.cache.size < 50) {
-                    return await this.createTempChannel(guild, channels.tempVCCategory3, member, 'tertiary');
-                }
+                // const tertiaryCategory = await this.client.channels.fetch(channels.tempVCCategory3);
+                // if (tertiaryCategory && tertiaryCategory.type === ChannelType.GuildCategory && tertiaryCategory.children.cache.size < 50) {
+                //     return await this.createTempChannel(guild, channels.tempVCCategory3, member, 'tertiary');
+                // }
             } else if (category === 'learner') {
                 const learnerCategory = await this.client.channels.fetch(channels.learnerCategory);
                 if (learnerCategory && learnerCategory.type === ChannelType.GuildCategory && learnerCategory.children.cache.size < 50) {

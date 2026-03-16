@@ -128,7 +128,7 @@ export default class UploadHandler {
             });
         }
 
-        const logChannelId = this.client.channelIds.uploadLogChannel;
+        const logChannelId = this.client.channelIds.godLogs;
         if (logChannelId && logChannelId !== 'YOUR_CHANNEL_ID_HERE') {
             const logChannel = await this.client.channels.fetch(logChannelId) as TextChannel;
             if (logChannel) {

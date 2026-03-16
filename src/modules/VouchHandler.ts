@@ -121,8 +121,8 @@ export default class VouchHandler {
             const roleObject = await interaction.guild?.roles.fetch(this.client.roleIds[vouch.role]);
 
             let messageUrl = '';
-            const confirmChannel = this.client.channelIds.roleConfirmations
-                ? await this.client.channels.fetch(this.client.channelIds.roleConfirmations) as TextChannel : null;
+            const confirmChannel = this.client.channelIds.achievements
+                ? await this.client.channels.fetch(this.client.channelIds.achievements) as TextChannel : null;
 
             if (confirmChannel) {
                 const msg = await confirmChannel.send({
@@ -134,8 +134,8 @@ export default class VouchHandler {
                 messageUrl = msg.url;
             }
 
-            const logChannel = this.client.channelIds.botRoleLog
-                ? await this.client.channels.fetch(this.client.channelIds.botRoleLog) as TextChannel : null;
+            const logChannel = this.client.channelIds.roleAssignLogs
+                ? await this.client.channels.fetch(this.client.channelIds.roleAssignLogs) as TextChannel : null;
 
             if (logChannel) {
                 const voucherList = vouches.map(v => `<@${v.voucher}>`).join(', ');
