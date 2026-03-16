@@ -22,6 +22,15 @@ export default class AssignMatchmaking extends BotInteraction {
         return ['elite500', 'elite1000', 'elite2000'];
     }
 
+    // Mapping for bundled notify roles - extendable by adding entries
+    get notifyRoles() {
+        return {
+            'elite500': 'notifyElite500',
+            'elite1000': 'notifyElite1000',
+            'elite2000': 'notifyElite2000'
+        };
+    }
+
     get slashData() {
         return new SlashCommandBuilder()
             .setName(this.name)
@@ -54,6 +63,8 @@ export default class AssignMatchmaking extends BotInteraction {
         const roleKey: string = interaction.options.getString('role', true);
         const { colours } = this.client.util;
 
+        const notifyRoleKey = this.notifyRoles[roleKey as keyof typeof this.notifyRoles];
+
         const member = await interaction.guild?.members.fetch(targetUser.id);
         const userRoleIds = member?.roles.cache.map(r => r.id) || [];
 
@@ -85,6 +96,11 @@ export default class AssignMatchmaking extends BotInteraction {
 
         for (const lowerRole of lowerRoles) {
             rolesToAdd.push(this.client.roleIds[lowerRole]);
+        }
+
+        // Bundle notify role if defined for this trialed role
+        if (notifyRoleKey) {
+            rolesToAdd.push(this.client.roleIds[notifyRoleKey]);
         }
 
         await member?.roles.add(rolesToAdd);

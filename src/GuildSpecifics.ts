@@ -261,6 +261,11 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             elite1000trialee: '1468293781513175082',
             elite500trialee: '1468293751461122303',
 
+            // Notify Roles
+            notifyElite2000: '1462531083135357031',
+            notifyElite1000: '1462531053230227699',
+            notifyElite500: '1462531007382028288',
+
             // KC Roles
             kc100: '1401429471692722292', // Cat-Bound Initiate
             kc250: '1401429722704904313', // Scarab-Marked Disciple
