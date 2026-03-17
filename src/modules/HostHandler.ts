@@ -470,14 +470,14 @@ export default class HostHandler {
             .setRequired(true)
             .setMaxValues(5);
 
-        modal.addLabelComponents(label => label.setLabel('Who were hosting?').setUserSelectMenuComponent(hostSelect));
+        modal.addLabelComponents(label => label.setLabel('Who was the host?').setUserSelectMenuComponent(hostSelect));
 
         const fillerSelect = new UserSelectMenuBuilder()
             .setCustomId('filler_select')
             .setRequired(true)
             .setMaxValues(5);
 
-        modal.addLabelComponents(label => label.setLabel('Who were participating?').setUserSelectMenuComponent(fillerSelect));
+        modal.addLabelComponents(label => label.setLabel('Who participated?').setUserSelectMenuComponent(fillerSelect));
 
         const learnerSelect = new UserSelectMenuBuilder()
             .setCustomId('learner_select')
@@ -485,11 +485,11 @@ export default class HostHandler {
             .setMaxValues(5);
 
         if (type === 0) {
-            modal.addLabelComponents(label => label.setLabel('Who were learning?').setUserSelectMenuComponent(learnerSelect));
+            modal.addLabelComponents(label => label.setLabel('Who was learning?').setUserSelectMenuComponent(learnerSelect));
         } else if (type === 1) {
-            modal.addLabelComponents(label => label.setLabel('Who were getting book?').setUserSelectMenuComponent(learnerSelect));
+            modal.addLabelComponents(label => label.setLabel('Who was getting the lorebook?').setUserSelectMenuComponent(learnerSelect));
         } else if (type === 2) {
-            modal.addLabelComponents(label => label.setLabel('Who was trialing?').setUserSelectMenuComponent(learnerSelect));
+            modal.addLabelComponents(label => label.setLabel('Who was the trialee?').setUserSelectMenuComponent(learnerSelect));
 
             const passSelect = new StringSelectMenuBuilder()
                 .setCustomId('trial_pass_select')
@@ -515,7 +515,7 @@ export default class HostHandler {
             .setRequired(true)
             .setMaxLength(4000);
 
-        modal.addLabelComponents(label => label.setLabel('Summarize the hour').setTextInputComponent(summaryInput));
+        modal.addLabelComponents(label => label.setLabel('Summarise the hour').setTextInputComponent(summaryInput));
 
         await interaction.showModal(modal);
     }
@@ -577,7 +577,7 @@ export default class HostHandler {
             .setRequired(true)
             .setMaxValues(5);
 
-        modal.addLabelComponents(label => label.setLabel('Who were hosting?').setUserSelectMenuComponent(hostSelect));
+        modal.addLabelComponents(label => label.setLabel('Who was the host?').setUserSelectMenuComponent(hostSelect));
 
         // Fillers
         const fillerSelect = new UserSelectMenuBuilder()
@@ -585,7 +585,7 @@ export default class HostHandler {
             .setRequired(true)
             .setMaxValues(5);
 
-        modal.addLabelComponents(label => label.setLabel('Who were participating?').setUserSelectMenuComponent(fillerSelect));
+        modal.addLabelComponents(label => label.setLabel('Who participated?').setUserSelectMenuComponent(fillerSelect));
 
         // Fillers
         const learnerSelect = new UserSelectMenuBuilder()
@@ -593,7 +593,7 @@ export default class HostHandler {
             .setRequired(true)
             .setMaxValues(5);
 
-        modal.addLabelComponents(label => label.setLabel('Who were learning / getting book / trialing?').setUserSelectMenuComponent(learnerSelect));
+        modal.addLabelComponents(label => label.setLabel('Who was learning / getting the lorebook / trialing?').setUserSelectMenuComponent(learnerSelect));
 
         // Summary
         const summaryInput = new TextInputBuilder()
@@ -602,7 +602,7 @@ export default class HostHandler {
             .setRequired(true)
             .setMaxLength(4000);
 
-        modal.addLabelComponents(label => label.setLabel('Summarize the hour').setTextInputComponent(summaryInput));
+        modal.addLabelComponents(label => label.setLabel('Summarise the hour').setTextInputComponent(summaryInput));
 
         await interaction.showModal(modal);
 
