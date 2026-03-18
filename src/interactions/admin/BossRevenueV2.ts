@@ -133,7 +133,7 @@ export default class BossRevenueV2 extends BotInteraction {
                 
                 container.addSeparatorComponents(separator => separator.setSpacing(1));
                 container.addTextDisplayComponents(builder => builder.setContent(
-                    `*-# All GP/Hour values are approximate and based on ${config.kph} kills per hour. Data taken from the [RS Wiki](https://runescape.wiki/w/Amascut,_the_Devourer) drop tables using current GE prices (includes -2% for tax).*`
+                    `*-# All GP/Hour values are approximate and based on ${config.kph} kills per hour. Data is taken from the [GEPrice.com](https://discord.gg/qvaaUX2fcK) price checking service for uniques, with [RS Wiki](https://runescape.wiki/w/Amascut,_the_Devourer) pricing for common loot.*`
                 ));
 
                 const message = await interaction.channel.send({ 
@@ -675,7 +675,7 @@ export default class BossRevenueV2 extends BotInteraction {
                 
                 container.addSeparatorComponents(separator => separator.setSpacing(1));
                 container.addTextDisplayComponents(builder => builder.setContent(
-                    `*-# All GP/Hour values are approximate and based on ${config.kph} kills per hour. Data taken from the [RS Wiki](https://runescape.wiki/w/Amascut,_the_Devourer) drop tables using current GE prices (includes -2% for tax).*`
+                    `*-# All GP/Hour values are approximate and based on ${config.kph} kills per hour. Data is taken from the [GEPrice.com](https://discord.gg/qvaaUX2fcK) price checking service for uniques, with [RS Wiki](https://runescape.wiki/w/Amascut,_the_Devourer) pricing for common loot.*`
                 ));
 
                 await message.edit({ 
