@@ -5,6 +5,25 @@ import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
 
+interface GePriceApiResponse {
+    itemId: number;
+    itemName: string;
+    lastBuy: number;
+    lastSell: number;
+}
+
+const GEPRICE_UNIQUE_ITEMS: Record<string, number> = {
+    "Devourer's Guard": 59354,
+    "Tumeken's Light": 59350,
+    "Mask of Tumeken's resplendence": 59344,
+    "Robe top of Tumeken's resplendence": 59336,
+    "Robe bottom of Tumeken's resplendence": 59346,
+    "Gloves of Tumeken's resplendence": 59342,
+    "Boots of Tumeken's resplendence": 59340,
+    "The Devourer's Nexus": 59358,
+    "Shard of Genesis Essence": 57128
+};
+
 interface DropTableItem {
     name: string;
     quantity: number;
@@ -174,6 +193,18 @@ export default class BossRevenueV2 extends BotInteraction {
 
         const config = this.loadBossConfig();
         const itemPrices = await this.getItemPrices(dropTable.map(item => item.name));
+        const uniquePrices = await this.getUniquePricesFromGePriceApi();
+
+        for (const drop of dropTable) {
+            if (drop.isUnique) {
+                const matchingKey = Object.keys(GEPRICE_UNIQUE_ITEMS).find(
+                    key => drop.name.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(drop.name.toLowerCase())
+                );
+                if (matchingKey && uniquePrices[matchingKey] !== undefined) {
+                    itemPrices[drop.name] = uniquePrices[matchingKey];
+                }
+            }
+        }
 
         let overallValue = 0;
         for (const drop of dropTable) {
@@ -513,6 +544,32 @@ export default class BossRevenueV2 extends BotInteraction {
             "Gloves of Tumeken's resplendence", "Boots of Tumeken's resplendence"
         ];
         return uniques.some(unique => itemName.toLowerCase().includes(unique.toLowerCase()));
+    }
+
+    private async getUniquePricesFromGePriceApi(): Promise<Record<string, number>> {
+        const priceMap: Record<string, number> = {};
+
+        await Promise.all(
+            Object.entries(GEPRICE_UNIQUE_ITEMS).map(async ([itemName, itemId]) => {
+                try {
+                    const response = await axios.get<GePriceApiResponse>(
+                        `https://api.geprice.com/api/prices/${itemId}?numDays=30`,
+                        { headers: { 'User-Agent': 'Amascut-Discord-Bot - Boss Revenue Calculator' }, timeout: 10000 }
+                    );
+                    const { lastBuy, lastSell } = response.data;
+                    if (lastBuy && lastSell) {
+                        priceMap[itemName] = Math.round((lastBuy + lastSell) / 2);
+                    } else if (lastBuy) {
+                        priceMap[itemName] = lastBuy;
+                    } else if (lastSell) {
+                        priceMap[itemName] = lastSell;
+                    }
+                } catch {
+                }
+            })
+        );
+
+        return priceMap;
     }
 
     private async getItemPrices(itemNames: string[]): Promise<Record<string, number>> {
