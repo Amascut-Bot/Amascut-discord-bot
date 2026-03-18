@@ -1976,6 +1976,7 @@ export default class TicketHandler {
                         EmbedLinks: true,
                         ManageMessages: true,
                         ManageChannels: true,
+                        ManageThreads: true,
                     }
                 );
 
@@ -1989,6 +1990,7 @@ export default class TicketHandler {
                         EmbedLinks: true,
                         ManageMessages: true,
                         ManageChannels: true,
+                        ManageThreads: true,
                     }
                 );
 
@@ -2101,7 +2103,7 @@ export default class TicketHandler {
             }
 
             if (ticketType === 'trialee') {
-                welcomeMessage = `<@${userId}>, your ticket has been created. A member of the ${trialTeamRole} will be with you shortly.`;
+                welcomeMessage = `<@${userId}>, your ticket has been created. Someone will be with you shortly.`;
             }
 
             // Create embed with form data using fields for better organization
@@ -2342,28 +2344,41 @@ export default class TicketHandler {
             }
 
             if (ticketType === 'trialee') {
-                const container = this.client.cv2.getContainerBuilder(null, '### Trial Team Controls');
+                const thread = await channel.threads.create({
+                    name: 'Trial Team Controls',
+                    type: ChannelType.PrivateThread,
+                    invitable: false,
+                    autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+                    reason: 'Trial team controls thread'
+                });
+
+                await thread.send({
+                    content: trialTeamRole,
+                    allowedMentions: { parse: ['roles'] }
+                });
+
+                const container = this.client.cv2.getContainerBuilder(null, 'Trials - Post a quick host card by clicking one of these Buttons');
                 container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
                     [
                         new ButtonBuilder()
                             .setCustomId('host_trial_post_500')
-                            .setLabel('Host 500%')
+                            .setLabel('500%')
                             .setStyle(ButtonStyle.Secondary),
                         new ButtonBuilder()
                             .setCustomId('host_trial_post_1000')
-                            .setLabel('Host 1000%')
+                            .setLabel('1000%')
                             .setStyle(ButtonStyle.Secondary),
                         new ButtonBuilder()
                             .setCustomId('host_trial_post_2000')
-                            .setLabel('Host 2000%')
+                            .setLabel('2000%')
                             .setStyle(ButtonStyle.Secondary),
                     ]
                 ));
 
-                await channel.send({
+                await thread.send({
                     components: [container],
                     flags: MessageFlags.IsComponentsV2,
-                    allowedMentions: { 'parse': [] }
+                    allowedMentions: { parse: [] }
                 });
             }
 
