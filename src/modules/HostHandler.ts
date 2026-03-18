@@ -234,8 +234,11 @@ export default class HostHandler {
             }
         }
 
-        //find from ticket
-        const learner = await TicketHandler.findTicketOpener(interaction.channel as TextChannel, this.client);
+        //find from ticket - if the interaction comes from a thread, resolve the parent channel
+        const ticketChannel = interaction.channel?.isThread()
+            ? await interaction.guild?.channels.fetch(interaction.channel.parentId!) as TextChannel
+            : interaction.channel as TextChannel;
+        const learner = await TicketHandler.findTicketOpener(ticketChannel, this.client);
 
         //grab hosts channel
         const hostChannel = type === 0 ? await interaction.guild?.channels.fetch(this.client.channelIds.learnerHosts) as TextChannel
