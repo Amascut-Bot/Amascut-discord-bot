@@ -307,9 +307,9 @@ export default class HostHandler {
 
                 message = message.trim();
 
-                await HostHandler.postHost(hostChannel!, id, message, learner ? [learner] : null, [interaction.user.id], null, type);
+                await HostHandler.postHost(interaction.channel as TextChannel, id, message, learner ? [learner] : null, [interaction.user.id], null, type);
 
-                return await modalInteraction.reply({ content: `Host card successfully created! Head over to <#${hostChannel.id}> to find your host.`, flags: MessageFlags.Ephemeral });
+                return await modalInteraction.reply({ content: 'Host card successfully created!', flags: MessageFlags.Ephemeral });
             } catch (err) {
                 await interaction.editReply('Host creation cancelled.');
 
