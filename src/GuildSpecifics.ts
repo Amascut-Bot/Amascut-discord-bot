@@ -46,6 +46,9 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialLounge: '1405664850469847122',
             autoBanLogs: '1450965697378386115',
             trialeeTicketsCategory: '1412871767932010547',
+            trialee500TicketsCategory: '1412871767932010547',
+            trialee1000TicketsCategory: '1412871767932010547',
+            trialee2000TicketsCategory: '1412871767932010547',
             vouchTicketsCategory: `1464678728410992844`,
             vodSubmissions: `1464589392843767860`,
             vodReview: `1464589425932632155`
@@ -99,7 +102,9 @@ export function getChannels(guildId: string | undefined) : Channels {
             teachersChat: '1404510586536202453',
 
             // trialee tickets
-            trialeeTicketsCategory: '1464336828206415923',
+            trialee500TicketsCategory: '1464336828206415923',
+            trialee1000TicketsCategory: '1483844686467563530',
+            trialee2000TicketsCategory: '1483844787357614210',
 
             // trial team
             trialCategory: '1416026683659780148',
