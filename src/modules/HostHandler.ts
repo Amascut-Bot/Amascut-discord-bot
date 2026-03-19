@@ -395,6 +395,13 @@ export default class HostHandler {
             }
 
             await member?.roles.add(rolesToAdd);
+
+            const trialeeRoleKey = `${roleKey}trialee`;
+            const trialeeRoleId = this.client.roleIds[trialeeRoleKey];
+            if (trialeeRoleId) {
+                await member?.roles.remove(trialeeRoleId).catch(() => {});
+            }
+
             const trialedRoleObject = await member.guild?.roles.fetch(trialedRoleId);
             const { colours } = this.client.util;
 

@@ -105,6 +105,12 @@ export default class AssignMatchmaking extends BotInteraction {
 
         await member?.roles.add(rolesToAdd);
 
+        const trialeeRoleKey = `${roleKey}trialee`;
+        const trialeeRoleId = this.client.roleIds[trialeeRoleKey];
+        if (trialeeRoleId) {
+            await member?.roles.remove(trialeeRoleId).catch(() => {});
+        }
+
         const confirmationChannel = this.client.channelIds.achievements
             ? await this.client.channels.fetch(this.client.channelIds.achievements) as TextChannel
             : null;
