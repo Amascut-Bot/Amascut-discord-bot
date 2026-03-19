@@ -57,6 +57,11 @@ export default class AutoTriggerHandler {
             }
         }
 
+        if (message.author.id === '561059859290652672' && message.content.includes('...')) {
+            await message.reply('...');
+            return true;
+        }
+
         return false;
     }
 
