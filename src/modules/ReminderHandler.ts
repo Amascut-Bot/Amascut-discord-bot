@@ -21,7 +21,7 @@ export default class ReminderHandler {
     }
 
     public startReminders() {
-        cron.schedule('0 */2 * * *', async () => {
+        cron.schedule('*/1 * * * *', async () => {
             await this.sendMyvcReminders();
             await this.sendKeepsReminders(); // Uncomment when needed
         });
@@ -36,7 +36,7 @@ export default class ReminderHandler {
         const targetChannels = [
             channels.casualTeams,
             channels.trialedTeams,
-            channels.keepsOnly,
+            channels.splitsOnly,
             channels.combatAchievements,
         ].filter(Boolean);
 
