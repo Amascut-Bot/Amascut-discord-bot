@@ -394,6 +394,14 @@ export default class HostHandler {
                 rolesToAdd.push(this.client.roleIds[lowerRole]);
             }
 
+            const notifyRoleMap: Record<string, string> = {
+                'elite500': 'notifyElite500',
+                'elite1000': 'notifyElite1000',
+                'elite2000': 'notifyElite2000'
+            };
+            const notifyRoleId = this.client.roleIds[notifyRoleMap[roleKey]];
+            if (notifyRoleId) rolesToAdd.push(notifyRoleId);
+
             await member?.roles.add(rolesToAdd);
 
             const trialeeRoleKey = `${roleKey}trialee`;
