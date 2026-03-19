@@ -116,9 +116,9 @@ export function getChannels(guildId: string | undefined) : Channels {
             guides: '1389410242210693212',
 
             // teamforming
-            casualTeams: '1403494299903066142',
+            casualTeams: '1413114658541539410',
             trialedTeams: '1401385848993222866',
-            splitsOnly: '1413114658541539410',
+            splitsOnly: '1403494299903066142',
             combatAchievements: '1422202006793097328',
 
             // voice channels
