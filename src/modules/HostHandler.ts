@@ -234,8 +234,11 @@ export default class HostHandler {
             }
         }
 
-        //find from ticket
-        const learner = await TicketHandler.findTicketOpener(interaction.channel as TextChannel, this.client);
+        //find from ticket - if the interaction comes from a thread, resolve the parent channel
+        const ticketChannel = interaction.channel?.isThread()
+            ? await interaction.guild?.channels.fetch(interaction.channel.parentId!) as TextChannel
+            : interaction.channel as TextChannel;
+        const learner = await TicketHandler.findTicketOpener(ticketChannel, this.client);
 
         //grab hosts channel
         const hostChannel = type === 0 ? await interaction.guild?.channels.fetch(this.client.channelIds.learnerHosts) as TextChannel
@@ -304,9 +307,9 @@ export default class HostHandler {
 
                 message = message.trim();
 
-                await HostHandler.postHost(hostChannel!, id, message, learner ? [learner] : null, [interaction.user.id], null, type);
+                await HostHandler.postHost(interaction.channel as TextChannel, id, message, learner ? [learner] : null, [interaction.user.id], null, type);
 
-                return await modalInteraction.reply({ content: `Host card successfully created! Head over to <#${hostChannel.id}> to find your host.`, flags: MessageFlags.Ephemeral });
+                return await modalInteraction.reply({ content: 'Host card successfully created!', flags: MessageFlags.Ephemeral });
             } catch (err) {
                 await interaction.editReply('Host creation cancelled.');
 
