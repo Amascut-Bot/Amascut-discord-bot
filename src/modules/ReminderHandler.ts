@@ -145,7 +145,7 @@ export default class ReminderHandler {
                 container.setAccentColor(this.client.color);
 
                 const reminderText = new TextDisplayBuilder()
-                    .setContent('# Important\nAll hours are splits (Ironmen keeps) unless specified otherwise as per our <#1389379617915408445>.\nKeeps must be hosted in <#1413114658541539410> to avoid confusion.');
+                    .setContent('# Important\nAll hours are **KEEPS** unless specified otherwise as per our <#1389379617915408445>.\nSplits must be hosted in <#1403494299903066142> to avoid confusion.');
 
                 container.addTextDisplayComponents(reminderText);
 
