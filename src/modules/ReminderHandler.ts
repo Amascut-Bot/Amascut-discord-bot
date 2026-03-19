@@ -36,7 +36,7 @@ export default class ReminderHandler {
         const targetChannels = [
             channels.casualTeams,
             channels.trialedTeams,
-            channels.keepsOnly,
+            channels.splitsOnly,
             channels.combatAchievements,
         ].filter(Boolean);
 
