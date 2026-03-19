@@ -145,7 +145,7 @@ export default class ReminderHandler {
                 container.setAccentColor(this.client.color);
 
                 const reminderText = new TextDisplayBuilder()
-                    .setContent('# Important\nAll hours are **KEEPS** unless specified otherwise as per our <#1389379617915408445>.\nSplits must be hosted in <#1403494299903066142> to avoid confusion.');
+                    .setContent('# Important\nAll hours are **KEEPS** unless specified otherwise as per our <#1389379617915408445>.\nSplits must be hosted in <#1403494299903066142> to avoid confusion.\nPlease do not ping the notify roles more than once every 30 minutes.');
 
                 container.addTextDisplayComponents(reminderText);
 
