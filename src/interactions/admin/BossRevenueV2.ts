@@ -179,9 +179,9 @@ export default class BossRevenueV2 extends BotInteraction {
         try {
             const configPath = path.join(process.cwd(), 'boss-configs.json');
             const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-            return configData.amascut || { kph: 6 };
+            return configData.amascut || { kph: 7 };
         } catch (error) {
-            return { kph: 6 };
+            return { kph: 7 };
         }
     }
 
