@@ -609,7 +609,7 @@ export default class BossRevenueV2 extends BotInteraction {
                 configData = {};
             }
 
-            if (!configData.amascut) configData.amascut = { kph: 6 };
+            if (!configData.amascut) configData.amascut = { kph: 7.5 };
             
             configData.amascut.lastMessageId = messageId;
             configData.amascut.lastChannelId = channelId;
