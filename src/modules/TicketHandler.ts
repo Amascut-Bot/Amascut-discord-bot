@@ -2301,7 +2301,7 @@ export default class TicketHandler {
                     [
                         new ButtonBuilder()
                             .setCustomId('host_learner_quickfinish')
-                            .setLabel('Finish an host')
+                            .setLabel('Complete ticket')
                             .setStyle(ButtonStyle.Secondary)
                     ]
                 ));
@@ -2317,7 +2317,7 @@ export default class TicketHandler {
                 const container = this.client.cv2.getContainerBuilder(null, '## Additional information');
                 container.addTextDisplayComponents(builder => builder.setContent([
                     '- Please change your discord nickname to your RSN if you haven\'t already',
-                    '- Before your scheduled hour, please review <#1404510914526580837> and the roles found in <#1405324280522346657>',
+                    '- Before your scheduled kill, please review <#1404510914526580837> and the roles found in <#1405324280522346657>',
                     '- Some mechanics include the distinction between red, blue and green colours, please let us know if you are colourblind to accomodate for that'
                 ].join('\n')));
 
@@ -2331,7 +2331,7 @@ export default class TicketHandler {
                             .setStyle(ButtonStyle.Secondary),
                         new ButtonBuilder()
                             .setCustomId('host_lorebook_quickfinish')
-                            .setLabel('Finish an host')
+                            .setLabel('Complete ticket')
                             .setStyle(ButtonStyle.Secondary)
                     ]
                 ));
