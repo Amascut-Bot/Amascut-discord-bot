@@ -3,7 +3,7 @@ export interface Channels {
 }
 
 export interface Roles {
-    [roleName: string]: string;
+    [roleName: string]: string | string[];
 }
 
 export function getChannels(guildId: string | undefined) : Channels {
@@ -242,6 +242,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             admin: '1389526658167603230',
             trialTeam: '1436786514922311831',
             trialTeamTryout: '1436750954585264380',
+            trialTeamElevated: ['168684955851816960', '254926455924981762', '808550091328979006', '610023932212412441'], //Theum, Deadlox, Feeh, Ultizema
             reaper: '1390444833537130568',
             teacher: '1412881470673916077',
             helperLearner: '1404509333185892422',
