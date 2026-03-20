@@ -3,7 +3,7 @@ export interface Channels {
 }
 
 export interface Roles {
-    [roleName: string]: string;
+    [roleName: string]: string | string[];
 }
 
 export function getChannels(guildId: string | undefined) : Channels {
@@ -112,13 +112,16 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialLounge: '1416027312369172481',
             vodReview: '1416026842753798276',
 
+            // vouch tickets
+            vouchTicketsCategory: '1484592041647407134',
+            
             // guides
             guides: '1389410242210693212',
 
             // teamforming
-            casualTeams: '1413114658541539410',
+            casualTeams: '1403494299903066142',
             trialedTeams: '1401385848993222866',
-            splitsOnly: '1403494299903066142',
+            keepsOnly: '1413114658541539410',
             combatAchievements: '1422202006793097328',
 
             // voice channels
@@ -239,6 +242,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             admin: '1389526658167603230',
             trialTeam: '1436786514922311831',
             trialTeamTryout: '1436750954585264380',
+            trialTeamElevated: ['168684955851816960', '254926455924981762', '808550091328979006', '610023932212412441'], //Theum, Deadlox, Feeh, Ultizema
             reaper: '1390444833537130568',
             teacher: '1412881470673916077',
             helperLearner: '1404509333185892422',
