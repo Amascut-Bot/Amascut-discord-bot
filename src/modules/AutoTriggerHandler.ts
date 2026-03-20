@@ -44,7 +44,7 @@ export default class AutoTriggerHandler {
 
         if (message.guild?.id !== process.env.GUILD_ID) return false;
 
-        if (await this.handleKeeps(message)) return true;
+        if (await this.handleSplits(message)) return true;
 
         if (!await this.handleYoink(message)) return true;
 
@@ -249,10 +249,9 @@ export default class AutoTriggerHandler {
     private static readonly splitsKeywords = [
         'splits',
         'split',
-        'spli',
     ];
 
-    private async handleKeeps(message: Message): Promise<boolean> {
+    private async handleSplits(message: Message): Promise<boolean> {
         const teamformingChannels = [this.client.channelIds.casualTeams];
 
         if (teamformingChannels.includes(message.channelId) && (AutoTriggerHandler.splitsKeywords.some((keyword) => { return message.content.toLowerCase().includes(keyword)})) && 'send' in message.channel) {
