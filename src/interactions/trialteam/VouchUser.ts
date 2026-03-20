@@ -1,8 +1,8 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, OverwriteType, PermissionFlagsBits, SlashCommandBuilder, TextChannel, User } from 'discord.js';
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, User } from 'discord.js';
 import { Vouch } from '../../entity/Vouch';
-import { Ticket } from '../../entity/Ticket';
 import { VouchBlacklist } from '../../entity/VouchBlacklist';
+import TicketHandler from '../../modules/TicketHandler';
 
 export default class VouchUser extends BotInteraction {
     get name() {
@@ -87,7 +87,6 @@ export default class VouchUser extends BotInteraction {
 
         const REQUIRED_VOUCHES = 2;
 
-        // Get all pending vouches for this user
         const allVouchesForUser = await vouchRepository.find({
             where: {
                 vouchee: targetUser.id,
@@ -95,21 +94,17 @@ export default class VouchUser extends BotInteraction {
             }
         });
 
-        // Find the highest tier that qualifies (has 2+ vouches) and doesn't have a ticket yet
         let highestQualifyingRole: string | null = null;
         let qualifyingVouchesForTicket: Vouch[] = [];
 
-        // Loop from highest to lowest (reverse)
         for (let i = roleIndex; i >= 0; i--) {
             const checkRole = hierarchy[i];
 
-            // Count vouches that are for the checkRole or any role higher in hierarchy
             const qualifyingVouches = allVouchesForUser.filter(v => {
                 const vouchRoleIndex = hierarchy.indexOf(v.role);
                 return vouchRoleIndex >= i;
             });
 
-            // Check if ticket already exists for this specific role
             const existingTicketForRole = allVouchesForUser.some(v =>
                 v.ticketRole === checkRole
             );
@@ -121,107 +116,10 @@ export default class VouchUser extends BotInteraction {
             }
         }
 
-        // Create ticket for the highest qualifying role only
         if (highestQualifyingRole) {
-            await this.createVouchTicket(interaction, targetUser, highestQualifyingRole, qualifyingVouchesForTicket);
+            await TicketHandler.createVouchTicket(this.client, interaction, targetUser, highestQualifyingRole, qualifyingVouchesForTicket);
         }
 
         await interaction.editReply(`Vouch submitted for <@${targetUser.id}> - ${this.client.roles[roleKey]}`);
-    }
-
-    private async createVouchTicket(interaction: ChatInputCommandInteraction, targetUser: User, roleKey: string, vouches: Vouch[]) {
-        const vouchCount = await this.client.dataSource.getRepository(Vouch).count();
-        const channelName = `vouch-${vouchCount.toString().padStart(4, '0')}`;
-
-        const ticketChannel = await interaction.guild?.channels.create({
-            name: channelName,
-            type: ChannelType.GuildText,
-            parent: this.client.channelIds.vouchTicketsCategory,
-            permissionOverwrites: [
-                {
-                    id: interaction.guild.id,
-                    deny: [PermissionFlagsBits.ViewChannel]
-                },
-                {
-                    id: targetUser.id,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                    type: OverwriteType.Member
-                },
-                {
-                    id: this.client.roleIds.admin,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
-                    type: OverwriteType.Role
-                },
-                {
-                    id: this.client.roleIds.owner,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
-                    type: OverwriteType.Role
-                },
-                {
-                    id: this.client.roleIds.trialTeam,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-                    type: OverwriteType.Role
-                }
-            ]
-        }) as TextChannel;
-
-        if (!ticketChannel) return;
-
-        const vouchFields = vouches.map((v, i) => ({
-            name: `Vouch ${i + 1}`,
-            value: `**Voucher:** <@${v.voucher}>\n**RSN:** ${v.rsn}\n**Description:** ${v.description}`,
-            inline: false
-        }));
-
-        const vouchEmbed = new EmbedBuilder()
-            .setTitle('Elite Role Vouch - Approval Required')
-            .setColor(this.client.color)
-            .addFields(
-                { name: 'Vouchee', value: `<@${targetUser.id}>`, inline: false },
-                { name: 'Role', value: this.client.roles[roleKey], inline: false },
-                ...vouchFields,
-                { name: 'Votes', value: '✅ 0 | ❌ 0', inline: false }
-            )
-            .setTimestamp();
-
-        const approveButton = new ButtonBuilder()
-            .setCustomId('vouch_approve')
-            .setLabel('Approve')
-            .setStyle(ButtonStyle.Success);
-
-        const rejectButton = new ButtonBuilder()
-            .setCustomId('vouch_reject')
-            .setLabel('Reject')
-            .setStyle(ButtonStyle.Danger);
-
-        const closeButton = new ButtonBuilder()
-            .setCustomId('ticket_close')
-            .setLabel('Close Ticket')
-            .setStyle(ButtonStyle.Secondary);
-
-        const voteRow = new ActionRowBuilder<ButtonBuilder>().addComponents(approveButton, rejectButton);
-        const controlRow = new ActionRowBuilder<ButtonBuilder>().addComponents(closeButton);
-
-        await ticketChannel.send({ embeds: [vouchEmbed], components: [voteRow, controlRow] });
-
-        const ticketRepository = this.client.dataSource.getRepository(Ticket);
-        const ticket = ticketRepository.create({
-            channelId: ticketChannel.id,
-            userOpen: targetUser.id,
-            ticketType: 3
-        });
-        await ticketRepository.save(ticket);
-
-        const vouchRepository = this.client.dataSource.getRepository(Vouch);
-        for (const vouch of vouches) {
-            vouch.ticketChannelId = ticketChannel.id;
-            vouch.ticketRole = roleKey;
-            await vouchRepository.save(vouch);
-        }
-
-        await interaction.followUp({
-            content: `Vouch ticket created for <@${targetUser.id}>: <#${ticketChannel.id}>`,
-            flags: MessageFlags.Ephemeral
-        });
     }
 }
