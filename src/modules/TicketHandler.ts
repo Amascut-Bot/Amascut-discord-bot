@@ -1239,10 +1239,25 @@ export default class TicketHandler {
             ? this.client.channelIds.VOUCH_TRANSCRIPT_CHANNEL
             : this.client.channelIds.tickets;
 
-        const forumChannel = await channel.guild.channels.fetch(transcriptChannelId);
-        if (!forumChannel || !forumChannel.isThreadOnly()) {
-            throw new Error('Could not find or access the forum channel.');
+        const transcriptChannel = await channel.guild.channels.fetch(transcriptChannelId);
+        if (!transcriptChannel) {
+            throw new Error('Could not find the transcript channel.');
         }
+
+        // Text channel path (e.g. vouch transcript channel)
+        if (transcriptChannel.type !== ChannelType.GuildForum) {
+            if (!transcriptChannel.isTextBased() || transcriptChannel.isThread()) {
+                throw new Error('Transcript channel is not a supported channel type.');
+            }
+            const textChannel = transcriptChannel as TextChannel;
+            const sentMessage = await textChannel.send({
+                embeds: originalTicketEmbed ? [summaryEmbed, originalTicketEmbed] : [summaryEmbed],
+                files: [transcriptAttachment]
+            });
+            return `msg:${textChannel.id}:${sentMessage.id}`;
+        }
+
+        const forumChannel = transcriptChannel;
 
         const tagName = ticketType === 'contentcreator' ? 'Content Creator' : ticketType === 'clearance' ? 'report' :
                        ticketType.charAt(0).toUpperCase() + ticketType.slice(1);
@@ -1588,10 +1603,10 @@ export default class TicketHandler {
                 }
             }, 5000);
 
-        } catch (error) {
+        } catch (error: any) {
             this.client.logger.error({
                 message: 'Failed to delete ticket',
-                error,
+                error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
                 handler: this.constructor.name
             });
 
@@ -1659,31 +1674,33 @@ export default class TicketHandler {
         client.logger.log({ message: `[Transcript] Received download request for post ${forumPostId}.`, handler: 'ButtonHandler' }, true);
 
         try {
-            client.logger.log({ message: `[Transcript] Fetching forum channel ${client.channelIds.tickets}...`, handler: 'ButtonHandler' }, true);
-            const forumChannel = await client.channels.fetch(client.channelIds.tickets);
-            if (!forumChannel || !forumChannel.isThreadOnly()) {
-                await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
-                return;
-            }
-            client.logger.log({ message: `[Transcript] Forum channel found. Fetching thread ${forumPostId}...`, handler: 'ButtonHandler' }, true);
+            let transcriptAttachment: any;
 
-            const thread = await forumChannel.threads.fetch(forumPostId);
-            if (!thread) {
-                await interaction.editReply({ content: 'Error: Could not find the specific transcript for this ticket.' });
-                return;
+            if (forumPostId.startsWith('msg:')) {
+                const [, channelId, messageId] = forumPostId.split(':');
+                client.logger.log({ message: `[Transcript] Text channel transcript. Channel: ${channelId}, Message: ${messageId}`, handler: 'ButtonHandler' }, true);
+                const textChannel = await client.channels.fetch(channelId) as TextChannel;
+                const message = await textChannel.messages.fetch(messageId);
+                transcriptAttachment = message?.attachments.first();
+            } else {
+                client.logger.log({ message: `[Transcript] Fetching forum channel ${client.channelIds.tickets}...`, handler: 'ButtonHandler' }, true);
+                const forumChannel = await client.channels.fetch(client.channelIds.tickets);
+                if (!forumChannel || forumChannel.type !== ChannelType.GuildForum) {
+                    await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
+                    return;
+                }
+                client.logger.log({ message: `[Transcript] Forum channel found. Fetching thread ${forumPostId}...`, handler: 'ButtonHandler' }, true);
+                const thread = await forumChannel.threads.fetch(forumPostId);
+                if (!thread) {
+                    await interaction.editReply({ content: 'Error: Could not find the specific transcript for this ticket.' });
+                    return;
+                }
+                const starterMessage = await thread.fetchStarterMessage();
+                transcriptAttachment = starterMessage?.attachments.first();
             }
-            client.logger.log({ message: `[Transcript] Thread found. Fetching starter message...`, handler: 'ButtonHandler' }, true);
 
-            const starterMessage = await thread.fetchStarterMessage();
-            if (!starterMessage || starterMessage.attachments.size === 0) {
-                await interaction.editReply({ content: 'Error: The archived transcript is missing its attachment.' });
-                return;
-            }
-            client.logger.log({ message: `[Transcript] Starter message found. Getting attachment...`, handler: 'ButtonHandler' }, true);
-
-            const transcriptAttachment = starterMessage.attachments.first();
             if (!transcriptAttachment) {
-                await interaction.editReply({ content: 'Error: Could not retrieve the transcript attachment.' });
+                await interaction.editReply({ content: 'Error: The archived transcript is missing its attachment.' });
                 return;
             }
             client.logger.log({ message: `[Transcript] Attachment found: ${transcriptAttachment.name}. URL: ${transcriptAttachment.url}`, handler: 'ButtonHandler' }, true);
@@ -1746,31 +1763,33 @@ export default class TicketHandler {
         this.client.logger.log({ message: `[Transcript] Received download request for post ${forumPostId}.`, handler: this.constructor.name }, true);
 
         try {
-            this.client.logger.log({ message: `[Transcript] Fetching forum channel ${this.client.channelIds.tickets}...`, handler: this.constructor.name }, true);
-            const forumChannel = await this.client.channels.fetch(this.client.channelIds.tickets);
-            if (!forumChannel || !forumChannel.isThreadOnly()) {
-                await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
-                return;
-            }
-            this.client.logger.log({ message: `[Transcript] Forum channel found. Fetching thread ${forumPostId}...`, handler: this.constructor.name }, true);
+            let transcriptAttachment: any;
 
-            const thread = await forumChannel.threads.fetch(forumPostId);
-            if (!thread) {
-                await interaction.editReply({ content: 'Error: Could not find the specific transcript for this ticket.' });
-                return;
+            if (forumPostId.startsWith('msg:')) {
+                const [, channelId, messageId] = forumPostId.split(':');
+                this.client.logger.log({ message: `[Transcript] Text channel transcript. Channel: ${channelId}, Message: ${messageId}`, handler: this.constructor.name }, true);
+                const textChannel = await this.client.channels.fetch(channelId) as TextChannel;
+                const message = await textChannel.messages.fetch(messageId);
+                transcriptAttachment = message?.attachments.first();
+            } else {
+                this.client.logger.log({ message: `[Transcript] Fetching forum channel ${this.client.channelIds.tickets}...`, handler: this.constructor.name }, true);
+                const forumChannel = await this.client.channels.fetch(this.client.channelIds.tickets);
+                if (!forumChannel || forumChannel.type !== ChannelType.GuildForum) {
+                    await interaction.editReply({ content: 'Error: Could not find the transcript archive.' });
+                    return;
+                }
+                this.client.logger.log({ message: `[Transcript] Forum channel found. Fetching thread ${forumPostId}...`, handler: this.constructor.name }, true);
+                const thread = await forumChannel.threads.fetch(forumPostId);
+                if (!thread) {
+                    await interaction.editReply({ content: 'Error: Could not find the specific transcript for this ticket.' });
+                    return;
+                }
+                const starterMessage = await thread.fetchStarterMessage();
+                transcriptAttachment = starterMessage?.attachments.first();
             }
-            this.client.logger.log({ message: `[Transcript] Thread found. Fetching starter message...`, handler: this.constructor.name }, true);
 
-            const starterMessage = await thread.fetchStarterMessage();
-            if (!starterMessage || starterMessage.attachments.size === 0) {
-                await interaction.editReply({ content: 'Error: The archived transcript is missing its attachment.' });
-                return;
-            }
-            this.client.logger.log({ message: `[Transcript] Starter message found. Getting attachment...`, handler: this.constructor.name }, true);
-
-            const transcriptAttachment = starterMessage.attachments.first();
             if (!transcriptAttachment) {
-                await interaction.editReply({ content: 'Error: Could not retrieve the transcript attachment.' });
+                await interaction.editReply({ content: 'Error: The archived transcript is missing its attachment.' });
                 return;
             }
             this.client.logger.log({ message: `[Transcript] Attachment found: ${transcriptAttachment.name}. URL: ${transcriptAttachment.url}`, handler: this.constructor.name }, true);
