@@ -164,6 +164,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             admin: '1391860635507363883',
             trialTeam: '1391860635347849375',
             trialTeamTryout: '1391860635347849375',
+            vouchTeam: '1484617729515323596',
             reaper: '1391860635347849374',
             teacher: '1412871872374116463',
             helperLearner: '1412871872374116463',
