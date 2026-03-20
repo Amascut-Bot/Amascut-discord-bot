@@ -258,7 +258,7 @@ export default class AutoTriggerHandler {
         if (teamformingChannels.includes(message.channelId) && (AutoTriggerHandler.keepsKeywords.some((keyword) => { return message.content.toLowerCase().includes(keyword)})) && 'send' in message.channel) {
             if (await this.client.util.hasRolePermissionsMessage(this.client, ['admin', 'owner'], message)) return false;
 
-            await message.channel.send(`<@${message.member?.id}> use <#${this.client.channelIds.keepsOnly}> for keeps!`);
+            await message.channel.send(`<@${message.member?.id}> use <#${this.client.channelIds.splitsOnly}> for keeps!`);
             await message.delete();
             return true;
         }
