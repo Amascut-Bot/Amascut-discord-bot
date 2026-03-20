@@ -21,7 +21,6 @@ export function getChannels(guildId: string | undefined) : Channels {
             godLogs: '1391860641916260488',
             godImageStorage: '1391860641916260488',
             tickets: '1397705706358050948',
-            VOUCH_TRANSCRIPT_CHANNEL: `1464685914637734103`,
             cutePets: '1391860639063871579',
             reactionRoleLog: '1391860640674484228',
             admin: '1391860637369372764',
