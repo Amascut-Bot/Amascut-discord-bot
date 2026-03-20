@@ -2553,36 +2553,41 @@ export default class TicketHandler {
         const vouchCount = await client.dataSource.getRepository(Vouch).count();
         const channelName = `vouch-${vouchCount.toString().padStart(4, '0')}`;
 
+        const permissionOverwrites: any[] = [
+            {
+                id: interaction.guild!.id,
+                deny: [PermissionFlagsBits.ViewChannel]
+            },
+            {
+                id: targetUser.id,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                type: OverwriteType.Member
+            },
+            {
+                id: client.roleIds.admin,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
+                type: OverwriteType.Role
+            },
+            {
+                id: client.roleIds.owner,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
+                type: OverwriteType.Role
+            }
+        ];
+
+        if (client.roleIds.vouchTeam) {
+            permissionOverwrites.push({
+                id: client.roleIds.vouchTeam,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                type: OverwriteType.Role
+            });
+        }
+
         const ticketChannel = await interaction.guild?.channels.create({
             name: channelName,
             type: ChannelType.GuildText,
             parent: client.channelIds.vouchTicketsCategory,
-            permissionOverwrites: [
-                {
-                    id: interaction.guild.id,
-                    deny: [PermissionFlagsBits.ViewChannel]
-                },
-                {
-                    id: targetUser.id,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                    type: OverwriteType.Member
-                },
-                {
-                    id: client.roleIds.admin,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
-                    type: OverwriteType.Role
-                },
-                {
-                    id: client.roleIds.owner,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
-                    type: OverwriteType.Role
-                },
-                {
-                    id: client.roleIds.vouchTeam,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-                    type: OverwriteType.Role
-                }
-            ]
+            permissionOverwrites
         }) as TextChannel;
 
         if (!ticketChannel) return;
