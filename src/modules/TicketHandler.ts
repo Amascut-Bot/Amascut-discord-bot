@@ -2555,6 +2555,10 @@ export default class TicketHandler {
 
         const permissionOverwrites: any[] = [
             {
+                id: interaction.guild!.roles.everyone.id,
+                deny: [PermissionFlagsBits.ViewChannel]
+            },
+            {
                 id: client.roleIds.admin,
                 allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
                 type: OverwriteType.Role
