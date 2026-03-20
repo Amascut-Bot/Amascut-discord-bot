@@ -112,6 +112,9 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialLounge: '1416027312369172481',
             vodReview: '1416026842753798276',
 
+            // vouch tickets
+            vouchTicketsCategory: '1484592041647407134',
+
             // guides
             guides: '1389410242210693212',
 
