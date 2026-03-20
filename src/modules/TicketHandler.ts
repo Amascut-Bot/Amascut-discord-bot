@@ -1113,6 +1113,11 @@ export default class TicketHandler {
             if (isTrialTeam) return true;
         }
 
+        if (channel.parentId === this.client.channelIds.vouchTicketsCategory) {
+            const isTrialTeam = await this.client.util.hasRolePermissions(this.client, ['trialTeam'], interaction);
+            if (isTrialTeam) return true;
+        }
+
         if (channel.name.startsWith('clearance')) {
             return false;
         }
