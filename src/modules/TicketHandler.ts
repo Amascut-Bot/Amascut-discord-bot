@@ -2555,15 +2555,6 @@ export default class TicketHandler {
 
         const permissionOverwrites: any[] = [
             {
-                id: interaction.guild!.id,
-                deny: [PermissionFlagsBits.ViewChannel]
-            },
-            {
-                id: targetUser.id,
-                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                type: OverwriteType.Member
-            },
-            {
                 id: client.roleIds.admin,
                 allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
                 type: OverwriteType.Role
@@ -2574,6 +2565,14 @@ export default class TicketHandler {
                 type: OverwriteType.Role
             }
         ];
+
+        if (client.roleIds.trialTeam) {
+            permissionOverwrites.push({
+                id: client.roleIds.trialTeam,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                type: OverwriteType.Role
+            });
+        }
 
         if (client.roleIds.vouchTeam) {
             permissionOverwrites.push({
