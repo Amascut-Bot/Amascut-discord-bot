@@ -5,6 +5,7 @@ import TranscriptGenerator from './TranscriptGenerator';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { Ticket } from '../entity/Ticket';
+import { Vouch } from '../entity/Vouch';
 import { Warning } from '../entity/Warning';
 import UtilityHandler from './UtilityHandler';
 
@@ -2542,6 +2543,96 @@ export default class TicketHandler {
 
             await channel.send(attachments.length > 0 ? { content: message.content, files: attachments } : { content: message.content });
         }
+    }
+
+    //#endregion
+
+    //#region Vouch Tickets
+
+    public static async createVouchTicket(client: Bot, interaction: ChatInputCommandInteraction, targetUser: User, roleKey: string, vouches: Vouch[]): Promise<void> {
+        const vouchCount = await client.dataSource.getRepository(Vouch).count();
+        const channelName = `vouch-${vouchCount.toString().padStart(4, '0')}`;
+
+        const ticketChannel = await interaction.guild?.channels.create({
+            name: channelName,
+            type: ChannelType.GuildText,
+            parent: client.channelIds.vouchTicketsCategory,
+            permissionOverwrites: [
+                {
+                    id: interaction.guild.id,
+                    deny: [PermissionFlagsBits.ViewChannel]
+                },
+                {
+                    id: targetUser.id,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    type: OverwriteType.Member
+                },
+                {
+                    id: client.roleIds.admin,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
+                    type: OverwriteType.Role
+                },
+                {
+                    id: client.roleIds.owner,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
+                    type: OverwriteType.Role
+                },
+                {
+                    id: client.roleIds.vouchTeam,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                    type: OverwriteType.Role
+                }
+            ]
+        }) as TextChannel;
+
+        if (!ticketChannel) return;
+
+        const vouchFields = vouches.map((v, i) => ({
+            name: `Vouch ${i + 1}`,
+            value: `**Voucher:** <@${v.voucher}>\n**RSN:** ${v.rsn}\n**Description:** ${v.description}`,
+            inline: false
+        }));
+
+        const vouchEmbed = new EmbedBuilder()
+            .setTitle('Elite Role Vouch - Approval Required')
+            .setColor(client.color)
+            .addFields(
+                { name: 'Vouchee', value: `<@${targetUser.id}>`, inline: false },
+                { name: 'Role', value: client.roles[roleKey], inline: false },
+                ...vouchFields,
+                { name: 'Votes', value: '✅ 0 | ❌ 0', inline: false }
+            )
+            .setTimestamp();
+
+        const voteRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('vouch_approve').setLabel('Approve').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('vouch_reject').setLabel('Reject').setStyle(ButtonStyle.Danger)
+        );
+        const controlRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId('ticket_close').setLabel('Close Ticket').setStyle(ButtonStyle.Secondary)
+        );
+
+        await ticketChannel.send({ embeds: [vouchEmbed], components: [voteRow, controlRow] });
+
+        const ticketRepository = client.dataSource.getRepository(Ticket);
+        const ticket = ticketRepository.create({
+            channelId: ticketChannel.id,
+            userOpen: targetUser.id,
+            ticketType: 3
+        });
+        await ticketRepository.save(ticket);
+
+        const vouchRepository = client.dataSource.getRepository(Vouch);
+        for (const vouch of vouches) {
+            vouch.ticketChannelId = ticketChannel.id;
+            vouch.ticketRole = roleKey;
+            await vouchRepository.save(vouch);
+        }
+
+        await interaction.followUp({
+            content: `Vouch ticket created for <@${targetUser.id}>: <#${ticketChannel.id}>`,
+            flags: MessageFlags.Ephemeral
+        });
     }
 
     //#endregion

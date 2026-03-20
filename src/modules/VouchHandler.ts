@@ -101,6 +101,15 @@ export default class VouchHandler {
             const rolesToAdd = [this.client.roleIds[vouch.role], this.client.roleIds.elite];
 
             hierarchy.slice(0, roleIndex).forEach(role => rolesToAdd.push(this.client.roleIds[role]));
+
+            const notifyRoleMap: Record<string, string> = {
+                'elite500': 'notifyElite500',
+                'elite1000': 'notifyElite1000',
+                'elite2000': 'notifyElite2000'
+            };
+            const notifyRoleId = this.client.roleIds[notifyRoleMap[vouch.role]];
+            if (notifyRoleId) rolesToAdd.push(notifyRoleId);
+
             await member.roles.add(rolesToAdd);
 
             const roleObject = await interaction.guild?.roles.fetch(this.client.roleIds[vouch.role]);
