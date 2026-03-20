@@ -117,7 +117,13 @@ export default class VouchUser extends BotInteraction {
         }
 
         if (highestQualifyingRole) {
-            await TicketHandler.createVouchTicket(this.client, interaction, targetUser, highestQualifyingRole, qualifyingVouchesForTicket);
+            try {
+                await TicketHandler.createVouchTicket(this.client, interaction, targetUser, highestQualifyingRole, qualifyingVouchesForTicket);
+            } catch (error) {
+                await vouchRepository.remove(vouch);
+                this.client.logger.error({ message: 'Failed to create vouch ticket — vouch rolled back', error, handler: this.constructor.name });
+                return await interaction.editReply('Failed to create the vouch ticket. Your vouch has not been counted — please try again.');
+            }
         }
 
         await interaction.editReply(`Vouch submitted for <@${targetUser.id}> - ${this.client.roles[roleKey]}`);
