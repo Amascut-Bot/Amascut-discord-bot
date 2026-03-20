@@ -25,9 +25,9 @@ export default class VouchHandler {
     }
 
     private async handleVote(interaction: ButtonInteraction<'cached'>, voteType: 'approve' | 'reject') {
-        if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
+        if (!await this.client.util.hasRolePermissions(this.client, ['vouchTeam', 'admin', 'owner'], interaction)) {
             return await interaction.reply({
-                content: 'Only Trial Team members can vote.',
+                content: 'Only Vouch Team members can vote.',
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -44,21 +44,6 @@ export default class VouchHandler {
             }
 
             const firstVouch = vouches[0];
-            const member = await interaction.guild?.members.fetch(interaction.user.id);
-            const userRoleIds = member?.roles.cache.map(r => r.id) || [];
-
-            const hierarchy = ['elite500', 'elite1000', 'elite2000'];
-            const roleIndex = hierarchy.indexOf(firstVouch.role);
-            const hasRoleOrHigher = hierarchy.slice(roleIndex).some(role =>
-                userRoleIds.includes(this.client.roleIds[role])
-            );
-
-            if (!hasRoleOrHigher) {
-                return await interaction.followUp({
-                    content: `You must have ${this.client.roles[firstVouch.role]} or higher to vote on this vouch.`,
-                    flags: MessageFlags.Ephemeral
-                });
-            }
 
             let existingVote = await voteRepository.findOne({ where: { vouchId: firstVouch.id, voterId: interaction.user.id } });
 
@@ -89,7 +74,7 @@ export default class VouchHandler {
             await interaction.message.edit({ embeds: [updatedEmbed] });
 
             // CHANGE THIS NUMBER TO INCREASE APPROVAL THRESHOLD BECAUSE I WILL FORGET!!!!
-            const APPROVAL_THRESHOLD = 2;
+            const APPROVAL_THRESHOLD = 1;
 
             if (approveCount >= APPROVAL_THRESHOLD) {
                 await this.approveVouch(interaction, firstVouch);
