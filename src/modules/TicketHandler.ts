@@ -1236,11 +1236,7 @@ export default class TicketHandler {
                 { name: 'Message Count', value: messageArray.length.toString(), inline: false }
             );
 
-        const transcriptChannelId = ticketType === 'vouch'
-            ? this.client.channelIds.VOUCH_TRANSCRIPT_CHANNEL
-            : this.client.channelIds.tickets;
-
-        const transcriptChannel = await channel.guild.channels.fetch(transcriptChannelId);
+        const transcriptChannel = await channel.guild.channels.fetch(this.client.channelIds.tickets);
         if (!transcriptChannel) {
             throw new Error('Could not find the transcript channel.');
         }
