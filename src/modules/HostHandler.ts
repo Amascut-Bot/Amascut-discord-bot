@@ -611,7 +611,13 @@ export default class HostHandler {
             .setRequired(true)
             .setMaxValues(5);
 
-        modal.addLabelComponents(label => label.setLabel('Who was learning / getting the lorebook / trialing?').setUserSelectMenuComponent(learnerSelect));
+        if (type === 0) {
+            modal.addLabelComponents(label => label.setLabel('Who was learning?').setUserSelectMenuComponent(learnerSelect));
+        } else if (type === 1) {
+            modal.addLabelComponents(label => label.setLabel('Who was getting the lorebook?').setUserSelectMenuComponent(learnerSelect));
+        } else if (type === 2) {
+            modal.addLabelComponents(label => label.setLabel('Who was the trialee?').setUserSelectMenuComponent(learnerSelect));
+        }
 
         // Summary
         const summaryInput = new TextInputBuilder()
