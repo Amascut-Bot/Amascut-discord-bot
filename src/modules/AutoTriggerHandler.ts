@@ -44,7 +44,7 @@ export default class AutoTriggerHandler {
 
         if (message.guild?.id !== process.env.GUILD_ID) return false;
 
-        if (await this.handleKeeps(message)) return true;
+        if (await this.handleSplits(message)) return true;
 
         if (!await this.handleYoink(message)) return true;
 
@@ -246,19 +246,18 @@ export default class AutoTriggerHandler {
         return false;
     }
 
-    private static readonly keepsKeywords = [
-        'keeps',
-        'keep',
-        'kep',
+    private static readonly splitsKeywords = [
+        'splits',
+        'split',
     ];
 
-    private async handleKeeps(message: Message): Promise<boolean> {
+    private async handleSplits(message: Message): Promise<boolean> {
         const teamformingChannels = [this.client.channelIds.casualTeams];
 
-        if (teamformingChannels.includes(message.channelId) && (AutoTriggerHandler.keepsKeywords.some((keyword) => { return message.content.toLowerCase().includes(keyword)})) && 'send' in message.channel) {
+        if (teamformingChannels.includes(message.channelId) && (AutoTriggerHandler.splitsKeywords.some((keyword) => { return message.content.toLowerCase().includes(keyword)})) && 'send' in message.channel) {
             if (await this.client.util.hasRolePermissionsMessage(this.client, ['admin', 'owner'], message)) return false;
 
-            await message.channel.send(`<@${message.member?.id}> use <#${this.client.channelIds.splitsOnly}> for keeps!`);
+            await message.channel.send(`<@${message.member?.id}> use <#${this.client.channelIds.splitsOnly}> for splits!`);
             await message.delete();
             return true;
         }
