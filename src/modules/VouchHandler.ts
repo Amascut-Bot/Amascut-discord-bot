@@ -89,7 +89,7 @@ export default class VouchHandler {
             await interaction.message.edit({ embeds: [updatedEmbed] });
 
             // CHANGE THIS NUMBER TO INCREASE APPROVAL THRESHOLD BECAUSE I WILL FORGET!!!!
-            const APPROVAL_THRESHOLD = 1;
+            const APPROVAL_THRESHOLD = 2;
 
             if (approveCount >= APPROVAL_THRESHOLD) {
                 await this.approveVouch(interaction, firstVouch);
