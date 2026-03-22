@@ -49,6 +49,7 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialee1000TicketsCategory: '1412871767932010547',
             trialee2000TicketsCategory: '1412871767932010547',
             vouchTicketsCategory: `1464678728410992844`,
+            vouchLog: '1485240645340889128',
             vodSubmissions: `1464589392843767860`,
             vodReview: `1464589425932632155`
         }
@@ -113,6 +114,7 @@ export function getChannels(guildId: string | undefined) : Channels {
 
             // vouch tickets
             vouchTicketsCategory: '1484592041647407134',
+            vouchLog: '1485234144102449173',
 
             // guides
             guides: '1389410242210693212',
