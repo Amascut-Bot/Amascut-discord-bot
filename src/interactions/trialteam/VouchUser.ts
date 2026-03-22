@@ -117,7 +117,7 @@ export default class VouchUser extends BotInteraction {
         }
 
         // Say how many vouches are needed for the role
-        const vouchProgress = `${REQUIRED_VOUCHES}/${REQUIRED_VOUCHES}`;
+        const vouchProgress = `${allVouchesForUser.filter(v => hierarchy.indexOf(v.role) >= roleIndex).length}/${REQUIRED_VOUCHES}`;
 
         // Log vouch to the vouch log channel
         if (this.client.channelIds.vouchLog) {
