@@ -73,10 +73,12 @@ export default class VouchHandler {
 
             await interaction.message.edit({ embeds: [updatedEmbed] });
 
-            // CHANGE THIS NUMBER TO INCREASE APPROVAL THRESHOLD BECAUSE I WILL FORGET!!!!
             const APPROVAL_THRESHOLD = 1;
+            const REJECTION_THRESHOLD = 1;
 
-            if (approveCount >= APPROVAL_THRESHOLD) {
+            if (rejectCount >= REJECTION_THRESHOLD) {
+                await this.rejectVouch(interaction, firstVouch);
+            } else if (approveCount >= APPROVAL_THRESHOLD) {
                 await this.approveVouch(interaction, firstVouch);
             }
         } catch (error) {
@@ -162,6 +164,30 @@ export default class VouchHandler {
             });
         } catch (error) {
             this.client.logger.error({ message: 'Failed to approve vouch', error, handler: this.constructor.name });
+        }
+    }
+
+    private async rejectVouch(interaction: ButtonInteraction<'cached'>, vouch: Vouch) {
+        try {
+            const vouchRepository = this.client.dataSource.getRepository(Vouch);
+            const vouches = await vouchRepository.find({ where: { ticketChannelId: interaction.channel!.id } });
+
+            for (const v of vouches) {
+                v.status = 'rejected';
+                await vouchRepository.save(v);
+            }
+
+            const closeButton = new ButtonBuilder()
+                .setCustomId('ticket_close')
+                .setLabel('Close Ticket')
+                .setStyle(ButtonStyle.Secondary);
+
+            await interaction.message.edit({
+                embeds: [EmbedBuilder.from(interaction.message.embeds[0]).setColor(0xff0000).setTitle('Elite Role Vouch - REJECTED')],
+                components: [new ActionRowBuilder<ButtonBuilder>().addComponents(closeButton)]
+            });
+        } catch (error) {
+            this.client.logger.error({ message: 'Failed to reject vouch', error, handler: this.constructor.name });
         }
     }
 }
