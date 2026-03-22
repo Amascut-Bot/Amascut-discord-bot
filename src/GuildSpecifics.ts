@@ -113,6 +113,7 @@ export function getChannels(guildId: string | undefined) : Channels {
 
             // vouch tickets
             vouchTicketsCategory: '1484592041647407134',
+            vouchLog: '1485234144102449173',
 
             // guides
             guides: '1389410242210693212',

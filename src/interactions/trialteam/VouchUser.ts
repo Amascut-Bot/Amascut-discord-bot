@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder, User } from 'discord.js';
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, TextChannel, User } from 'discord.js';
 import { Vouch } from '../../entity/Vouch';
 import { VouchBlacklist } from '../../entity/VouchBlacklist';
 import TicketHandler from '../../modules/TicketHandler';
@@ -85,7 +85,7 @@ export default class VouchUser extends BotInteraction {
         });
         await vouchRepository.save(vouch);
 
-        const REQUIRED_VOUCHES = 2;
+        const REQUIRED_VOUCHES = 3;
 
         const allVouchesForUser = await vouchRepository.find({
             where: {
@@ -116,6 +116,30 @@ export default class VouchUser extends BotInteraction {
             }
         }
 
+        // Say how many vouches are needed for the role
+        const vouchProgress = `${REQUIRED_VOUCHES}/${REQUIRED_VOUCHES}`;
+
+        // Log vouch to the vouch log channel
+        if (this.client.channelIds.vouchLog) {
+            try {
+                const logChannel = await this.client.channels.fetch(this.client.channelIds.vouchLog) as TextChannel;
+                const logEmbed = new EmbedBuilder()
+                    .setColor(this.client.color)
+                    .setTitle('Vouch Submitted')
+                    .addFields(
+                        { name: 'Voucher', value: `<@${interaction.user.id}>`, inline: true },
+                        { name: 'Vouchee', value: `<@${targetUser.id}>`, inline: true },
+                        { name: 'Role', value: this.client.roles[roleKey], inline: true },
+                        { name: 'RSN', value: rsn, inline: true },
+                        { name: 'Progress', value: vouchProgress, inline: true }
+                    )
+                    .setTimestamp();
+                await logChannel.send({ embeds: [logEmbed] });
+            } catch (error) {
+                this.client.logger.error({ message: 'Failed to send vouch log', error, handler: this.constructor.name });
+            }
+        }
+
         if (highestQualifyingRole) {
             try {
                 await TicketHandler.createVouchTicket(this.client, interaction, targetUser, highestQualifyingRole, qualifyingVouchesForTicket);
@@ -126,6 +150,6 @@ export default class VouchUser extends BotInteraction {
             }
         }
 
-        await interaction.editReply(`Vouch submitted for <@${targetUser.id}> - ${this.client.roles[roleKey]}`);
+        await interaction.editReply(`Vouch submitted for <@${targetUser.id}> - ${this.client.roles[roleKey]} (${vouchProgress} vouches)`);
     }
 }
