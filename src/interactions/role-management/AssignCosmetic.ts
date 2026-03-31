@@ -61,6 +61,8 @@ export default class Pass extends BotInteraction {
             'Tumekenslight (5)': 'light5',
             'Amaskitty': 'pet',
             'Nexus (5)': 'nexus5',
+            'The Devoured (Unorthodox CA)': 'devoured',
+            'Tumeken\'s Light (Perfect CA)': 'tumekensLight',
         }
         const options: any = [];
         Object.keys(assignOptions).forEach((key: string) => {

@@ -218,6 +218,8 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             guard5: '1409629629521858681',
             light5: '1409629706218766358',
             pet: '1409629724732293293',
+            devoured: '1488094862128447588',
+            tumekensLight: '1488094722651328613',
 
             // Enrage Roles
             enr500: '1404800709462982716',
@@ -303,6 +305,8 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             light5: '1401431760704901193',
             pet: '1401431834780241940',
             nexus5: '1416532184851808316',
+            devoured: '1487808817193549854',
+            tumekensLight: '1487809205980238017',
 
             // Enrage Roles
             enr500: '1401450408492404877',
