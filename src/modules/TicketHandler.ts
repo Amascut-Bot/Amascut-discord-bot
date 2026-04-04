@@ -1110,7 +1110,7 @@ export default class TicketHandler {
         }
 
         if (channel.name.startsWith('trialee')) {
-            const isTrialTeam = await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'trialTeamTryout'], interaction);
+            const isTrialTeam = await this.client.util.hasRolePermissions(this.client, ['trialTeam'], interaction);
             if (isTrialTeam) return true;
         }
 
@@ -1892,7 +1892,6 @@ export default class TicketHandler {
             const teacherRoleId = this.client.roleIds.teacher;
             const lorebookRoleId = this.client.roleIds.lorebook;
             const trialTeamRoleId = this.client.roleIds.trialTeam;
-            const trialTeamTryoutRoleId = this.client.roleIds.trialTeamTryout;
 
             const member = await guild.members.fetch(userId);
 
@@ -1989,20 +1988,6 @@ export default class TicketHandler {
             if (ticketType === 'trialee') {
                 await channel.permissionOverwrites.create(
                     trialTeamRoleId,
-                    {
-                        ViewChannel: true,
-                        SendMessages: true,
-                        ReadMessageHistory: true,
-                        AttachFiles: true,
-                        EmbedLinks: true,
-                        ManageMessages: true,
-                        ManageChannels: true,
-                        ManageThreads: true,
-                    }
-                );
-
-                await channel.permissionOverwrites.create(
-                    trialTeamTryoutRoleId,
                     {
                         ViewChannel: true,
                         SendMessages: true,

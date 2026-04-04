@@ -67,8 +67,8 @@ export default class LeaderboardHandler {
                 break;
             }
             default:{
-                dateFrom = new Date(2000, 1, 0, 0, 0, 0);
-                dateTo = new Date(2099, 31, 11, 23, 59, 59);
+                dateFrom = new Date(2000, 0, 1, 0, 0, 0);
+                dateTo = new Date(2099, 11, 31, 23, 59, 59);
                 description = 'All Time';
                 break;
             }
