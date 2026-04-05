@@ -1,29 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from "discord.js";
 import BotInteraction from "../../types/BotInteraction";
-import * as fs from 'fs/promises';
-import * as path from 'path';
-
-const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
-
-interface MonitoredStreamer {
-    id: string;
-    userName: string;
-    displayName: string;
-    discordUserId: string | null;
-    profileImageUrl: string;
-    isLive: boolean;
-    lastLiveAt: Date | null;
-}
-
-async function readStreamers(): Promise<MonitoredStreamer[]> {
-    try {
-        await fs.access(streamersFilePath);
-        const data = await fs.readFile(streamersFilePath, 'utf-8');
-        return JSON.parse(data) as MonitoredStreamer[];
-    } catch (error) {
-        return [];
-    }
-}
+import TwitchHandler from "../../modules/TwitchHandler";
 
 export default class ListStreamers extends BotInteraction {
     get name(): string {
@@ -47,7 +24,7 @@ export default class ListStreamers extends BotInteraction {
     async run(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const streamers = await readStreamers();
+        const streamers = await TwitchHandler.readStreamers();
 
         if (streamers.length === 0) {
             return interaction.editReply({ content: 'There are no streamers currently on the notification list.' });

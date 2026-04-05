@@ -1,33 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, AutocompleteInteraction, MessageFlags } from "discord.js";
 import BotInteraction from "../../types/BotInteraction";
-import * as fs from 'fs/promises';
-import * as path from 'path';
-
-const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
-
-interface MonitoredStreamer {
-    id: string;
-    userName: string;
-    displayName: string;
-    discordUserId: string | null;
-    profileImageUrl: string;
-    isLive: boolean;
-    lastLiveAt: Date | null;
-}
-
-async function readStreamers(): Promise<MonitoredStreamer[]> {
-    try {
-        await fs.access(streamersFilePath);
-        const data = await fs.readFile(streamersFilePath, 'utf-8');
-        return JSON.parse(data) as MonitoredStreamer[];
-    } catch (error) {
-        return [];
-    }
-}
-
-async function writeStreamers(data: MonitoredStreamer[]): Promise<void> {
-    await fs.writeFile(streamersFilePath, JSON.stringify(data, null, 2));
-}
+import TwitchHandler from "../../modules/TwitchHandler";
 
 export default class RemoveStreamer extends BotInteraction {
     get name(): string {
@@ -55,7 +28,7 @@ export default class RemoveStreamer extends BotInteraction {
 
     async autocomplete(interaction: AutocompleteInteraction) {
         const focusedValue = interaction.options.getFocused();
-        const streamers = await readStreamers();
+        const streamers = await TwitchHandler.readStreamers();
         const choices = streamers.map(s => ({ name: s.displayName, value: s.userName }));
         const filtered = choices.filter(choice => choice.name.toLowerCase().includes(focusedValue.toLowerCase()));
         await interaction.respond(filtered.slice(0, 25));
@@ -68,7 +41,7 @@ export default class RemoveStreamer extends BotInteraction {
 
         const userNameToRemove = interaction.options.getString('username', true);
 
-        const streamers = await readStreamers();
+        const streamers = await TwitchHandler.readStreamers();
         const initialLength = streamers.length;
 
         const newStreamers = streamers.filter(s => s.userName.toLowerCase() !== userNameToRemove.toLowerCase());
@@ -77,7 +50,7 @@ export default class RemoveStreamer extends BotInteraction {
             return interaction.editReply({ content: `Could not find a streamer with the username \`${userNameToRemove}\` on the notification list.` });
         }
 
-        await writeStreamers(newStreamers);
+        await TwitchHandler.writeStreamers(newStreamers);
 
         this.client.logger.log({
             message: `Removed streamer ${userNameToRemove} from the notification list.`,

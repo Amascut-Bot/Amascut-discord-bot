@@ -1,33 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import BotInteraction from "../../types/BotInteraction";
-import * as fs from 'fs/promises';
-import * as path from 'path';
-
-const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
-
-interface MonitoredStreamer {
-    id: string;
-    userName: string;
-    displayName: string;
-    discordUserId: string | null;
-    profileImageUrl: string;
-    isLive: boolean;
-    lastLiveAt: Date | null;
-}
-
-async function readStreamers(): Promise<MonitoredStreamer[]> {
-    try {
-        await fs.access(streamersFilePath);
-        const data = await fs.readFile(streamersFilePath, 'utf-8');
-        return JSON.parse(data) as MonitoredStreamer[];
-    } catch (error) {
-        return [];
-    }
-}
-
-async function writeStreamers(data: MonitoredStreamer[]): Promise<void> {
-    await fs.writeFile(streamersFilePath, JSON.stringify(data, null, 2));
-}
+import TwitchHandler, { MonitoredStreamer } from "../../modules/TwitchHandler";
 
 export default class AddStreamer extends BotInteraction {
     get name(): string {
@@ -78,7 +51,7 @@ export default class AddStreamer extends BotInteraction {
             return interaction.editReply({ content: `Could not find a Twitch user with the username \`${userName}\`. Please check the spelling.` });
         }
 
-        const streamers = await readStreamers();
+        const streamers = await TwitchHandler.readStreamers();
 
         if (streamers.some(s => s.id === streamerInfo.id)) {
             return interaction.editReply({ content: `**${streamerInfo.display_name}** is already on the notification list.` });
@@ -99,7 +72,7 @@ export default class AddStreamer extends BotInteraction {
         };
 
         streamers.push(newStreamer);
-        await writeStreamers(streamers);
+        await TwitchHandler.writeStreamers(streamers);
 
         this.client.logger.log({
             message: `Added streamer ${streamerInfo.display_name} to the notification list. Linked to ${discordUser.tag}`,
