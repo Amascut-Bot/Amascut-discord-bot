@@ -22,7 +22,7 @@ export default class HealthCheck extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction<any>) {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply();
 
         // Check for roles, that are defined but no longer exists in the guild
         await interaction.editReply('*Checking GuildSpecifics Roles...*');
@@ -46,6 +46,9 @@ export default class HealthCheck extends BotInteraction {
         await interaction.editReply('*Checking for orphaned streamers...*');
 
         const streamers = await TwitchHandler.readStreamers();
+
+        // make sure guild members are cached, ignore rate limit exception
+        await interaction.guild?.members.fetch().catch(() => { });
 
         for (const streamer of streamers) {
             if (streamer.discordUserId != null && !interaction.guild?.members.cache.has(streamer.discordUserId)) {

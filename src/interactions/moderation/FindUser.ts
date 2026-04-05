@@ -27,25 +27,25 @@ export default class FindUser extends BotInteraction {
         await interaction.deferReply();
 
         const name = interaction.options.getString('name', true);
-        const guildMembers = await interaction.guild?.members.fetch();
+        await interaction.guild?.members.fetch().catch(() => { });
 
         // step 1: search by exact name match
-        let user = guildMembers?.find(usr => usr.nickname === name || usr.displayName === name || usr.user.username === name);
+        let user = interaction.guild?.members.cache?.find(usr => usr.nickname === name || usr.displayName === name || usr.user.username === name);
 
         // step 2: be more lenient - lowercase match
         if (!user) {
-            user = guildMembers?.find(usr => usr.nickname?.toLowerCase() === name.toLowerCase() || usr.displayName.toLowerCase() === name.toLowerCase() || usr.user.username.toLowerCase() === name.toLowerCase());
+            user = interaction.guild?.members.cache?.find(usr => usr.nickname?.toLowerCase() === name.toLowerCase() || usr.displayName.toLowerCase() === name.toLowerCase() || usr.user.username.toLowerCase() === name.toLowerCase());
         }
 
         // step 3: if somehow they search a user by it's id?
         if (!user) {
-            user = guildMembers?.find(usr => usr.id === name);
+            user = interaction.guild?.members.cache?.find(usr => usr.id === name);
         }
 
         // step 4: normalize the search-string and usernames
         if (!user) {
             const normalizedName = this.normalizeString(name);
-            user = guildMembers?.find(usr => this.normalizeString(usr.nickname) === normalizedName || this.normalizeString(usr.displayName) === normalizedName || this.normalizeString(usr.user.username) === normalizedName);
+            user = interaction.guild?.members.cache?.find(usr => this.normalizeString(usr.nickname) === normalizedName || this.normalizeString(usr.displayName) === normalizedName || this.normalizeString(usr.user.username) === normalizedName);
         }
 
         // step 5: levensthein / fuzzy / soundex maybe some day
