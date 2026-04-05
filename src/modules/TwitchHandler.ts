@@ -10,7 +10,7 @@ const streamersFilePath = path.join(process.cwd(), 'monitored-streamers.json');
 const dashboardDataFilePath = path.join(process.cwd(), 'dashboard-data.json');
 const notificationsFilePath = path.join(process.cwd(), 'notifications.json');
 
-interface MonitoredStreamer {
+export interface MonitoredStreamer {
     id: string;
     userName: string;
     displayName: string;
@@ -542,5 +542,27 @@ export default class TwitchHandler {
                 handler: 'TwitchHandler'
             });
         }
+    }
+
+    /**
+     * Static method to read streamers, used by interactions without needing an instance of TwitchHandler
+     * @returns {Promise<MonitoredStreamer[]>} List of all streamers currently configured to be monitored
+     */
+    public static async readStreamers(): Promise<MonitoredStreamer[]> {
+        try {
+            await fs.access(streamersFilePath);
+            const data = await fs.readFile(streamersFilePath, 'utf-8');
+            return JSON.parse(data) as MonitoredStreamer[];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    /**
+     * Static method to write streamers, used by interactions without needing an instance of TwitchHandler
+     * @returns {Promise<void>}
+     */
+    public static async writeStreamers(data: MonitoredStreamer[]): Promise<void> {
+        await fs.writeFile(streamersFilePath, JSON.stringify(data, null, 2));
     }
 }
