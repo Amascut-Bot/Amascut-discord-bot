@@ -53,6 +53,6 @@ export default class HealthCheck extends BotInteraction {
             }
         }
 
-
+        await interaction.editReply(':white_check_mark: Health check completed!');
     }
 }
