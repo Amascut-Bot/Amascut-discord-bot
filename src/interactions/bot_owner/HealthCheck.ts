@@ -52,7 +52,7 @@ export default class HealthCheck extends BotInteraction {
 
         for (const streamer of streamers) {
             if (streamer.discordUserId != null && !interaction.guild?.members.cache.has(streamer.discordUserId)) {
-                await interaction.followUp(`:x: Orphaned streamer found - ${streamer.displayName} (<@${streamer.discordUserId}>)`);
+                await interaction.followUp(`:x: Orphaned streamer found - \`${streamer.userName}\` (<@${streamer.discordUserId}>)`);
             }
         }
 
