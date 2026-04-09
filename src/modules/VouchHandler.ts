@@ -98,21 +98,15 @@ export default class VouchHandler {
             const member = await interaction.guild?.members.fetch(vouch.vouchee);
             if (!member) return;
 
-            const hierarchy = ['elite500', 'elite1000', 'elite2000'];
-            const roleIndex = hierarchy.indexOf(vouch.role);
-            const rolesToAdd = [this.client.roleIds[vouch.role], this.client.roleIds.elite];
+            const existingRoleIds = member.roles.cache.map((role) => role.id);
+            const allAwardRoleKeys = this.client.util.getTrialAwardRoleKeys(vouch.role);
+            const grantedRoleKeys = this.client.util.getUnownedRoleKeys(existingRoleIds, allAwardRoleKeys);
+            const rolesToAdd = this.client.util.getRoleIdsFromKeys(grantedRoleKeys);
+            const grantedRoleMentions = this.client.util.getRoleMentionsFromKeys(grantedRoleKeys);
 
-            hierarchy.slice(0, roleIndex).forEach(role => rolesToAdd.push(this.client.roleIds[role]));
-
-            const notifyRoleMap: Record<string, string> = {
-                'elite500': 'notifyElite500',
-                'elite1000': 'notifyElite1000',
-                'elite2000': 'notifyElite2000'
-            };
-            const notifyRoleId = this.client.roleIds[notifyRoleMap[vouch.role]];
-            if (notifyRoleId) rolesToAdd.push(notifyRoleId);
-
-            await member.roles.add(rolesToAdd);
+            if (rolesToAdd.length > 0) {
+                await member.roles.add(rolesToAdd);
+            }
 
             const roleObject = await interaction.guild?.roles.fetch(this.client.roleIds[vouch.role]);
 
@@ -135,14 +129,20 @@ export default class VouchHandler {
 
             if (logChannel) {
                 const voucherList = vouches.map(v => `<@${v.voucher}>`).join(', ');
+                const description = grantedRoleMentions.length > 0
+                    ? `${grantedRoleMentions.join(', ')} assigned to <@${vouch.vouchee}> via vouch by ${voucherList}.${messageUrl ? `\n**Message**: ${messageUrl}` : ''}`
+                    : `<@${vouch.vouchee}> already had every applicable role for ${this.client.roles[vouch.role]}. No new roles were added.${messageUrl ? `\n**Message**: ${messageUrl}` : ''}`;
+
                 await logChannel.send({
                     embeds: [new EmbedBuilder()
                         .setColor(roleObject?.hexColor || this.client.color)
-                        .setDescription(`${this.client.roles[vouch.role]} and ${this.client.roles.elite} assigned to <@${vouch.vouchee}> via vouch by ${voucherList}.${messageUrl ? `\n**Message**: ${messageUrl}` : ''}`)
+                        .setDescription(description)
                         .setTimestamp()],
-                    components: [new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('rejectRoleAssign').setLabel('Reject Approval').setStyle(ButtonStyle.Danger)
-                    )]
+                    components: grantedRoleMentions.length > 0
+                        ? [new ActionRowBuilder<ButtonBuilder>().addComponents(
+                            new ButtonBuilder().setCustomId('rejectRoleAssign').setLabel('Reject Approval').setStyle(ButtonStyle.Danger)
+                        )]
+                        : []
                 });
             }
 

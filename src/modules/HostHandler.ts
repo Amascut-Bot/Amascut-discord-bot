@@ -85,6 +85,7 @@ export default class HostHandler {
         const hosts = hostSelect.map(x => x.id);
         const learners = learnerSelect.map(x => x.id);
         const fillers = fillerSelect.map(x => x.id).filter(x => !learners.includes(x) && !hosts.includes(x));
+        let passResult: string | null = null;
 
         const message = interaction.message;
 
@@ -95,7 +96,7 @@ export default class HostHandler {
         } else {
             if (pass) {
                 const trialee = await interaction.guild!.members.fetch(learners[0]);
-                await this.passHost(interaction.member as GuildMember, message!, trialee);
+                passResult = await this.passHost(interaction.member as GuildMember, message!, trialee) ?? null;
             }
             // recording fails is not necessary
 
@@ -131,7 +132,7 @@ export default class HostHandler {
 
         await HostHandler.disableHost(interaction.message!);
 
-        await interaction.editReply(`${hostTypeLabel} finished!`);
+        await interaction.editReply(type === 2 && passResult ? `${hostTypeLabel} finished! ${passResult}` : `${hostTypeLabel} finished!`);
     }
 
     //#endregion
@@ -363,49 +364,31 @@ export default class HostHandler {
         const container = ComponentsV2Utils.cleanContainer(message.components[0]);
         const containerJson = JSON.stringify(container, null, 2);
 
-        const enrageMatch = containerJson.match(/Enrage Mode - (\d+)% Enrage/);
-        if (!enrageMatch) {
-            return 'Could not determine enrage mode from host card.';
-        }
+        const enrage = containerJson.match(/Enrage Mode - (\d+)% Enrage/)?.[1] ?? null;
+        const roleKey = this.client.util.resolveTrialAwardRole(member, enrage);
 
-        const enrage = enrageMatch[1];
-        let roleKey: string;
-
-        if (enrage === '500') {
-            roleKey = 'elite500';
-        } else if (enrage === '1000') {
-            roleKey = 'elite1000';
-        } else if (enrage === '2000') {
-            roleKey = 'elite2000';
-        } else {
-            return `Invalid enrage: ${enrage}%. Must be 500%, 1000%, or 2000%.`;
+        if (!roleKey) {
+            return enrage
+                ? `Invalid enrage: ${enrage}%. Must be 500%, 1000%, or 2000%, or the trialee must still have their trialee role.`
+                : 'Could not determine the trial tier from the host card or the trialee roles.';
         }
 
         try {
             const trialedRoleId = this.client.roleIds[roleKey];
-            const coverTagId = this.client.roleIds.elite;
+            const existingRoleIds = member.roles.cache.map((role) => role.id);
+            const allAwardRoleKeys = this.client.util.getTrialAwardRoleKeys(roleKey);
+            const grantedRoleKeys = this.client.util.getUnownedRoleKeys(existingRoleIds, allAwardRoleKeys);
+            const rolesToAdd = this.client.util.getRoleIdsFromKeys(grantedRoleKeys);
+            const grantedRoleMentions = this.client.util.getRoleMentionsFromKeys(grantedRoleKeys);
 
-            const hierarchy = ['elite500', 'elite1000', 'elite2000'];
-            const roleIndex = hierarchy.indexOf(roleKey);
-            const lowerRoles = hierarchy.slice(0, roleIndex);
-
-            const rolesToAdd = [trialedRoleId, coverTagId];
-            for (const lowerRole of lowerRoles) {
-                rolesToAdd.push(this.client.roleIds[lowerRole]);
+            if (!trialedRoleId || rolesToAdd.length === 0 || grantedRoleMentions.length === 0) {
+                return `Could not resolve the roles to assign for ${roleKey}.`;
             }
-
-            const notifyRoleMap: Record<string, string> = {
-                'elite500': 'notifyElite500',
-                'elite1000': 'notifyElite1000',
-                'elite2000': 'notifyElite2000'
-            };
-            const notifyRoleId = this.client.roleIds[notifyRoleMap[roleKey]];
-            if (notifyRoleId) rolesToAdd.push(notifyRoleId);
 
             await member?.roles.add(rolesToAdd);
 
-            const trialeeRoleKey = `${roleKey}trialee`;
-            const trialeeRoleId = this.client.roleIds[trialeeRoleKey];
+            const trialeeRoleKey = this.client.util.getTrialeeRoleKey(roleKey);
+            const trialeeRoleId = trialeeRoleKey ? this.client.roleIds[trialeeRoleKey] : null;
             if (trialeeRoleId) {
                 await member?.roles.remove(trialeeRoleId).catch(() => {});
             }
@@ -438,7 +421,7 @@ export default class HostHandler {
                 const logEmbed = new EmbedBuilder()
                     .setTimestamp()
                     .setColor(trialedRoleObject?.hexColor || colours.discord.green)
-                    .setDescription(`${this.client.roles[roleKey]} and ${this.client.roles.elite} were assigned to <@${member.id}> by <@${host.user.id}>.\n${messageUrl ? `**Message**: ${messageUrl}` : ''}`);
+                    .setDescription(`${grantedRoleMentions.join(', ')} were assigned to <@${member.id}> by <@${host.user.id}>.\n${messageUrl ? `**Message**: ${messageUrl}` : ''}`);
 
                 const buttonRow = new ActionRowBuilder<ButtonBuilder>()
                     .addComponents(
@@ -451,7 +434,7 @@ export default class HostHandler {
                 await logChannel.send({ embeds: [logEmbed], components: [buttonRow] });
             }
 
-            return `${this.client.roles[roleKey]} and ${this.client.roles.elite} have been assigned to <@${member.id}>!`;
+            return `${grantedRoleMentions.join(', ')} have been assigned to <@${member.id}>!`;
         } catch (err) {
             this.client.logger.error({ message: 'Pass host error:', error: err });
         }

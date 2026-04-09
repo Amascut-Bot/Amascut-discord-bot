@@ -640,9 +640,8 @@ export default class TicketHandler {
                 new StringSelectMenuOptionBuilder().setLabel('Elite - 1000% Enrage').setValue('elite1000'),
                 new StringSelectMenuOptionBuilder().setLabel('Elite - 2000% Enrage').setValue('elite2000'),
 
-                // new StringSelectMenuOptionBuilder().setLabel('Master - 500% Enrage').setValue('master500'),
-                // new StringSelectMenuOptionBuilder().setLabel('Master - 1000% Enrage').setValue('master1000'),
-                // new StringSelectMenuOptionBuilder().setLabel('Master - 2000% Enrage').setValue('master2000'),
+                new StringSelectMenuOptionBuilder().setLabel('Master - 1000% Enrage').setValue('master1000'),
+                new StringSelectMenuOptionBuilder().setLabel('Master - 2000% Enrage').setValue('master2000'),
 
                 // new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 500% Enrage').setValue('gm500'),
                 // new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 1000% Enrage').setValue('gm1000'),
@@ -768,7 +767,7 @@ export default class TicketHandler {
                         }
 
                         if (automodResult.ban) {
-                            await banChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
+                            await banChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
 
                             await interaction.member!.ban({ reason: automodResult.reason, deleteMessageSeconds: 604800 }).then(() => {
                                 this.client.logger.log({ message: `Automatically banned user with id ${interaction.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}` }, true)
@@ -776,7 +775,7 @@ export default class TicketHandler {
                                 this.client.logger.error({ message: `Error banning user with id ${interaction.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}`, error: err.stack });
                             });
                         } else {
-                            await adminChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
+                            await adminChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
 
                             const { timeout } = this.client.util;
                             const timeoutUser = timeout.bind(this.client.util);
@@ -1257,7 +1256,7 @@ export default class TicketHandler {
         const forumChannel = transcriptChannel;
 
         const tagName = ticketType === 'contentcreator' ? 'Content Creator' : ticketType === 'clearance' ? 'report' :
-                       ticketType.charAt(0).toUpperCase() + ticketType.slice(1);
+            ticketType.charAt(0).toUpperCase() + ticketType.slice(1);
 
         const availableTags = forumChannel.availableTags;
         const matchingTag = availableTags.find(tag =>
@@ -1368,7 +1367,7 @@ export default class TicketHandler {
             await forumPost.setArchived(true);
 
             return forumPost.id;
-        } catch(error) {
+        } catch (error) {
             this.client.logger.error({
                 message: `Failed to create forum post for transcript log for channel ${channel.name}`,
                 error,
@@ -1725,9 +1724,9 @@ export default class TicketHandler {
 
             // Final attempt to notify the user
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', flags: MessageFlags.Ephemeral }).catch(() => {});
+                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', flags: MessageFlags.Ephemeral }).catch(() => { });
             } else {
-                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => {});
+                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => { });
             }
         }
     }
@@ -1823,9 +1822,9 @@ export default class TicketHandler {
 
             // Final attempt to notify the user
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', flags: MessageFlags.Ephemeral }).catch(() => {});
+                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', flags: MessageFlags.Ephemeral }).catch(() => { });
             } else {
-                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => {});
+                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => { });
             }
         }
     }
@@ -1873,18 +1872,48 @@ export default class TicketHandler {
             const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
             const isClearanceTicket = ticketType === 'clearance';
             const isReportTicket = ticketType === 'report';
-            const parentCategoryId =
-                ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory
-                : ticketType === 'lorebookkill' ? this.client.channelIds.lorebookTicketsCategory
-                : ticketType === 'trialee' ? (
-                    formData?.tier === 'elite500' ? this.client.channelIds.trialee500TicketsCategory
-                    : formData?.tier === 'elite1000' ? this.client.channelIds.trialee1000TicketsCategory
-                    : formData?.tier === 'elite2000' ? this.client.channelIds.trialee2000TicketsCategory
-                    : this.client.channelIds.trialeeTicketsCategory
-                )
-                : isStaffTicket ? this.client.channelIds.staffTicketsCategory
-                : isClearanceTicket ? this.client.channelIds.wipTicketCategory
-                : this.client.channelIds.ticketCategory;
+            let parentCategoryId: string;
+
+            switch (ticketType) {
+                case 'learner':
+                    parentCategoryId = this.client.channelIds.learnerTicketsCategory;
+                    break;
+                case 'lorebookkill':
+                    parentCategoryId = this.client.channelIds.lorebookTicketsCategory;
+                    break;
+                case 'trialee':
+                    switch (formData?.tier) {
+                        case 'elite500':
+                            parentCategoryId = this.client.channelIds.trialee500TicketsCategory;
+                            break;
+                        case 'elite1000':
+                            parentCategoryId = this.client.channelIds.trialee1000TicketsCategory;
+                            break;
+                        case 'elite2000':
+                            parentCategoryId = this.client.channelIds.trialee2000TicketsCategory;
+                            break;
+                        case 'master1000':
+                            parentCategoryId = this.client.channelIds.masterTrialee1000TicketsCategory;
+                            break;
+                        case 'master2000':
+                            parentCategoryId = this.client.channelIds.masterTrialee2000TicketsCategory;
+                            break;
+                        default:
+                            parentCategoryId = this.client.channelIds.trialeeTicketsCategory;
+                    }
+                    break;
+                case 'lorebook':
+                case 'support':
+                case 'teacher':
+                case 'trialteam':
+                    parentCategoryId = this.client.channelIds.staffTicketsCategory;
+                    break;
+                case 'clearance':
+                    parentCategoryId = this.client.channelIds.wipTicketCategory;
+                    break;
+                default:
+                    parentCategoryId = this.client.channelIds.ticketCategory;
+            }
 
             // Get admin and owner role IDs
             const adminRoleId = this.client.roleIds.admin;
@@ -2003,15 +2032,23 @@ export default class TicketHandler {
                 // give user the notify role for trialees
                 switch (formData.tier) {
                     case 'elite500':
-                        await member.roles.add(this.client.roleIds.elite500trialee).catch(() => {});
+                        await member.roles.add(this.client.roleIds.elite500trialee).catch(() => { });
                         break;
 
                     case 'elite1000':
-                        await member.roles.add(this.client.roleIds.elite1000trialee).catch(() => {});
+                        await member.roles.add(this.client.roleIds.elite1000trialee).catch(() => { });
                         break;
 
                     case 'elite2000':
-                        await member.roles.add(this.client.roleIds.elite2000trialee).catch(() => {});
+                        await member.roles.add(this.client.roleIds.elite2000trialee).catch(() => { });
+                        break;
+
+                    case 'master1000':
+                        await member.roles.add(this.client.roleIds.master1000trialee).catch(() => { });
+                        break;
+
+                    case 'master2000':
+                        await member.roles.add(this.client.roleIds.master2000trialee).catch(() => { });
                         break;
 
                     default:
@@ -2026,9 +2063,9 @@ export default class TicketHandler {
 
                 const thread = await channel.threads.create({
                     name: isStaffTicket ? `Discussion - ${member.displayName}`
-                    : isReportTicket ? `Report - ${member.displayName}`
-                    : isClearanceTicket ? `Clearance - ${member.displayName}`
-                    : `Undefined - ${member.displayName}`,
+                        : isReportTicket ? `Report - ${member.displayName}`
+                            : isClearanceTicket ? `Clearance - ${member.displayName}`
+                                : `Undefined - ${member.displayName}`,
                     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
                     type: ChannelType.PrivateThread,
                     reason: 'Thread automatically created by TicketHandler'
@@ -2363,7 +2400,14 @@ export default class TicketHandler {
                     allowedMentions: { parse: ['roles'] }
                 });
 
-                const container = this.client.cv2.getContainerBuilder(null, 'Trials - Post a quick host card by clicking one of these Buttons');
+                const targetTrialRole = formData?.tier ? this.client.roles[formData.tier] : null;
+                const container = this.client.cv2.getContainerBuilder(null, 'Trials - Post a quick host card by clicking one of these buttons');
+
+                if (targetTrialRole) {
+                    container.addTextDisplayComponents(builder => builder.setContent(`Target role: ${targetTrialRole}\nPassing the trial will assign the matching tier, the relevant umbrella roles, and every lower tier based on the selected trialee's active trialee role.`));
+                    container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+                }
+
                 container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
                     [
                         new ButtonBuilder()

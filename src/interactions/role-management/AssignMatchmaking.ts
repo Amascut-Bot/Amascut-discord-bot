@@ -14,21 +14,8 @@ export default class AssignMatchmaking extends BotInteraction {
         return 'TRIAL_TEAM';
     }
 
-    get coverTag() {
-        return 'elite';
-    }
-
     get hierarchy() {
-        return ['elite500', 'elite1000', 'elite2000'];
-    }
-
-    // Mapping for bundled notify roles - extendable by adding entries
-    get notifyRoles() {
-        return {
-            'elite500': 'notifyElite500',
-            'elite1000': 'notifyElite1000',
-            'elite2000': 'notifyElite2000'
-        };
+        return this.client.util.trialHierarchy;
     }
 
     get slashData() {
@@ -46,7 +33,9 @@ export default class AssignMatchmaking extends BotInteraction {
         const options = {
             'Elite 500': 'elite500',
             'Elite 1000': 'elite1000',
-            'Elite 2000': 'elite2000'
+            'Elite 2000': 'elite2000',
+            'Master 1000': 'master1000',
+            'Master 2000': 'master2000'
         };
 
         const filtered = Object.keys(options)
@@ -63,13 +52,10 @@ export default class AssignMatchmaking extends BotInteraction {
         const roleKey: string = interaction.options.getString('role', true);
         const { colours } = this.client.util;
 
-        const notifyRoleKey = this.notifyRoles[roleKey as keyof typeof this.notifyRoles];
-
         const member = await interaction.guild?.members.fetch(targetUser.id);
         const userRoleIds = member?.roles.cache.map(r => r.id) || [];
 
         const trialedRoleId = this.client.roleIds[roleKey];
-        const coverTagId = this.client.roleIds[this.coverTag];
         const trialedRoleObject = await interaction.guild?.roles.fetch(trialedRoleId) as Role;
 
         if (!trialedRoleObject) {
@@ -77,8 +63,12 @@ export default class AssignMatchmaking extends BotInteraction {
         }
 
         const roleIndex = this.hierarchy.indexOf(roleKey);
+
+        if (roleIndex === -1) {
+            return await interaction.editReply({ content: 'Invalid role selection.' });
+        }
+
         const higherRoles = this.hierarchy.slice(roleIndex + 1);
-        const lowerRoles = this.hierarchy.slice(0, roleIndex);
 
         const hasHigherRole = higherRoles.some(r => userRoleIds.includes(this.client.roleIds[r]));
         const hasThisRole = userRoleIds.includes(trialedRoleId);
@@ -92,21 +82,15 @@ export default class AssignMatchmaking extends BotInteraction {
             return await interaction.editReply({ embeds: [embed] });
         }
 
-        const rolesToAdd = [trialedRoleId, coverTagId];
-
-        for (const lowerRole of lowerRoles) {
-            rolesToAdd.push(this.client.roleIds[lowerRole]);
-        }
-
-        // Bundle notify role if defined for this trialed role
-        if (notifyRoleKey) {
-            rolesToAdd.push(this.client.roleIds[notifyRoleKey]);
-        }
+        const grantedRoleKeys = this.client.util.getTrialAwardRoleKeys(roleKey);
+        const newlyGrantedRoleKeys = this.client.util.getUnownedRoleKeys(userRoleIds, grantedRoleKeys);
+        const rolesToAdd = this.client.util.getRoleIdsFromKeys(newlyGrantedRoleKeys);
+        const grantedRoleMentions = this.client.util.getRoleMentionsFromKeys(newlyGrantedRoleKeys);
 
         await member?.roles.add(rolesToAdd);
 
-        const trialeeRoleKey = `${roleKey}trialee`;
-        const trialeeRoleId = this.client.roleIds[trialeeRoleKey];
+        const trialeeRoleKey = this.client.util.getTrialeeRoleKey(roleKey);
+        const trialeeRoleId = trialeeRoleKey ? this.client.roleIds[trialeeRoleKey] : null;
         if (trialeeRoleId) {
             await member?.roles.remove(trialeeRoleId).catch(() => {});
         }
@@ -136,7 +120,7 @@ export default class AssignMatchmaking extends BotInteraction {
             const logEmbed = new EmbedBuilder()
                 .setTimestamp()
                 .setColor(trialedRoleObject.hexColor)
-                .setDescription(`${this.client.roles[roleKey]} and ${this.client.roles[this.coverTag]} were assigned to <@${targetUser.id}> by <@${interaction.user.id}>.\n${messageUrl ? `**Message**: ${messageUrl}` : ''}`);
+                .setDescription(`${grantedRoleMentions.join(', ')} were assigned to <@${targetUser.id}> by <@${interaction.user.id}>.\n${messageUrl ? `**Message**: ${messageUrl}` : ''}`);
 
             const buttonRow = new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
@@ -152,7 +136,7 @@ export default class AssignMatchmaking extends BotInteraction {
         const replyEmbed = new EmbedBuilder()
             .setTitle('Role successfully assigned')
             .setColor(colours.discord.green)
-            .setDescription(`**Member:** <@${targetUser.id}>\n**Trialed Role:** ${this.client.roles[roleKey]}\n**Cover Tag:** ${this.client.roles[this.coverTag]}`);
+            .setDescription(`**Member:** <@${targetUser.id}>\n**Trialed Role:** ${this.client.roles[roleKey]}\n**Assigned Roles:** ${grantedRoleMentions.join(', ')}`);
 
         await interaction.editReply({ embeds: [replyEmbed] });
     }

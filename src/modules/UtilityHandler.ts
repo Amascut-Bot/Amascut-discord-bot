@@ -32,6 +32,10 @@ interface Hierarchy {
     [key: string]: string[];
 }
 
+interface RoleMap {
+    [key: string]: string;
+}
+
 interface AutomodResult {
     reason: string
     evidence: string
@@ -86,6 +90,30 @@ export default class UtilityHandler {
         }
     }
 
+    get trialHierarchy(): string[] {
+        return ['elite500', 'elite1000', 'elite2000', 'master1000', 'master2000'];
+    }
+
+    get trialNotifyRoles(): RoleMap {
+        return {
+            elite500: 'notifyElite500',
+            elite1000: 'notifyElite1000',
+            elite2000: 'notifyElite2000',
+            master1000: 'notifyMaster1000',
+            master2000: 'notifyMaster2000'
+        };
+    }
+
+    get trialeeRoles(): RoleMap {
+        return {
+            elite500: 'elite500trialee',
+            elite1000: 'elite1000trialee',
+            elite2000: 'elite2000trialee',
+            master1000: 'master1000trialee',
+            master2000: 'master2000trialee'
+        };
+    }
+
     // instead of a hierarchy, enrages are a whitelist
     get enrageHierarchy(): Hierarchy {
         return {
@@ -106,6 +134,120 @@ export default class UtilityHandler {
 
     public stripRole = (role: string) => {
         return role.slice(3, -1)
+    }
+
+    public isTrialTier = (role: string): boolean => {
+        return this.trialHierarchy.includes(role);
+    }
+
+    public isMasterTrialTier = (role: string): boolean => {
+        return role.startsWith('master');
+    }
+
+    public getTrialTierIndex = (role: string): number => {
+        return this.trialHierarchy.indexOf(role);
+    }
+
+    public getTrialTierFromEnrage = (enrage: string): string | null => {
+        switch (enrage) {
+            case '500':
+                return 'elite500';
+            case '1000':
+                return 'elite1000';
+            case '2000':
+                return 'elite2000';
+            default:
+                return null;
+        }
+    }
+
+    public getTrialTierFromTrialeeRole = (memberOrRoleIds: GuildMember | string[]): string | null => {
+        const userRoleIds = Array.isArray(memberOrRoleIds)
+            ? memberOrRoleIds
+            : memberOrRoleIds.roles.cache.map((role) => role.id);
+
+        for (const roleKey of [...this.trialHierarchy].reverse()) {
+            const trialeeRoleKey = this.trialeeRoles[roleKey];
+            const trialeeRoleId = this.client.roleIds[trialeeRoleKey];
+
+            if (trialeeRoleId && userRoleIds.includes(trialeeRoleId)) {
+                return roleKey;
+            }
+        }
+
+        return null;
+    }
+
+    public resolveTrialAwardRole = (member: GuildMember, fallbackEnrage: string | null = null): string | null => {
+        const trialeeRole = this.getTrialTierFromTrialeeRole(member);
+
+        if (trialeeRole) {
+            return trialeeRole;
+        }
+
+        if (!fallbackEnrage) {
+            return null;
+        }
+
+        return this.getTrialTierFromEnrage(fallbackEnrage);
+    }
+
+    public canVouchForTrialRole = (userRoleIds: string[], requestedRole: string): boolean => {
+        const roleIndex = this.getTrialTierIndex(requestedRole);
+
+        if (roleIndex === -1) {
+            return false;
+        }
+
+        return this.trialHierarchy.slice(roleIndex).some((roleKey) => {
+            const roleId = this.client.roleIds[roleKey];
+            return Boolean(roleId && userRoleIds.includes(roleId));
+        });
+    }
+
+    public getTrialAwardRoleKeys = (role: string): string[] => {
+        const roleIndex = this.getTrialTierIndex(role);
+
+        if (roleIndex === -1) {
+            return [];
+        }
+
+        const lowerRoles = this.trialHierarchy.slice(0, roleIndex).reverse();
+        const coverRoles = this.isMasterTrialTier(role) ? ['master', 'elite'] : ['elite'];
+        const notifyRole = this.trialNotifyRoles[role];
+
+        return [...new Set([role, ...coverRoles, ...lowerRoles, ...(notifyRole ? [notifyRole] : [])])];
+    }
+
+    public getRoleIdsFromKeys = (roleKeys: string[]): string[] => {
+        return [...new Set(roleKeys
+            .map((roleKey) => this.client.roleIds[roleKey])
+            .filter((roleId): roleId is string => Boolean(roleId)))];
+    }
+
+    public getRoleMentionsFromKeys = (roleKeys: string[]): string[] => {
+        return [...new Set(roleKeys
+            .map((roleKey) => this.client.roles[roleKey])
+            .filter((roleMention): roleMention is string => Boolean(roleMention)))];
+    }
+
+    public getUnownedRoleKeys = (existingRoleIds: string[], roleKeys: string[]): string[] => {
+        return roleKeys.filter((roleKey) => {
+            const roleId = this.client.roleIds[roleKey];
+            return Boolean(roleId && !existingRoleIds.includes(roleId));
+        });
+    }
+
+    public getTrialAwardRoleIds = (role: string): string[] => {
+        return this.getRoleIdsFromKeys(this.getTrialAwardRoleKeys(role));
+    }
+
+    public getTrialAwardRoleMentions = (role: string): string[] => {
+        return this.getRoleMentionsFromKeys(this.getTrialAwardRoleKeys(role));
+    }
+
+    public getTrialeeRoleKey = (role: string): string | null => {
+        return this.trialeeRoles[role] ?? null;
     }
 
     public getKeyFromValue = (obj: any, value: string): any => {

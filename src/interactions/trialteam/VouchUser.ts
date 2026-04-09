@@ -50,11 +50,13 @@ export default class VouchUser extends BotInteraction {
         const member = await interaction.guild?.members.fetch(interaction.user.id);
         const userRoleIds = member?.roles.cache.map(r => r.id) || [];
 
-        const hierarchy = ['elite500', 'elite1000', 'elite2000'];
-        const roleIndex = hierarchy.indexOf(roleKey);
-        const hasRoleOrHigher = hierarchy.slice(roleIndex).some(role =>
-            userRoleIds.includes(this.client.roleIds[role])
-        );
+        const hierarchy = this.client.util.trialHierarchy;
+        const roleIndex = this.client.util.getTrialTierIndex(roleKey);
+        const hasRoleOrHigher = this.client.util.canVouchForTrialRole(userRoleIds, roleKey);
+
+        if (roleIndex === -1) {
+            return await interaction.editReply('Invalid role selected.');
+        }
 
         if (!hasRoleOrHigher) {
             return await interaction.editReply(`You must have ${this.client.roles[roleKey]} or higher to vouch for this role.`);
