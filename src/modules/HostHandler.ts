@@ -435,6 +435,16 @@ export default class HostHandler {
         try {
             const trialedRoleId = this.client.roleIds[roleKey];
             const existingRoleIds = member.roles.cache.map((role) => role.id);
+            const rolePriority = this.client.util.getTrialTierPriority(roleKey);
+
+            if (trialedRoleId && existingRoleIds.includes(trialedRoleId)) {
+                return `<@${member.id}> already has ${this.client.roles[roleKey]}. No role changes were made.`;
+            }
+
+            if (rolePriority !== null && this.client.util.hasTrialRoleAbovePriority(existingRoleIds, rolePriority)) {
+                return `<@${member.id}> already has a higher-priority role than ${this.client.roles[roleKey]}. No role changes were made.`;
+            }
+
             const roleTransition = this.client.util.getTrialRoleTransition(existingRoleIds, roleKey);
             const rolesToAdd = roleTransition.addedRoleIds;
             const rolesToRemove = roleTransition.removedRoleIds;

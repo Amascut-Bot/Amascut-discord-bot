@@ -70,7 +70,7 @@ export default class AssignMatchmaking extends BotInteraction {
             const embed = new EmbedBuilder()
                 .setTitle('Role assign failed')
                 .setColor(colours.discord.red)
-                .setDescription(`<@${targetUser.id}> already has this role or a higher role.`);
+                .setDescription(`<@${targetUser.id}> already has this role or a higher-priority role.`);
 
             return await interaction.editReply({ embeds: [embed] });
         }
