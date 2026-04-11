@@ -2401,26 +2401,18 @@ export default class TicketHandler {
                 });
 
                 const targetTrialRole = formData?.tier ? this.client.roles[formData.tier] : null;
-                const container = this.client.cv2.getContainerBuilder(null, 'Trials - Post a quick host card by clicking one of these buttons');
+                const container = this.client.cv2.getContainerBuilder(null, 'Trials - Post a quick host card');
 
                 if (targetTrialRole) {
-                    container.addTextDisplayComponents(builder => builder.setContent(`Target role: ${targetTrialRole}\nPassing the trial will assign the matching tier, the relevant umbrella roles, and every lower tier based on the selected trialee's active trialee role.`));
+                    container.addTextDisplayComponents(builder => builder.setContent(`Target role: ${targetTrialRole}\nPassing the trial will assign this stored ticket tier and the relevant umbrella roles.`));
                     container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
                 }
 
                 container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
                     [
                         new ButtonBuilder()
-                            .setCustomId('host_trial_post_500')
-                            .setLabel('500%')
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId('host_trial_post_1000')
-                            .setLabel('1000%')
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId('host_trial_post_2000')
-                            .setLabel('2000%')
+                            .setCustomId(`host_trial_post_${formData.tier}`)
+                            .setLabel('Host Trial')
                             .setStyle(ButtonStyle.Secondary),
                     ]
                 ));

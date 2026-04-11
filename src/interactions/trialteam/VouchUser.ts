@@ -49,12 +49,10 @@ export default class VouchUser extends BotInteraction {
 
         const member = await interaction.guild?.members.fetch(interaction.user.id);
         const userRoleIds = member?.roles.cache.map(r => r.id) || [];
-
-        const hierarchy = this.client.util.trialHierarchy;
-        const roleIndex = this.client.util.getTrialTierIndex(roleKey);
+        const rolePriority = this.client.util.getTrialTierPriority(roleKey);
         const hasRoleOrHigher = this.client.util.canVouchForTrialRole(userRoleIds, roleKey);
 
-        if (roleIndex === -1) {
+        if (rolePriority === null) {
             return await interaction.editReply('Invalid role selected.');
         }
 
@@ -99,12 +97,16 @@ export default class VouchUser extends BotInteraction {
         let highestQualifyingRole: string | null = null;
         let qualifyingVouchesForTicket: Vouch[] = [];
 
-        for (let i = roleIndex; i >= 0; i--) {
-            const checkRole = hierarchy[i];
+        for (const checkRole of this.client.util.getTrialQualificationRoleKeys(roleKey)) {
+            const checkPriority = this.client.util.getTrialTierPriority(checkRole);
+
+            if (checkPriority === null) {
+                continue;
+            }
 
             const qualifyingVouches = allVouchesForUser.filter(v => {
-                const vouchRoleIndex = hierarchy.indexOf(v.role);
-                return vouchRoleIndex >= i;
+                const vouchPriority = this.client.util.getTrialTierPriority(v.role);
+                return vouchPriority !== null && vouchPriority >= checkPriority;
             });
 
             const existingTicketForRole = allVouchesForUser.some(v =>
@@ -119,7 +121,10 @@ export default class VouchUser extends BotInteraction {
         }
 
         // Say how many vouches are needed for the role
-        const vouchProgress = `${allVouchesForUser.filter(v => hierarchy.indexOf(v.role) >= roleIndex).length}/${REQUIRED_VOUCHES}`;
+        const vouchProgress = `${allVouchesForUser.filter(v => {
+            const vouchPriority = this.client.util.getTrialTierPriority(v.role);
+            return vouchPriority !== null && vouchPriority >= rolePriority;
+        }).length}/${REQUIRED_VOUCHES}`;
 
         // Log vouch to the vouch log channel
         if (this.client.channelIds.vouchLog) {

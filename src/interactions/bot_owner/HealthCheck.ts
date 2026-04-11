@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import BotInteraction from '../../types/BotInteraction';
 import TwitchHandler from '../../modules/TwitchHandler';
 

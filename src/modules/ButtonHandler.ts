@@ -4,6 +4,7 @@ import TicketHandler from './TicketHandler';
 import LeaderboardHandler from './LeaderboardHandler';
 import HostHandler from './HostHandler';
 import VouchHandler from './VouchHandler';
+import { RoleAssignmentLog } from '../entity/RoleAssignmentLog';
 
 // ===============================
 // MAIN CLASS
@@ -53,8 +54,13 @@ export default class ButtonHandler {
             return;
         }
 
+        if (id.startsWith('rejectRoleAssign_')) {
+            this.rejectRoleAssign(interaction, id.substring('rejectRoleAssign_'.length));
+            return;
+        }
+
         switch (id) {
-            case 'rejectRoleAssign': this.rejectRoleAssign(interaction); break;
+            case 'rejectRoleAssign': this.rejectLegacyRoleAssign(interaction); break;
         }
     }
 
@@ -72,7 +78,87 @@ export default class ButtonHandler {
 
     //#region Role-Assign
 
-    private async rejectRoleAssign(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
+    private async rejectRoleAssign(interaction: ButtonInteraction<'cached'>, roleAssignmentLogIdText: string): Promise<Message<true> | InteractionResponse<true> | void> {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const { hasOverridePermissions, hasRolePermissions } = this.client.util;
+
+        const rolePermissions = await hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        const overridePermissions = await hasOverridePermissions(interaction, 'assign');
+
+        if (!(rolePermissions || overridePermissions)) {
+            this.client.logger.log(
+                {
+                    message: `Attempted restricted permissions. { command: Reject Role Assign, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                    handler: this.constructor.name,
+                },
+                true
+            );
+            return await interaction.editReply({ content: 'You do not have permissions to run this command. This incident has been logged.' });
+        }
+
+        const roleAssignmentLogId = Number.parseInt(roleAssignmentLogIdText, 10);
+
+        if (Number.isNaN(roleAssignmentLogId)) {
+            return await interaction.editReply({ content: 'Invalid role assignment record.' });
+        }
+
+        const roleAssignmentLogRepository = this.client.dataSource.getRepository(RoleAssignmentLog);
+        const roleAssignmentLog = await roleAssignmentLogRepository.findOne({ where: { id: roleAssignmentLogId } });
+
+        if (!roleAssignmentLog) {
+            return await interaction.editReply({ content: 'Role assignment record not found.' });
+        }
+
+        if (roleAssignmentLog.status !== 'active') {
+            return await interaction.editReply({ content: 'This approval has already been rejected.' });
+        }
+
+        const user = await interaction.guild?.members.fetch(roleAssignmentLog.targetUserId);
+
+        if (!user) {
+            return await interaction.editReply({ content: 'Could not find the member for this approval.' });
+        }
+
+        if (roleAssignmentLog.addedRoleIds.length > 0) {
+            await user.roles.remove(roleAssignmentLog.addedRoleIds);
+        }
+
+        if (roleAssignmentLog.removedRoleIds.length > 0) {
+            await user.roles.add(roleAssignmentLog.removedRoleIds);
+        }
+
+        if (roleAssignmentLog.announcementChannelId && roleAssignmentLog.announcementMessageId) {
+            try {
+                const channel = await interaction.guild?.channels.fetch(roleAssignmentLog.announcementChannelId) as TextChannel;
+                const message = await channel.messages.fetch(roleAssignmentLog.announcementMessageId);
+                await message.delete();
+            }
+            catch (err) { }
+        }
+
+        roleAssignmentLog.status = 'rejected';
+        await roleAssignmentLogRepository.save(roleAssignmentLog);
+
+        const messageEmbed = interaction.message.embeds[0];
+        const messageContent = messageEmbed.data.description;
+        const oldTimestamp = messageEmbed.timestamp ? new Date(messageEmbed.timestamp) : new Date();
+        const newEmbed = new EmbedBuilder()
+            .setTimestamp(oldTimestamp)
+            .setColor(messageEmbed.color)
+            .setDescription(`${messageContent}
+
+> Role Rejected by <@${this.userId}> <t:${this.currentTime}:R>.`);
+
+        await interaction.message.edit({ embeds: [newEmbed], components: [] });
+
+        const replyEmbed = new EmbedBuilder()
+            .setColor(this.client.util.colours.discord.green)
+            .setDescription('Role changes successfully reverted.');
+        return await interaction.editReply({ embeds: [replyEmbed] });
+    }
+
+    private async rejectLegacyRoleAssign(interaction: ButtonInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const { hasOverridePermissions, hasRolePermissions } = this.client.util;
@@ -133,8 +219,8 @@ export default class ButtonHandler {
     //#endregion
 
     //#region SELF-ASSIGN SYSTEM
-    private async handleSelfAssign(interaction: ButtonInteraction<'cached'>, id: string) : Promise<Message<true> | InteractionResponse<true> | void> {
-        await interaction.deferReply({flags: MessageFlags.Ephemeral});
+    private async handleSelfAssign(interaction: ButtonInteraction<'cached'>, id: string): Promise<Message<true> | InteractionResponse<true> | void> {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const { colours } = this.client.util;
         const user = await interaction.guild?.members.fetch(interaction.user.id);
         const userRoles = await user?.roles.cache.map(role => role.id) || [];
@@ -152,20 +238,22 @@ export default class ButtonHandler {
         const roleObject = interaction.guild.roles.cache.get(roleIds[0]);
 
         if (roleObject?.permissions.has('ManageRoles') || roleIds[0] === this.client.roleIds.honeypot) {
-            return await interaction.editReply({embeds: [new EmbedBuilder()
-                .setColor(colours.discord.red)
-                .setDescription(`Unallowed Role-Assign!`)]});
+            return await interaction.editReply({
+                embeds: [new EmbedBuilder()
+                    .setColor(colours.discord.red)
+                    .setDescription(`Unallowed Role-Assign!`)]
+            });
         }
 
         if (userRoles.includes(roleIds[0])) {
             await user.roles.remove(roleIds[0]);
             await this.client.logReactionRoleChange(user, roleObject!, 'removed');
-            return await interaction.editReply({embeds: [removeResultEmbed]});
+            return await interaction.editReply({ embeds: [removeResultEmbed] });
         } else if (roleIds.length == 1) {
             if (!userRoles.includes(roleIds[0])) {
                 await user.roles.add(roleIds[0]);
                 await this.client.logReactionRoleChange(user, roleObject!, 'added');
-                return await interaction.editReply({embeds: [addResultEmbed]});
+                return await interaction.editReply({ embeds: [addResultEmbed] });
             }
         } else if (roleIds.length > 1) {
             const { categorize, hierarchy, enrageHierarchy } = this.client.util;
@@ -173,6 +261,10 @@ export default class ButtonHandler {
             //special logic for hierarchy tags
             const hasRoleOrHigher = (role: string) => {
                 try {
+                    if (this.client.util.isTrialTier(role)) {
+                        return this.client.util.canVouchForTrialRole(userRoles, role);
+                    }
+
                     if (!categorize(role) || categorize(role) === 'vanity' || categorize(role) === '') return false;
 
                     //special logic for enrage roles
@@ -203,9 +295,9 @@ export default class ButtonHandler {
             for (let i = 1; i < roleIds.length; i++) {
                 if (!/^[+-]?\d+(\.\d+)?$/.test(roleIds[i])) {
                     if (hasRoleOrHigher(roleIds[i])) {
-                    await user.roles.add(roleIds[0]);
+                        await user.roles.add(roleIds[0]);
                         await this.client.logReactionRoleChange(user, roleObject!, 'added');
-                    return await interaction.editReply({embeds: [addResultEmbed]});
+                        return await interaction.editReply({ embeds: [addResultEmbed] });
                     } else {
                         // go through whitelist
                         if (categorize(roleIds[i]) === 'enrage') {
@@ -226,7 +318,7 @@ export default class ButtonHandler {
                     if (userRoles.includes(roleIds[i])) {
                         await user.roles.add(roleIds[0]);
                         await this.client.logReactionRoleChange(user, roleObject!, 'added');
-                        return await interaction.editReply({embeds: [addResultEmbed]});
+                        return await interaction.editReply({ embeds: [addResultEmbed] });
                     }
                     if (i > 1) {
                         roleReqError += ", ";

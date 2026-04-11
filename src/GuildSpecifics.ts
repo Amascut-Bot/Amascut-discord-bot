@@ -51,7 +51,9 @@ export function getChannels(guildId: string | undefined): Channels {
             vouchTicketsCategory: `1464678728410992844`,
             vouchLog: '1485240645340889128',
             vodSubmissions: `1464589392843767860`,
-            vodReview: `1464589425932632155`
+            vodReview: `1464589425932632155`,
+            masterTrialee1000TicketsCategory: '1492216896852988026',
+            masterTrialee2000TicketsCategory: '1492216981972058122'
         }
     }
 
@@ -192,6 +194,19 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             elite2000trialee: '1468296795879772183',
             elite1000trialee: '1468296820319981568',
             elite500trialee: '1468296846488375472',
+
+            master: '1492215560652591124',
+            master2000: '1492215768388210749',
+            master1000: '1492215806120169502',
+            master2000trialee: '1492215881726562364',
+            master1000trialee: '1492215850726592541',
+
+            // Notify Roles
+            notifyElite2000: '1492216554279141387',
+            notifyElite1000: '1492216530174218485',
+            notifyElite500: '1492216496045166744',
+            notifyMaster2000: '1492215943340757154',
+            notifyMaster1000: '1492215963758756062',
 
             // KC Roles
             kc100: '1409628812915904652', // Cat-Bound Initiate
