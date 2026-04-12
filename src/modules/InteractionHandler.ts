@@ -8,6 +8,7 @@ import EventEmitter = require('events');
 import TicketHandler from './TicketHandler';
 import LeaderboardHandler from './LeaderboardHandler';
 import HostHandler from './HostHandler';
+import VouchHandler from './VouchHandler';
 
 export default interface InteractionHandler {
     client: Bot;
@@ -100,6 +101,10 @@ export default class InteractionHandler extends EventEmitter {
 
             if (interaction.customId.startsWith('host_')) {
                 return new HostHandler(this.client, interaction.customId, interaction);
+            }
+
+            if (interaction.customId.startsWith('vouch_')) {
+                return new VouchHandler(this.client, interaction.customId, interaction);
             }
         }
 
