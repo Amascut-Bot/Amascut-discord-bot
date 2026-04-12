@@ -2566,7 +2566,7 @@ export default class TicketHandler {
 
     //#region Vouch Tickets
 
-    public static async createVouchTicket(client: Bot, interaction: ChatInputCommandInteraction, targetUser: User, roleKey: string, vouches: Vouch[]): Promise<void> {
+    public static async createVouchTicket(client: Bot, interaction: ChatInputCommandInteraction | ModalSubmitInteraction, targetUser: User, roleKey: string, vouches: Vouch[]): Promise<void> {
         const vouchCount = await client.dataSource.getRepository(Vouch).count();
         const channelName = `vouch-${vouchCount.toString().padStart(4, '0')}`;
 
@@ -2602,6 +2602,12 @@ export default class TicketHandler {
                 type: OverwriteType.Role
             });
         }
+
+        permissionOverwrites.push({
+            id: targetUser.id,
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory],
+            type: OverwriteType.Member
+        });
 
         const ticketChannel = await interaction.guild?.channels.create({
             name: channelName,
