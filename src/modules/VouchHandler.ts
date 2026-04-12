@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, Interaction, MessageFlags, TextChannel } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, Interaction, Message, MessageFlags, TextChannel } from 'discord.js';
 import Bot from '../Bot';
 import { Vouch } from '../entity/Vouch';
 import { VouchVote } from '../entity/VouchVote';
@@ -98,35 +98,39 @@ export default class VouchHandler {
             const member = await interaction.guild?.members.fetch(vouch.vouchee);
             if (!member) return;
 
-            const hierarchy = ['elite500', 'elite1000', 'elite2000'];
-            const roleIndex = hierarchy.indexOf(vouch.role);
-            const rolesToAdd = [this.client.roleIds[vouch.role], this.client.roleIds.elite];
+            const existingRoleIds = member.roles.cache.map((role) => role.id);
+            const roleTransition = this.client.util.getTrialRoleTransition(existingRoleIds, vouch.role);
+            const rolesToAdd = roleTransition.addedRoleIds;
+            const rolesToRemove = roleTransition.removedRoleIds;
+            const grantedRoleMentions = roleTransition.addedRoleMentions;
+            const removedRoleMentions = roleTransition.removedRoleMentions;
+            const hasRoleChanges = rolesToAdd.length > 0 || rolesToRemove.length > 0;
+            const exactRoleId = this.client.roleIds[vouch.role];
+            const newlyEarnedTier = Boolean(exactRoleId && !existingRoleIds.includes(exactRoleId));
 
-            hierarchy.slice(0, roleIndex).forEach(role => rolesToAdd.push(this.client.roleIds[role]));
+            if (rolesToRemove.length > 0) {
+                await member.roles.remove(rolesToRemove);
+            }
 
-            const notifyRoleMap: Record<string, string> = {
-                'elite500': 'notifyElite500',
-                'elite1000': 'notifyElite1000',
-                'elite2000': 'notifyElite2000'
-            };
-            const notifyRoleId = this.client.roleIds[notifyRoleMap[vouch.role]];
-            if (notifyRoleId) rolesToAdd.push(notifyRoleId);
-
-            await member.roles.add(rolesToAdd);
+            if (rolesToAdd.length > 0) {
+                await member.roles.add(rolesToAdd);
+            }
 
             const roleObject = await interaction.guild?.roles.fetch(this.client.roleIds[vouch.role]);
 
+            let confirmationMessage: Message | null = null;
             let messageUrl = '';
             const confirmChannel = this.client.channelIds.achievements
                 ? await this.client.channels.fetch(this.client.channelIds.achievements) as TextChannel : null;
 
-            if (confirmChannel) {
+            if (confirmChannel && newlyEarnedTier) {
                 const msg = await confirmChannel.send({
                     embeds: [new EmbedBuilder()
                         .setColor(roleObject?.hexColor || this.client.color)
                         .setDescription(`Congratulations to <@${vouch.vouchee}> on achieving ${this.client.roles[vouch.role]}!`)
                         .setTimestamp()]
                 });
+                confirmationMessage = msg;
                 messageUrl = msg.url;
             }
 
@@ -135,14 +139,46 @@ export default class VouchHandler {
 
             if (logChannel) {
                 const voucherList = vouches.map(v => `<@${v.voucher}>`).join(', ');
+                const changeLines: string[] = [];
+
+                if (grantedRoleMentions.length > 0) {
+                    changeLines.push(`${grantedRoleMentions.join(', ')} assigned to <@${vouch.vouchee}> via vouch by ${voucherList}.`);
+                }
+
+                if (removedRoleMentions.length > 0) {
+                    changeLines.push(`${removedRoleMentions.join(', ')} removed from <@${vouch.vouchee}>.`);
+                }
+
+                if (!hasRoleChanges) {
+                    changeLines.push(`<@${vouch.vouchee}> already had every applicable role for ${this.client.roles[vouch.role]}. No role changes were needed.`);
+                }
+
+                if (messageUrl) {
+                    changeLines.push(`**Message**: ${messageUrl}`);
+                }
+
+                const roleAssignmentLog = hasRoleChanges
+                    ? await this.client.util.createRoleAssignmentLog({
+                        targetUserId: vouch.vouchee,
+                        actorUserId: interaction.user.id,
+                        source: 'vouch-approve',
+                        addedRoleIds: rolesToAdd,
+                        removedRoleIds: rolesToRemove,
+                        announcementChannelId: confirmationMessage?.channelId ?? null,
+                        announcementMessageId: confirmationMessage?.id ?? null
+                    })
+                    : null;
+
                 await logChannel.send({
                     embeds: [new EmbedBuilder()
                         .setColor(roleObject?.hexColor || this.client.color)
-                        .setDescription(`${this.client.roles[vouch.role]} and ${this.client.roles.elite} assigned to <@${vouch.vouchee}> via vouch by ${voucherList}.${messageUrl ? `\n**Message**: ${messageUrl}` : ''}`)
+                        .setDescription(changeLines.join('\n'))
                         .setTimestamp()],
-                    components: [new ActionRowBuilder<ButtonBuilder>().addComponents(
-                        new ButtonBuilder().setCustomId('rejectRoleAssign').setLabel('Reject Approval').setStyle(ButtonStyle.Danger)
-                    )]
+                    components: roleAssignmentLog
+                        ? [new ActionRowBuilder<ButtonBuilder>().addComponents(
+                            new ButtonBuilder().setCustomId(this.client.util.getRejectRoleAssignCustomId(roleAssignmentLog.id)).setLabel('Reject Approval').setStyle(ButtonStyle.Danger)
+                        )]
+                        : []
                 });
             }
 

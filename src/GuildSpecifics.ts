@@ -6,7 +6,7 @@ export interface Roles {
     [roleName: string]: string;
 }
 
-export function getChannels(guildId: string | undefined) : Channels {
+export function getChannels(guildId: string | undefined): Channels {
     let result = {} as Channels;
 
     //AGOD Bot Testing (Patze)
@@ -51,7 +51,9 @@ export function getChannels(guildId: string | undefined) : Channels {
             vouchTicketsCategory: `1464678728410992844`,
             vouchLog: '1485240645340889128',
             vodSubmissions: `1464589392843767860`,
-            vodReview: `1464589425932632155`
+            vodReview: `1464589425932632155`,
+            masterTrialee1000TicketsCategory: '1492216896852988026',
+            masterTrialee2000TicketsCategory: '1492216981972058122'
         }
     }
 
@@ -105,6 +107,8 @@ export function getChannels(guildId: string | undefined) : Channels {
             trialee500TicketsCategory: '1464336828206415923',
             trialee1000TicketsCategory: '1483844686467563530',
             trialee2000TicketsCategory: '1483844787357614210',
+            masterTrialee1000TicketsCategory: '1491863628649861220',
+            masterTrialee2000TicketsCategory: '1491863719624577136',
 
             // trial team
             trialCategory: '1416026683659780148',
@@ -154,7 +158,7 @@ export function getChannels(guildId: string | undefined) : Channels {
     return result;
 }
 
-export function getRoles(guildId: string | undefined, stripRole: boolean = false) : Roles {
+export function getRoles(guildId: string | undefined, stripRole: boolean = false): Roles {
     let result = {} as Roles;
 
     //AGOD Bot Testing (Patze)
@@ -190,6 +194,19 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             elite2000trialee: '1468296795879772183',
             elite1000trialee: '1468296820319981568',
             elite500trialee: '1468296846488375472',
+
+            master: '1492215560652591124',
+            master2000: '1492215768388210749',
+            master1000: '1492215806120169502',
+            master2000trialee: '1492215881726562364',
+            master1000trialee: '1492215850726592541',
+
+            // Notify Roles
+            notifyElite2000: '1492216554279141387',
+            notifyElite1000: '1492216530174218485',
+            notifyElite500: '1492216496045166744',
+            notifyMaster2000: '1492215943340757154',
+            notifyMaster1000: '1492215963758756062',
 
             // KC Roles
             kc100: '1409628812915904652', // Cat-Bound Initiate
@@ -269,10 +286,18 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             elite1000trialee: '1468293781513175082',
             elite500trialee: '1468293751461122303',
 
+            master: '1485117983046238220',
+            master2000: '1489788387870380202',
+            master1000: '1489788305313890364',
+            master2000trialee: '1491553995083223162',
+            master1000trialee: '1491553904155164743',
+
             // Notify Roles
             notifyElite2000: '1462531083135357031',
             notifyElite1000: '1462531053230227699',
             notifyElite500: '1462531007382028288',
+            notifyMaster2000: '1489811960479613049',
+            notifyMaster1000: '1489811866552107058',
 
             // KC Roles
             kc100: '1401429471692722292', // Cat-Bound Initiate

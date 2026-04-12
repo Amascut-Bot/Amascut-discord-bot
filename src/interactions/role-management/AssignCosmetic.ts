@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, SlashCommandBuilder, User, Role, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AutocompleteInteraction, MessageFlags } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, User, Role, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AutocompleteInteraction, Message, MessageFlags } from 'discord.js';
 
 interface Hierarchy {
     [key: string]: string[];
@@ -33,7 +33,7 @@ export default class Pass extends BotInteraction {
         }
     }
 
-    get options(): { name: string, value: string } [] {
+    get options(): { name: string, value: string }[] {
         const assignOptions: any = {
             '500% Enrage': 'enr500',
             '1000% Enrage': 'enr1000',
@@ -100,6 +100,10 @@ export default class Pass extends BotInteraction {
 
         const user = await interaction.guild?.members.fetch(userResponse.id);
         const userRoles = await user?.roles.cache.map(role => role.id) || [];
+        const addedRoleIds: string[] = [];
+        const removedRoleIds: string[] = [];
+        const addedRoleMentions: string[] = [];
+        const removedRoleMentions: string[] = [];
 
         let sendMessage = false;
         const roleObject = await interaction.guild?.roles.fetch(this.client.roleIds[role]) as Role;
@@ -125,23 +129,35 @@ export default class Pass extends BotInteraction {
 
         const roleId = this.client.roleIds[role];
         if (!hasHigherRole(role)) {
-            await user?.roles.add(roleId);
+            if (!userRoles?.includes(roleId)) {
+                await user?.roles.add(roleId);
+                addedRoleIds.push(roleId);
+                addedRoleMentions.push(this.client.roles[role]);
+            }
         }
         embedColour = roleObject.colors.primaryColor ?? this.client.color;
-        if (!(userRoles?.includes(roleId)) && !hasHigherRole(role)) {
+        if (addedRoleIds.includes(roleId)) {
             sendMessage = true;
         }
         if (role in this.removeHierarchy) {
             for await (const roleToRemove of this.removeHierarchy[role]) {
                 const removeRoleId = this.client.roleIds[roleToRemove];
-                if (userRoles?.includes(removeRoleId)) await user?.roles.remove(removeRoleId);
+                if (userRoles?.includes(removeRoleId)) {
+                    await user?.roles.remove(removeRoleId);
+                    removedRoleIds.push(removeRoleId);
+                    removedRoleMentions.push(this.client.roles[roleToRemove]);
+                }
             };
         }
+
+        const hasRoleChanges = addedRoleIds.length > 0 || removedRoleIds.length > 0;
 
         let returnedMessage = {
             id: '',
             url: ''
         };
+
+        let confirmationMessage: Message | null = null;
 
         const embed = new EmbedBuilder()
             .setAuthor({ name: interaction.user.username, iconURL: interaction.user.avatarURL() || this.client.user?.avatarURL() || 'https://media.discordapp.net/attachments/1027186342620299315/1047598720834875422/618px-Solly_pet_1.png' })
@@ -149,7 +165,9 @@ export default class Pass extends BotInteraction {
             .setColor(embedColour)
             .setDescription(`Congratulations to <@${userResponse.id}> on achieving ${this.client.roles[role]}!`);
 
-        if (sendMessage && channel) await channel.send({ embeds: [embed] }).then(message => {
+        if (sendMessage && channel) {
+            const message = await channel.send({ embeds: [embed] });
+            confirmationMessage = message;
             returnedMessage.id = message.id;
             returnedMessage.url = message.url;
 
@@ -165,32 +183,58 @@ export default class Pass extends BotInteraction {
                 }
             }
             */
-        });
+        }
 
         const logChannel = await this.client.channels.fetch(this.client.channelIds.roleAssignLogs) as TextChannel;
-        const buttonRow = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('rejectRoleAssign')
-                    .setLabel('Reject Approval')
-                    .setStyle(ButtonStyle.Danger),
-            );
-        const logEmbed = new EmbedBuilder()
-            .setTimestamp()
-            .setColor(embedColour)
-            .setDescription(`
-            ${this.client.roles[role]} was assigned to <@${userResponse.id}> by <@${interaction.user.id}>.
-            **Message**: [${returnedMessage.id}](${returnedMessage.url})
-            `);
-        if (sendMessage) await logChannel.send({ embeds: [logEmbed], components: [buttonRow] });
+        if (hasRoleChanges) {
+            const roleAssignmentLog = await this.client.util.createRoleAssignmentLog({
+                targetUserId: userResponse.id,
+                actorUserId: interaction.user.id,
+                source: 'assign-cosmetic',
+                addedRoleIds,
+                removedRoleIds,
+                announcementChannelId: confirmationMessage?.channelId ?? null,
+                announcementMessageId: confirmationMessage?.id ?? null
+            });
+
+            const buttonRow = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(this.client.util.getRejectRoleAssignCustomId(roleAssignmentLog.id))
+                        .setLabel('Reject Approval')
+                        .setStyle(ButtonStyle.Danger),
+                );
+
+            const changeLines: string[] = [];
+
+            if (addedRoleMentions.length > 0) {
+                changeLines.push(`${addedRoleMentions.join(', ')} were assigned to <@${userResponse.id}> by <@${interaction.user.id}>.`);
+            }
+
+            if (removedRoleMentions.length > 0) {
+                changeLines.push(`${removedRoleMentions.join(', ')} were removed from <@${userResponse.id}>.`);
+            }
+
+            if (returnedMessage.url) {
+                changeLines.push(`**Message**: ${returnedMessage.url}`);
+            }
+
+            const logEmbed = new EmbedBuilder()
+                .setTimestamp()
+                .setColor(embedColour)
+                .setDescription(changeLines.join('\n'));
+
+            await logChannel.send({ embeds: [logEmbed], components: [buttonRow] });
+        }
 
         const replyEmbed = new EmbedBuilder()
-            .setTitle(sendMessage ? 'Role successfully assigned!' : 'Role assign failed.')
-            .setColor(sendMessage ? colours.discord.green : colours.discord.red)
-            .setDescription(sendMessage ? `
+            .setTitle(hasRoleChanges ? 'Role successfully updated!' : 'Role assign failed.')
+            .setColor(hasRoleChanges ? colours.discord.green : colours.discord.red)
+            .setDescription(hasRoleChanges ? `
             **Member:** <@${userResponse.id}>
-            **Role:** ${this.client.roles[role]}
-            ` : `This user either has this role, or a higher level role.`);
+            ${addedRoleMentions.length > 0 ? `**Assigned Roles:** ${addedRoleMentions.join(', ')}
+            ` : ''}${removedRoleMentions.length > 0 ? `**Removed Roles:** ${removedRoleMentions.join(', ')}
+            ` : ''}` : `This user either has this role, or a higher level role.`);
         await interaction.editReply({ embeds: [replyEmbed] });
     }
 }
