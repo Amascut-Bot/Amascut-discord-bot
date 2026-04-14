@@ -796,7 +796,7 @@ export default class TicketHandler {
             // sit non reading nerds
             if (ticketType === 'trialee') {
                 const secretWord = formData.secretword.toLowerCase().trim();
-                if (!secretWord.includes('meow')) {
+                if (!secretWord.includes('easyread')) {
                     await interaction.editReply({
                         content: 'The secret word you provided is incorrect. Please read the channel and try again.'
                     });
