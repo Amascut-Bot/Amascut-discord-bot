@@ -28,7 +28,8 @@ export default class TicketStatistics extends BotInteraction {
             'Lore Book' : 6,
             'Support': 7,
             'Teacher': 8,
-            'Trial Team': 9
+            'Trial Team': 9,
+            'Trial Reports': 10
         }
         const options: { name: string, value: number }[] = [];
         Object.keys(ticketTypes).forEach((key: string) => {
