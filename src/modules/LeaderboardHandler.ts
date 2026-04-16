@@ -133,8 +133,11 @@ export default class LeaderboardHandler {
         const hostChunks = this.chunkArray(hosts, chunkSize);
         const participantChunks = this.chunkArray(participants, chunkSize);
 
-        const maxChunks = Math.max(hostChunks.length, participantChunks.length);
+        // Discord embeds allow max 25 fields; each chunk uses 2 fields + 1 spacer, so cap at 8 chunks (23 fields)
+        const maxChunks = Math.min(Math.max(hostChunks.length, participantChunks.length), 8);
         const fields: any[] = [];
+        const truncatedHosts = hosts.length > maxChunks * chunkSize;
+        const truncatedParticipants = participants.length > maxChunks * chunkSize;
 
         for (let i = 0; i < maxChunks; i++) {
             const hostSlice = hostChunks[i] ?? [];
@@ -175,6 +178,14 @@ export default class LeaderboardHandler {
                     inline: false
                 });
             }
+        }
+
+        if (truncatedHosts || truncatedParticipants) {
+            fields.push({
+                name: "\u200B",
+                value: `*Showing top ${maxChunks * chunkSize} entries per column.*`,
+                inline: false
+            });
         }
 
         return fields;
