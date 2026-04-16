@@ -55,6 +55,7 @@ export default class TicketHandler {
             case 'ticket:create_teacher': this.handleTicketTeacher(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_trialteam': this.handleTicketTrialTeam(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_trialee': this.handleTicketTrialee(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_trialreport': this.handleTicketTrialReport(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close': this.handleTicketClose(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_confirm': this.handleTicketCloseConfirm(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction as ButtonInteraction<'cached'>); break;
@@ -166,6 +167,70 @@ export default class TicketHandler {
 
         modal.addLabelComponents(label => label
             .setLabel('Please provide any evidence you got')
+            .setFileUploadComponent(fileUpload)
+        );
+
+        await interaction.showModal(modal);
+    }
+
+    private async handleTicketTrialReport(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_trialreport_${interaction.user.id}`)
+            .setTitle('Submit a Trial Report');
+
+        // RSN
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Reported user
+        const userReport = new UserSelectMenuBuilder()
+            .setCustomId('user_report')
+            .setRequired(true)
+            .setMaxValues(5);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Who are you reporting?')
+            .setUserSelectMenuComponent(userReport)
+        );
+
+        const reportedUserInput = new TextInputBuilder()
+            .setCustomId('reported_user')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(100);
+
+        modal.addLabelComponents(label => label
+            .setLabel('What is the RSN of the person')
+            .setTextInputComponent(reportedUserInput)
+        );
+
+        // Reason
+        const reasonInput = new TextInputBuilder()
+            .setCustomId('reason')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        modal.addLabelComponents(label => label
+            .setLabel('What is the reason for your report?')
+            .setTextInputComponent(reasonInput)
+        );
+
+        // Evidence
+        const fileUpload = new FileUploadBuilder()
+            .setCustomId('attachment')
+            .setRequired(false);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Please provide any evidence you have')
             .setFileUploadComponent(fileUpload)
         );
 
@@ -692,6 +757,12 @@ export default class TicketHandler {
                     formData.reason = interaction.fields.getTextInputValue('reason');
                     formData.attachment = interaction.fields.getUploadedFiles('attachment');
                     break;
+                case 'trialreport':
+                    formData.user_report = interaction.fields.getSelectedUsers('user_report');
+                    formData.reported_user = interaction.fields.getTextInputValue('reported_user');
+                    formData.reason = interaction.fields.getTextInputValue('reason');
+                    formData.attachment = interaction.fields.getUploadedFiles('attachment');
+                    break;    
                 case 'suggestion':
                     formData.suggestion = interaction.fields.getTextInputValue('suggestion');
                     formData.reason = interaction.fields.getTextInputValue('reason');
@@ -1921,6 +1992,7 @@ export default class TicketHandler {
             const teacherRoleId = this.client.roleIds.teacher;
             const lorebookRoleId = this.client.roleIds.lorebook;
             const trialTeamRoleId = this.client.roleIds.trialTeam;
+            const reportPermsRoleId = this.client.roleIds.reportPerms;
 
             const member = await guild.members.fetch(userId);
 
@@ -2014,6 +2086,21 @@ export default class TicketHandler {
                 );
             }
 
+            if (ticketType === 'trialreport') {
+                await channel.permissionOverwrites.create(
+                    reportPermsRoleId,
+                    {
+                        ViewChannel: true,
+                        SendMessages: true,
+                        ReadMessageHistory: true,
+                        AttachFiles: true,
+                        EmbedLinks: true,
+                        ManageMessages: true,
+                        ManageChannels: true,
+                    }
+                );
+            }
+            
             if (ticketType === 'trialee') {
                 await channel.permissionOverwrites.create(
                     trialTeamRoleId,
@@ -2148,10 +2235,12 @@ export default class TicketHandler {
             if (ticketType === 'trialee') {
                 welcomeMessage = `<@${userId}>, your ticket has been created. Someone will be with you shortly.`;
             }
-
+            if (ticketType === 'trialreport') {
+                welcomeMessage = `<@${userId}>, your ticket has been created. Someone will be with you shortly.`;
+            }
             // Create embed with form data using fields for better organization
             const embed = new EmbedBuilder()
-                .setTitle(`${ticketType === 'trialteam' ? 'Trial Team' : ticketType === 'lorebook' ? 'Lore Book Crew' : ticketType === 'lorebookkill' ? 'Lore Book Kill' : capitalizeFirstLetter(ticketType)} Ticket`)
+                .setTitle(`${ticketType === 'trialteam' ? 'Trial Team' : ticketType === 'lorebook' ? 'Lore Book Crew' : ticketType === 'lorebookkill' ? 'Lore Book Kill' : ticketType === 'trialreport' ? 'Trial Report' : capitalizeFirstLetter(ticketType)} Ticket`)
                 .setColor(this.client.color)
                 .setTimestamp();
 
@@ -2193,6 +2282,21 @@ export default class TicketHandler {
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Reported Users', value: `${reportedUsers.trim()}\n\`\`\`${formData.reported_user}\`\`\``, inline: false },
+                        { name: 'Reason', value: `\`\`\`${formData.reason}\`\`\``, inline: false },
+                    );
+                    urls = urls.concat(formData.reason.match(urlRegex) || []);
+                    break;
+                case 'trialreport':
+                    let reportedUser: string = '';
+                    if (formData.user_report) {
+                        for (const [_, user] of formData.user_report) {
+                            reportedUser += `<@${user.id}>\n`;
+                        }
+                    }
+
+                    embed.addFields(
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Reported Users', value: `${reportedUser.trim()}\n\`\`\`${formData.reported_user}\`\`\``, inline: false },
                         { name: 'Reason', value: `\`\`\`${formData.reason}\`\`\``, inline: false },
                     );
                     urls = urls.concat(formData.reason.match(urlRegex) || []);
@@ -2483,6 +2587,8 @@ export default class TicketHandler {
                 ticketObject.ticketType = 10;
             case 'trialee':
                 ticketObject.ticketType = 11;
+            case 'trialreport':
+                ticketObject.ticketType = 12;
         }
 
         await ticketRepository.save(ticketObject);
