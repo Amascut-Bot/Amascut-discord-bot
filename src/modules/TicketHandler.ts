@@ -1940,7 +1940,7 @@ export default class TicketHandler {
                 channelName += `-${mode}`;
             }
 
-            const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
+            const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam' || ticketType === 'trialreport';
             const isClearanceTicket = ticketType === 'clearance';
             const isReportTicket = ticketType === 'report';
             let parentCategoryId: string;
@@ -2178,7 +2178,7 @@ export default class TicketHandler {
                         }
                     }
                 } else if (isClearanceTicket) {
-                    await thread.send(`${adminRole}, ${ownerRole}: Speak as the bot here`);
+                    await thread.send(`Any messages sent in this channel will be sent as the bot in the main ticket channel.`);
                     const member: GuildMember = await guild.members.fetch(userId);
 
                     const warning = await this.client.util.GetWarnings(member.user);
