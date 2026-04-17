@@ -2098,7 +2098,7 @@ export default class TicketHandler {
                         EmbedLinks: true,
                         ManageMessages: true,
                         ManageChannels: true,
-                        ManageThreads: true
+                        ManageThreads: true,
                     }
                 );
             }
