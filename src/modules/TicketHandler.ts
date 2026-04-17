@@ -2025,7 +2025,8 @@ export default class TicketHandler {
                             PermissionFlagsBits.AttachFiles,
                             PermissionFlagsBits.EmbedLinks,
                             PermissionFlagsBits.ManageMessages,
-                            PermissionFlagsBits.ManageChannels
+                            PermissionFlagsBits.ManageChannels,
+                            PermissionFlagsBits.ManageThreads
                         ]
                     },
                     {
@@ -2097,6 +2098,7 @@ export default class TicketHandler {
                         EmbedLinks: true,
                         ManageMessages: true,
                         ManageChannels: true,
+                        ManageThreads: true
                     }
                 );
             }
