@@ -1940,7 +1940,8 @@ export default class TicketHandler {
                 channelName += `-${mode}`;
             }
 
-            const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam' || ticketType === 'trialreport';
+            const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
+            const isTrialReport = ticketType === 'trialreport';
             const isClearanceTicket = ticketType === 'clearance';
             const isReportTicket = ticketType === 'report';
             let parentCategoryId: string;
@@ -1979,9 +1980,12 @@ export default class TicketHandler {
                 case 'trialteam':
                     parentCategoryId = this.client.channelIds.staffTicketsCategory;
                     break;
-                case 'clearance':
+                case 'clearance':   
                     parentCategoryId = this.client.channelIds.wipTicketCategory;
                     break;
+                case 'trialreport':
+                    parentCategoryId = this.client.channelIds.ticketCategory;
+                    break;                     
                 default:
                     parentCategoryId = this.client.channelIds.ticketCategory;
             }
@@ -2145,16 +2149,17 @@ export default class TicketHandler {
                 }
             }
 
-            if (isStaffTicket || isReportTicket || isClearanceTicket) {
+            if (isStaffTicket || isReportTicket || isClearanceTicket || isTrialReport) {
                 const adminRole = this.client.roles.admin;
-                const ownerRole = this.client.roles.owner;
+                const ownerRole = this.client.roles.owner;    
 
 
                 const thread = await channel.threads.create({
                     name: isStaffTicket ? `Discussion - ${member.displayName}`
                         : isReportTicket ? `Report - ${member.displayName}`
                             : isClearanceTicket ? `Clearance - ${member.displayName}`
-                                : `Undefined - ${member.displayName}`,
+                                : isTrialReport ? `TrialReport - ${member.displayName}`
+                                    : `Undefined - ${member.displayName}`,
                     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
                     type: ChannelType.PrivateThread,
                     reason: 'Thread automatically created by TicketHandler'
@@ -2178,7 +2183,11 @@ export default class TicketHandler {
                                 });
                             }
                         }
-                    }
+                    }                    
+                } else if (isTrialReport) {
+                    await thread.send(`Discuss the trial report here`);
+                
+
                 } else if (isClearanceTicket) {
                     await thread.send(`Any messages sent in this channel will be sent as the bot in the main ticket channel.`);
                     const member: GuildMember = await guild.members.fetch(userId);
