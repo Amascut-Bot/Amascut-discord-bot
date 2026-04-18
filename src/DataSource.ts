@@ -19,6 +19,7 @@ import { HostParticipation } from "./entity/HostParticipation"
 import { Vouch } from "./entity/Vouch"
 import { VouchBlacklist } from "./entity/VouchBlacklist"
 import { VouchVote } from "./entity/VouchVote"
+import { RoleAssignmentLog } from "./entity/RoleAssignmentLog"
 
 export const AppDataSource = new DataSource({
     type: "sqlite",
@@ -44,7 +45,8 @@ export const AppDataSource = new DataSource({
         HostParticipation,
         Vouch,
         VouchBlacklist,
-        VouchVote
+        VouchVote,
+        RoleAssignmentLog
     ],
     migrations: [],
     subscribers: [],

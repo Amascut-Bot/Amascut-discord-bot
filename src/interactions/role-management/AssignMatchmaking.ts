@@ -1,5 +1,5 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, SlashCommandBuilder, User, Role, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, User, Role, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Message, MessageFlags } from 'discord.js';
 
 export default class AssignMatchmaking extends BotInteraction {
     get name() {
@@ -12,23 +12,6 @@ export default class AssignMatchmaking extends BotInteraction {
 
     get permissions() {
         return 'TRIAL_TEAM';
-    }
-
-    get coverTag() {
-        return 'elite';
-    }
-
-    get hierarchy() {
-        return ['elite500', 'elite1000', 'elite2000'];
-    }
-
-    // Mapping for bundled notify roles - extendable by adding entries
-    get notifyRoles() {
-        return {
-            'elite500': 'notifyElite500',
-            'elite1000': 'notifyElite1000',
-            'elite2000': 'notifyElite2000'
-        };
     }
 
     get slashData() {
@@ -46,7 +29,9 @@ export default class AssignMatchmaking extends BotInteraction {
         const options = {
             'Elite 500': 'elite500',
             'Elite 1000': 'elite1000',
-            'Elite 2000': 'elite2000'
+            'Elite 2000': 'elite2000',
+            'Master 1000': 'master1000',
+            'Master 2000': 'master2000'
         };
 
         const filtered = Object.keys(options)
@@ -62,59 +47,53 @@ export default class AssignMatchmaking extends BotInteraction {
         const targetUser: User = interaction.options.getUser('user', true);
         const roleKey: string = interaction.options.getString('role', true);
         const { colours } = this.client.util;
+        const rolePriority = this.client.util.getTrialTierPriority(roleKey);
+        const trialedRoleId = this.client.roleIds[roleKey];
 
-        const notifyRoleKey = this.notifyRoles[roleKey as keyof typeof this.notifyRoles];
+        if (rolePriority === null || !trialedRoleId) {
+            return await interaction.editReply({ content: 'Invalid role selection.' });
+        }
 
         const member = await interaction.guild?.members.fetch(targetUser.id);
         const userRoleIds = member?.roles.cache.map(r => r.id) || [];
 
-        const trialedRoleId = this.client.roleIds[roleKey];
-        const coverTagId = this.client.roleIds[this.coverTag];
         const trialedRoleObject = await interaction.guild?.roles.fetch(trialedRoleId) as Role;
 
         if (!trialedRoleObject) {
             return await interaction.editReply({ content: 'Role not found.' });
         }
 
-        const roleIndex = this.hierarchy.indexOf(roleKey);
-        const higherRoles = this.hierarchy.slice(roleIndex + 1);
-        const lowerRoles = this.hierarchy.slice(0, roleIndex);
-
-        const hasHigherRole = higherRoles.some(r => userRoleIds.includes(this.client.roleIds[r]));
+        const hasHigherRole = this.client.util.hasTrialRoleAbovePriority(userRoleIds, rolePriority);
         const hasThisRole = userRoleIds.includes(trialedRoleId);
 
         if (hasHigherRole || hasThisRole) {
             const embed = new EmbedBuilder()
                 .setTitle('Role assign failed')
                 .setColor(colours.discord.red)
-                .setDescription(`<@${targetUser.id}> already has this role or a higher role.`);
+                .setDescription(`<@${targetUser.id}> already has this role or a higher-priority role.`);
 
             return await interaction.editReply({ embeds: [embed] });
         }
 
-        const rolesToAdd = [trialedRoleId, coverTagId];
+        const roleTransition = this.client.util.getTrialRoleTransition(userRoleIds, roleKey);
+        const rolesToAdd = roleTransition.addedRoleIds;
+        const rolesToRemove = roleTransition.removedRoleIds;
+        const grantedRoleMentions = roleTransition.addedRoleMentions;
+        const removedRoleMentions = roleTransition.removedRoleMentions;
 
-        for (const lowerRole of lowerRoles) {
-            rolesToAdd.push(this.client.roleIds[lowerRole]);
+        if (rolesToRemove.length > 0) {
+            await member?.roles.remove(rolesToRemove);
         }
 
-        // Bundle notify role if defined for this trialed role
-        if (notifyRoleKey) {
-            rolesToAdd.push(this.client.roleIds[notifyRoleKey]);
-        }
-
-        await member?.roles.add(rolesToAdd);
-
-        const trialeeRoleKey = `${roleKey}trialee`;
-        const trialeeRoleId = this.client.roleIds[trialeeRoleKey];
-        if (trialeeRoleId) {
-            await member?.roles.remove(trialeeRoleId).catch(() => {});
+        if (rolesToAdd.length > 0) {
+            await member?.roles.add(rolesToAdd);
         }
 
         const confirmationChannel = this.client.channelIds.achievements
             ? await this.client.channels.fetch(this.client.channelIds.achievements) as TextChannel
             : null;
 
+        let confirmationMessage: Message | null = null;
         let messageUrl = '';
         if (confirmationChannel) {
             const embed = new EmbedBuilder()
@@ -127,21 +106,46 @@ export default class AssignMatchmaking extends BotInteraction {
                 .setDescription(`Congratulations to <@${targetUser.id}> on achieving ${this.client.roles[roleKey]}!`);
 
             const message = await confirmationChannel.send({ embeds: [embed] });
+            confirmationMessage = message;
             messageUrl = message.url;
         }
 
         const logChannelId = this.client.channelIds.roleAssignLogs;
         const logChannel = logChannelId ? await this.client.channels.fetch(logChannelId) as TextChannel : null;
         if (logChannel) {
+            const changeLines: string[] = [];
+
+            if (grantedRoleMentions.length > 0) {
+                changeLines.push(`${grantedRoleMentions.join(', ')} were assigned to <@${targetUser.id}> by <@${interaction.user.id}>.`);
+            }
+
+            if (removedRoleMentions.length > 0) {
+                changeLines.push(`${removedRoleMentions.join(', ')} were removed from <@${targetUser.id}>.`);
+            }
+
+            if (messageUrl) {
+                changeLines.push(`**Message**: ${messageUrl}`);
+            }
+
+            const roleAssignmentLog = await this.client.util.createRoleAssignmentLog({
+                targetUserId: targetUser.id,
+                actorUserId: interaction.user.id,
+                source: 'assign-matchmaking',
+                addedRoleIds: rolesToAdd,
+                removedRoleIds: rolesToRemove,
+                announcementChannelId: confirmationMessage?.channelId ?? null,
+                announcementMessageId: confirmationMessage?.id ?? null
+            });
+
             const logEmbed = new EmbedBuilder()
                 .setTimestamp()
                 .setColor(trialedRoleObject.hexColor)
-                .setDescription(`${this.client.roles[roleKey]} and ${this.client.roles[this.coverTag]} were assigned to <@${targetUser.id}> by <@${interaction.user.id}>.\n${messageUrl ? `**Message**: ${messageUrl}` : ''}`);
+                .setDescription(changeLines.join('\n'));
 
             const buttonRow = new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
                     new ButtonBuilder()
-                        .setCustomId('rejectRoleAssign')
+                        .setCustomId(this.client.util.getRejectRoleAssignCustomId(roleAssignmentLog.id))
                         .setLabel('Reject Approval')
                         .setStyle(ButtonStyle.Danger)
                 );
@@ -152,7 +156,7 @@ export default class AssignMatchmaking extends BotInteraction {
         const replyEmbed = new EmbedBuilder()
             .setTitle('Role successfully assigned')
             .setColor(colours.discord.green)
-            .setDescription(`**Member:** <@${targetUser.id}>\n**Trialed Role:** ${this.client.roles[roleKey]}\n**Cover Tag:** ${this.client.roles[this.coverTag]}`);
+            .setDescription(`**Member:** <@${targetUser.id}>\n**Trialed Role:** ${this.client.roles[roleKey]}\n**Assigned Roles:** ${grantedRoleMentions.length > 0 ? grantedRoleMentions.join(', ') : 'None'}${removedRoleMentions.length > 0 ? `\n**Removed Roles:** ${removedRoleMentions.join(', ')}` : ''}`);
 
         await interaction.editReply({ embeds: [replyEmbed] });
     }

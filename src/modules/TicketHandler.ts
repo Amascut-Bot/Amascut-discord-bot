@@ -55,6 +55,7 @@ export default class TicketHandler {
             case 'ticket:create_teacher': this.handleTicketTeacher(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_trialteam': this.handleTicketTrialTeam(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_trialee': this.handleTicketTrialee(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:create_trialreport': this.handleTicketTrialReport(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close': this.handleTicketClose(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_confirm': this.handleTicketCloseConfirm(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction as ButtonInteraction<'cached'>); break;
@@ -166,6 +167,70 @@ export default class TicketHandler {
 
         modal.addLabelComponents(label => label
             .setLabel('Please provide any evidence you got')
+            .setFileUploadComponent(fileUpload)
+        );
+
+        await interaction.showModal(modal);
+    }
+
+    private async handleTicketTrialReport(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket:create_trialreport_${interaction.user.id}`)
+            .setTitle('Submit a Trial Report');
+
+        // RSN
+        const rsnInput = new TextInputBuilder()
+            .setCustomId('rsn')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(12);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Your RSN (RuneScape Name)')
+            .setTextInputComponent(rsnInput)
+        );
+
+        // Reported user
+        const userReport = new UserSelectMenuBuilder()
+            .setCustomId('user_report')
+            .setRequired(true)
+            .setMaxValues(5);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Who are you reporting?')
+            .setUserSelectMenuComponent(userReport)
+        );
+
+        const reportedUserInput = new TextInputBuilder()
+            .setCustomId('reported_user')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(100);
+
+        modal.addLabelComponents(label => label
+            .setLabel('What is the RSN of the person')
+            .setTextInputComponent(reportedUserInput)
+        );
+
+        // Reason
+        const reasonInput = new TextInputBuilder()
+            .setCustomId('reason')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        modal.addLabelComponents(label => label
+            .setLabel('What is the reason for your report?')
+            .setTextInputComponent(reasonInput)
+        );
+
+        // Evidence
+        const fileUpload = new FileUploadBuilder()
+            .setCustomId('attachment')
+            .setRequired(false);
+
+        modal.addLabelComponents(label => label
+            .setLabel('Please provide any evidence you have')
             .setFileUploadComponent(fileUpload)
         );
 
@@ -640,9 +705,8 @@ export default class TicketHandler {
                 new StringSelectMenuOptionBuilder().setLabel('Elite - 1000% Enrage').setValue('elite1000'),
                 new StringSelectMenuOptionBuilder().setLabel('Elite - 2000% Enrage').setValue('elite2000'),
 
-                // new StringSelectMenuOptionBuilder().setLabel('Master - 500% Enrage').setValue('master500'),
-                // new StringSelectMenuOptionBuilder().setLabel('Master - 1000% Enrage').setValue('master1000'),
-                // new StringSelectMenuOptionBuilder().setLabel('Master - 2000% Enrage').setValue('master2000'),
+                new StringSelectMenuOptionBuilder().setLabel('Master - 1000% Enrage').setValue('master1000'),
+                new StringSelectMenuOptionBuilder().setLabel('Master - 2000% Enrage').setValue('master2000'),
 
                 // new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 500% Enrage').setValue('gm500'),
                 // new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 1000% Enrage').setValue('gm1000'),
@@ -693,6 +757,12 @@ export default class TicketHandler {
                     formData.reason = interaction.fields.getTextInputValue('reason');
                     formData.attachment = interaction.fields.getUploadedFiles('attachment');
                     break;
+                case 'trialreport':
+                    formData.user_report = interaction.fields.getSelectedUsers('user_report');
+                    formData.reported_user = interaction.fields.getTextInputValue('reported_user');
+                    formData.reason = interaction.fields.getTextInputValue('reason');
+                    formData.attachment = interaction.fields.getUploadedFiles('attachment');
+                    break;    
                 case 'suggestion':
                     formData.suggestion = interaction.fields.getTextInputValue('suggestion');
                     formData.reason = interaction.fields.getTextInputValue('reason');
@@ -768,7 +838,7 @@ export default class TicketHandler {
                         }
 
                         if (automodResult.ban) {
-                            await banChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
+                            await banChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
 
                             await interaction.member!.ban({ reason: automodResult.reason, deleteMessageSeconds: 604800 }).then(() => {
                                 this.client.logger.log({ message: `Automatically banned user with id ${interaction.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}` }, true)
@@ -776,7 +846,7 @@ export default class TicketHandler {
                                 this.client.logger.error({ message: `Error banning user with id ${interaction.member?.id} for reason ${automodResult.reason} with evidence ${automodResult.evidence}`, error: err.stack });
                             });
                         } else {
-                            await adminChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse" : [] }});
+                            await adminChannel.send({ components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { "parse": [] } });
 
                             const { timeout } = this.client.util;
                             const timeoutUser = timeout.bind(this.client.util);
@@ -797,7 +867,7 @@ export default class TicketHandler {
             // sit non reading nerds
             if (ticketType === 'trialee') {
                 const secretWord = formData.secretword.toLowerCase().trim();
-                if (!secretWord.includes('meow')) {
+                if (!secretWord.includes('easyread')) {
                     await interaction.editReply({
                         content: 'The secret word you provided is incorrect. Please read the channel and try again.'
                     });
@@ -1257,7 +1327,7 @@ export default class TicketHandler {
         const forumChannel = transcriptChannel;
 
         const tagName = ticketType === 'contentcreator' ? 'Content Creator' : ticketType === 'clearance' ? 'report' :
-                       ticketType.charAt(0).toUpperCase() + ticketType.slice(1);
+            ticketType.charAt(0).toUpperCase() + ticketType.slice(1);
 
         const availableTags = forumChannel.availableTags;
         const matchingTag = availableTags.find(tag =>
@@ -1368,7 +1438,7 @@ export default class TicketHandler {
             await forumPost.setArchived(true);
 
             return forumPost.id;
-        } catch(error) {
+        } catch (error) {
             this.client.logger.error({
                 message: `Failed to create forum post for transcript log for channel ${channel.name}`,
                 error,
@@ -1725,9 +1795,9 @@ export default class TicketHandler {
 
             // Final attempt to notify the user
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', flags: MessageFlags.Ephemeral }).catch(() => {});
+                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', flags: MessageFlags.Ephemeral }).catch(() => { });
             } else {
-                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => {});
+                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => { });
             }
         }
     }
@@ -1823,9 +1893,9 @@ export default class TicketHandler {
 
             // Final attempt to notify the user
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', flags: MessageFlags.Ephemeral }).catch(() => {});
+                await interaction.reply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.', flags: MessageFlags.Ephemeral }).catch(() => { });
             } else {
-                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => {});
+                await interaction.editReply({ content: 'An unexpected error occurred while fetching your transcript. Please report this.' }).catch(() => { });
             }
         }
     }
@@ -1870,21 +1940,51 @@ export default class TicketHandler {
                 channelName += `-${mode}`;
             }
 
-            const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
+            const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam' || ticketType === 'trialreport';
             const isClearanceTicket = ticketType === 'clearance';
             const isReportTicket = ticketType === 'report';
-            const parentCategoryId =
-                ticketType === 'learner' ? this.client.channelIds.learnerTicketsCategory
-                : ticketType === 'lorebookkill' ? this.client.channelIds.lorebookTicketsCategory
-                : ticketType === 'trialee' ? (
-                    formData?.tier === 'elite500' ? this.client.channelIds.trialee500TicketsCategory
-                    : formData?.tier === 'elite1000' ? this.client.channelIds.trialee1000TicketsCategory
-                    : formData?.tier === 'elite2000' ? this.client.channelIds.trialee2000TicketsCategory
-                    : this.client.channelIds.trialeeTicketsCategory
-                )
-                : isStaffTicket ? this.client.channelIds.staffTicketsCategory
-                : isClearanceTicket ? this.client.channelIds.wipTicketCategory
-                : this.client.channelIds.ticketCategory;
+            let parentCategoryId: string;
+
+            switch (ticketType) {
+                case 'learner':
+                    parentCategoryId = this.client.channelIds.learnerTicketsCategory;
+                    break;
+                case 'lorebookkill':
+                    parentCategoryId = this.client.channelIds.lorebookTicketsCategory;
+                    break;
+                case 'trialee':
+                    switch (formData?.tier) {
+                        case 'elite500':
+                            parentCategoryId = this.client.channelIds.trialee500TicketsCategory;
+                            break;
+                        case 'elite1000':
+                            parentCategoryId = this.client.channelIds.trialee1000TicketsCategory;
+                            break;
+                        case 'elite2000':
+                            parentCategoryId = this.client.channelIds.trialee2000TicketsCategory;
+                            break;
+                        case 'master1000':
+                            parentCategoryId = this.client.channelIds.masterTrialee1000TicketsCategory;
+                            break;
+                        case 'master2000':
+                            parentCategoryId = this.client.channelIds.masterTrialee2000TicketsCategory;
+                            break;
+                        default:
+                            parentCategoryId = this.client.channelIds.trialeeTicketsCategory;
+                    }
+                    break;
+                case 'lorebook':
+                case 'support':
+                case 'teacher':
+                case 'trialteam':
+                    parentCategoryId = this.client.channelIds.staffTicketsCategory;
+                    break;
+                case 'clearance':
+                    parentCategoryId = this.client.channelIds.wipTicketCategory;
+                    break;
+                default:
+                    parentCategoryId = this.client.channelIds.ticketCategory;
+            }
 
             // Get admin and owner role IDs
             const adminRoleId = this.client.roleIds.admin;
@@ -1892,6 +1992,7 @@ export default class TicketHandler {
             const teacherRoleId = this.client.roleIds.teacher;
             const lorebookRoleId = this.client.roleIds.lorebook;
             const trialTeamRoleId = this.client.roleIds.trialTeam;
+            const reportPermsRoleId = this.client.roleIds.reportPerms;
 
             const member = await guild.members.fetch(userId);
 
@@ -1924,7 +2025,8 @@ export default class TicketHandler {
                             PermissionFlagsBits.AttachFiles,
                             PermissionFlagsBits.EmbedLinks,
                             PermissionFlagsBits.ManageMessages,
-                            PermissionFlagsBits.ManageChannels
+                            PermissionFlagsBits.ManageChannels,
+                            PermissionFlagsBits.ManageThreads
                         ]
                     },
                     {
@@ -1985,6 +2087,22 @@ export default class TicketHandler {
                 );
             }
 
+            if (ticketType === 'trialreport') {
+                await channel.permissionOverwrites.create(
+                    reportPermsRoleId,
+                    {
+                        ViewChannel: true,
+                        SendMessages: true,
+                        ReadMessageHistory: true,
+                        AttachFiles: true,
+                        EmbedLinks: true,
+                        ManageMessages: true,
+                        ManageChannels: true,
+                        ManageThreads: true,
+                    }
+                );
+            }
+            
             if (ticketType === 'trialee') {
                 await channel.permissionOverwrites.create(
                     trialTeamRoleId,
@@ -2003,15 +2121,23 @@ export default class TicketHandler {
                 // give user the notify role for trialees
                 switch (formData.tier) {
                     case 'elite500':
-                        await member.roles.add(this.client.roleIds.elite500trialee).catch(() => {});
+                        await member.roles.add(this.client.roleIds.elite500trialee).catch(() => { });
                         break;
 
                     case 'elite1000':
-                        await member.roles.add(this.client.roleIds.elite1000trialee).catch(() => {});
+                        await member.roles.add(this.client.roleIds.elite1000trialee).catch(() => { });
                         break;
 
                     case 'elite2000':
-                        await member.roles.add(this.client.roleIds.elite2000trialee).catch(() => {});
+                        await member.roles.add(this.client.roleIds.elite2000trialee).catch(() => { });
+                        break;
+
+                    case 'master1000':
+                        await member.roles.add(this.client.roleIds.master1000trialee).catch(() => { });
+                        break;
+
+                    case 'master2000':
+                        await member.roles.add(this.client.roleIds.master2000trialee).catch(() => { });
                         break;
 
                     default:
@@ -2026,9 +2152,9 @@ export default class TicketHandler {
 
                 const thread = await channel.threads.create({
                     name: isStaffTicket ? `Discussion - ${member.displayName}`
-                    : isReportTicket ? `Report - ${member.displayName}`
-                    : isClearanceTicket ? `Clearance - ${member.displayName}`
-                    : `Undefined - ${member.displayName}`,
+                        : isReportTicket ? `Report - ${member.displayName}`
+                            : isClearanceTicket ? `Clearance - ${member.displayName}`
+                                : `Undefined - ${member.displayName}`,
                     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
                     type: ChannelType.PrivateThread,
                     reason: 'Thread automatically created by TicketHandler'
@@ -2054,7 +2180,7 @@ export default class TicketHandler {
                         }
                     }
                 } else if (isClearanceTicket) {
-                    await thread.send(`${adminRole}, ${ownerRole}: Speak as the bot here`);
+                    await thread.send(`Any messages sent in this channel will be sent as the bot in the main ticket channel.`);
                     const member: GuildMember = await guild.members.fetch(userId);
 
                     const warning = await this.client.util.GetWarnings(member.user);
@@ -2111,10 +2237,12 @@ export default class TicketHandler {
             if (ticketType === 'trialee') {
                 welcomeMessage = `<@${userId}>, your ticket has been created. Someone will be with you shortly.`;
             }
-
+            if (ticketType === 'trialreport') {
+                welcomeMessage = `<@${userId}>, your ticket has been created. Someone will be with you shortly.`;
+            }
             // Create embed with form data using fields for better organization
             const embed = new EmbedBuilder()
-                .setTitle(`${ticketType === 'trialteam' ? 'Trial Team' : ticketType === 'lorebook' ? 'Lore Book Crew' : ticketType === 'lorebookkill' ? 'Lore Book Kill' : capitalizeFirstLetter(ticketType)} Ticket`)
+                .setTitle(`${ticketType === 'trialteam' ? 'Trial Team' : ticketType === 'lorebook' ? 'Lore Book Crew' : ticketType === 'lorebookkill' ? 'Lore Book Kill' : ticketType === 'trialreport' ? 'Trial Report' : capitalizeFirstLetter(ticketType)} Ticket`)
                 .setColor(this.client.color)
                 .setTimestamp();
 
@@ -2156,6 +2284,21 @@ export default class TicketHandler {
                     embed.addFields(
                         { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
                         { name: 'Reported Users', value: `${reportedUsers.trim()}\n\`\`\`${formData.reported_user}\`\`\``, inline: false },
+                        { name: 'Reason', value: `\`\`\`${formData.reason}\`\`\``, inline: false },
+                    );
+                    urls = urls.concat(formData.reason.match(urlRegex) || []);
+                    break;
+                case 'trialreport':
+                    let reportedUser: string = '';
+                    if (formData.user_report) {
+                        for (const [_, user] of formData.user_report) {
+                            reportedUser += `<@${user.id}>\n`;
+                        }
+                    }
+
+                    embed.addFields(
+                        { name: 'Your RSN', value: `\`\`\`${formData.rsn}\`\`\``, inline: false },
+                        { name: 'Reported Users', value: `${reportedUser.trim()}\n\`\`\`${formData.reported_user}\`\`\``, inline: false },
                         { name: 'Reason', value: `\`\`\`${formData.reason}\`\`\``, inline: false },
                     );
                     urls = urls.concat(formData.reason.match(urlRegex) || []);
@@ -2363,20 +2506,19 @@ export default class TicketHandler {
                     allowedMentions: { parse: ['roles'] }
                 });
 
-                const container = this.client.cv2.getContainerBuilder(null, 'Trials - Post a quick host card by clicking one of these Buttons');
+                const targetTrialRole = formData?.tier ? this.client.roles[formData.tier] : null;
+                const container = this.client.cv2.getContainerBuilder(null, 'Trials - Post a quick host card');
+
+                if (targetTrialRole) {
+                    container.addTextDisplayComponents(builder => builder.setContent(`Target role: ${targetTrialRole}\nPassing the trial will assign this stored ticket tier and the relevant umbrella roles.`));
+                    container.addSeparatorComponents(separator => separator.setSpacing(SeparatorSpacingSize.Small));
+                }
+
                 container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
                     [
                         new ButtonBuilder()
-                            .setCustomId('host_trial_post_500')
-                            .setLabel('500%')
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId('host_trial_post_1000')
-                            .setLabel('1000%')
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId('host_trial_post_2000')
-                            .setLabel('2000%')
+                            .setCustomId(`host_trial_post_${formData.tier}`)
+                            .setLabel('Host Trial')
                             .setStyle(ButtonStyle.Secondary),
                     ]
                 ));
@@ -2447,6 +2589,8 @@ export default class TicketHandler {
                 ticketObject.ticketType = 10;
             case 'trialee':
                 ticketObject.ticketType = 11;
+            case 'trialreport':
+                ticketObject.ticketType = 12;
         }
 
         await ticketRepository.save(ticketObject);
@@ -2530,7 +2674,7 @@ export default class TicketHandler {
 
     //#region Vouch Tickets
 
-    public static async createVouchTicket(client: Bot, interaction: ChatInputCommandInteraction, targetUser: User, roleKey: string, vouches: Vouch[]): Promise<void> {
+    public static async createVouchTicket(client: Bot, interaction: ChatInputCommandInteraction | ModalSubmitInteraction, targetUser: User, roleKey: string, vouches: Vouch[]): Promise<void> {
         const vouchCount = await client.dataSource.getRepository(Vouch).count();
         const channelName = `vouch-${vouchCount.toString().padStart(4, '0')}`;
 
@@ -2566,6 +2710,12 @@ export default class TicketHandler {
                 type: OverwriteType.Role
             });
         }
+
+        permissionOverwrites.push({
+            id: targetUser.id,
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory],
+            type: OverwriteType.Member
+        });
 
         const ticketChannel = await interaction.guild?.channels.create({
             name: channelName,

@@ -17,7 +17,7 @@ export default class StringSelectHandler {
         }
     }
 
-    private async handleSelfAssign(interaction: StringSelectMenuInteraction<'cached'>) : Promise<Message<true> | InteractionResponse<true> | void> {
+    private async handleSelfAssign(interaction: StringSelectMenuInteraction<'cached'>): Promise<Message<true> | InteractionResponse<true> | void> {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const { colours } = this.client.util;
         const user = await interaction.guild?.members.fetch(interaction.user.id);
@@ -27,8 +27,8 @@ export default class StringSelectHandler {
 
         //reset the StringSelectionMenu
         const container = interaction.message.components;
-        if (interaction.isMessageComponent()){
-            await interaction.message.edit({ components: container});
+        if (interaction.isMessageComponent()) {
+            await interaction.message.edit({ components: container });
         }
 
         //parse the id <role>{;<neededRole>;<neededRole>}
@@ -47,9 +47,11 @@ export default class StringSelectHandler {
         const roleObject = interaction.guild.roles.cache.get(roleIds[0]);
 
         if (roleObject?.permissions.has('ManageRoles') || roleIds[0] === this.client.roleIds.honeypot) {
-            return await interaction.editReply({embeds: [new EmbedBuilder()
-                .setColor(colours.discord.red)
-                .setDescription(`Unallowed Role-Assign!`)]});
+            return await interaction.editReply({
+                embeds: [new EmbedBuilder()
+                    .setColor(colours.discord.red)
+                    .setDescription(`Unallowed Role-Assign!`)]
+            });
         }
 
         //TODO: cleanup all other cosmetic tags
@@ -59,13 +61,13 @@ export default class StringSelectHandler {
         if (userRoles.includes(roleIds[0])) {
             await user.roles.remove(roleIds[0]);
             await this.client.logReactionRoleChange(user, roleObject!, 'removed');
-            return await interaction.editReply({embeds: [removeResultEmbed]});
+            return await interaction.editReply({ embeds: [removeResultEmbed] });
         } else if (roleIds.length == 1) {
             //if it's only assign, just do it
             if (!userRoles.includes(roleIds[0])) {
                 await user.roles.add(roleIds[0]);
                 await this.client.logReactionRoleChange(user, roleObject!, 'added');
-                return await interaction.editReply({embeds: [addResultEmbed]});
+                return await interaction.editReply({ embeds: [addResultEmbed] });
             }
         } else if (roleIds.length > 1) {
             const { categorize, hierarchy, enrageHierarchy } = this.client.util;
@@ -73,6 +75,10 @@ export default class StringSelectHandler {
             //special logic for hierarchy tags
             const hasRoleOrHigher = (role: string) => {
                 try {
+                    if (this.client.util.isTrialTier(role)) {
+                        return this.client.util.canVouchForTrialRole(userRoles, role);
+                    }
+
                     if (!categorize(role) || categorize(role) === 'vanity' || categorize(role) === '') return false;
 
                     //special logic for enrage roles
@@ -105,7 +111,7 @@ export default class StringSelectHandler {
                     if (hasRoleOrHigher(roleIds[i])) {
                         await user.roles.add(roleIds[0]);
                         await this.client.logReactionRoleChange(user, roleObject!, 'added');
-                        return await interaction.editReply({embeds: [addResultEmbed]});
+                        return await interaction.editReply({ embeds: [addResultEmbed] });
                     } else {
                         // go through whitelist
                         if (categorize(roleIds[i]) === 'enrage') {
@@ -127,7 +133,7 @@ export default class StringSelectHandler {
                     if (userRoles.includes(roleIds[i])) {
                         await user.roles.add(roleIds[0]);
                         await this.client.logReactionRoleChange(user, roleObject!, 'added');
-                        return await interaction.editReply({embeds: [addResultEmbed]});
+                        return await interaction.editReply({ embeds: [addResultEmbed] });
                     }
                     if (i > 1) {
                         roleReqError += ", ";
