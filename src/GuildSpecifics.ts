@@ -27,7 +27,7 @@ export function getChannels(guildId: string | undefined): Channels {
             leaderboardSubmission: '1401295942027841686',
             hallOfFame: '1401296432916467847',
             casualTeams: '1391860639584096316',
-            trialedTeams: '1391860639584096316',
+            trialedTeams: '1495724268041011383',
             keepsOnly: '1391860639584096316',
             combatAchievements: '1391860639584096316',
             ticketCategory: '1404433490266816632',
