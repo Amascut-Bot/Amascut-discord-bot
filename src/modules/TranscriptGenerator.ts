@@ -185,7 +185,13 @@ export default class TranscriptGenerator {
     private static async formatAttachment(attachment: Attachment, client: Bot): Promise<string> {
         const isImage = attachment.contentType?.startsWith('image/');
         if (isImage) {
-            const newUrl: string = await client.util.reuploadImage(attachment.url);
+            const newUrl: string | null = await client.util.reuploadImage(attachment.url);
+
+            //reupload failed (e.g. expired attachment), fallback to original URL
+            if (newUrl == null) {
+                return `<div class="attachment"><a href="${attachment.url}" target="_blank">Download ${this.escapeHtml(attachment.name || 'attachment')}</a></div>`;
+            }
+
             return `<div class="attachment"><a href="${newUrl}" target="_blank">${this.escapeHtml(attachment.name || 'attachment')}</a><br><img src="${newUrl}" alt="Attachment Image"></div>`;
         }
         return `<div class="attachment"><a href="${attachment.url}" target="_blank">Download ${this.escapeHtml(attachment.name || 'attachment')}</a></div>`;
@@ -203,8 +209,14 @@ export default class TranscriptGenerator {
             embedHtml += `<div class="embed-footer">${this.escapeHtml(embed.footer.text)}</div>`;
         }
         if (embed.data?.type === 'image') {
-            const newUrl: string = await client.util.reuploadImage(embed.data.url);
-            embedHtml += `<div class="embed-img"><a href="${newUrl}" target="_blank">image</a><br><img src="${newUrl}" alt="Embedded Image"></div>`;
+            const newUrl: string | null = await client.util.reuploadImage(embed.data.url);
+
+            //reupload failed (e.g. expired attachment), fallback to original URL
+            if (newUrl == null) {
+                embedHtml += `<div class="embed-img"><a href="${embed.data.url}" target="_blank">image</a><br><img src="${embed.data.url}" alt="Embedded Image"></div>`;
+            } else {
+                embedHtml += `<div class="embed-img"><a href="${newUrl}" target="_blank">image</a><br><img src="${newUrl}" alt="Embedded Image"></div>`;
+            }
         }
         embedHtml += '</div>';
         return embedHtml;

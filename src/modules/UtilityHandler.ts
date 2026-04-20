@@ -515,7 +515,7 @@ export default class UtilityHandler {
         return pattern.test(timeString);
     }
 
-    public async reuploadImage(url: string, filename?: string): Promise<string> {
+    public async reuploadImage(url: string, filename?: string): Promise<string | null> {
         console.log(`--- DEBUG: Entered reuploadImage function for URL: ${url}`);
 
         const assetChannelId = this.client.channelIds.godImageStorage;
@@ -539,14 +539,19 @@ export default class UtilityHandler {
             }
 
             console.log(`--- DEBUG: Fetching image from ${url}`);
-            const response = await axios.get(url, { responseType: 'arraybuffer' });
+            const response = await axios.get(url, { responseType: 'arraybuffer' }).catch((err) => {
+                if (axios.isAxiosError(err) && err.response?.status === 404) {
+                    console.warn(`--- DEBUG: Attachment expired or not found at URL: ${url}`);
+                    return null;
+                }
+            });
 
-            if (response.status !== 200) {
-                throw new Error(`Failed to fetch image: ${response.statusText}`);
+            if (response!.status !== 200) {
+                throw new Error(`Failed to fetch image: ${response!.statusText}`);
             }
 
             const attachmentName = filename || 'image.png';
-            const attachment = new AttachmentBuilder(Buffer.from(response.data, 'binary'), { name: attachmentName });
+            const attachment = new AttachmentBuilder(Buffer.from(response!.data, 'binary'), { name: attachmentName });
 
             console.log(`--- DEBUG: Sending attachment to Discord channel with name: ${attachmentName}...`);
             const message = await godImageStorage.send({ files: [attachment] });

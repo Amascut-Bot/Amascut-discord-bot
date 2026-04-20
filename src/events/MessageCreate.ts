@@ -86,7 +86,10 @@ export default class MessageCreate extends BotEvent {
                 if (message.attachments.size > 0) {
                     for (const [_, attachment] of message.attachments) {
                         const reuploaded = await this.client.util.reuploadImage(attachment.url, attachment.name);
-                        urls.push(reuploaded);
+
+                        if (reuploaded != null) {
+                            urls.push(reuploaded);
+                        }
                     }
                 }
 

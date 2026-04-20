@@ -762,7 +762,7 @@ export default class TicketHandler {
                     formData.reported_user = interaction.fields.getTextInputValue('reported_user');
                     formData.reason = interaction.fields.getTextInputValue('reason');
                     formData.attachment = interaction.fields.getUploadedFiles('attachment');
-                    break;    
+                    break;
                 case 'suggestion':
                     formData.suggestion = interaction.fields.getTextInputValue('suggestion');
                     formData.reason = interaction.fields.getTextInputValue('reason');
@@ -1396,7 +1396,12 @@ export default class TicketHandler {
 
                 if (hasAttachments) {
                     for (const attachment of message.attachments.values()) {
-                        const newUrl: string = await this.client.util.reuploadImage(attachment.url);
+                        const newUrl: string | null = await this.client.util.reuploadImage(attachment.url);
+
+                        if (newUrl == null) {
+                            continue;
+                        }
+
                         const attachmentBlock = `**[${timeOnly}] ${author}:** ${newUrl}\n`;
 
                         if (currentBlock.length + attachmentBlock.length > maxLength) {
@@ -1980,12 +1985,12 @@ export default class TicketHandler {
                 case 'trialteam':
                     parentCategoryId = this.client.channelIds.staffTicketsCategory;
                     break;
-                case 'clearance':   
+                case 'clearance':
                     parentCategoryId = this.client.channelIds.wipTicketCategory;
                     break;
                 case 'trialreport':
                     parentCategoryId = this.client.channelIds.ticketCategory;
-                    break;                     
+                    break;
                 default:
                     parentCategoryId = this.client.channelIds.ticketCategory;
             }
@@ -2106,7 +2111,7 @@ export default class TicketHandler {
                     }
                 );
             }
-            
+
             if (ticketType === 'trialee') {
                 await channel.permissionOverwrites.create(
                     trialTeamRoleId,
@@ -2151,7 +2156,7 @@ export default class TicketHandler {
 
             if (isStaffTicket || isReportTicket || isClearanceTicket || isTrialReport) {
                 const adminRole = this.client.roles.admin;
-                const ownerRole = this.client.roles.owner;    
+                const ownerRole = this.client.roles.owner;
 
 
                 const thread = await channel.threads.create({
@@ -2183,10 +2188,10 @@ export default class TicketHandler {
                                 });
                             }
                         }
-                    }                    
+                    }
                 } else if (isTrialReport) {
                     await thread.send(`Discuss the trial report here`);
-                
+
 
                 } else if (isClearanceTicket) {
                     await thread.send(`Any messages sent in this channel will be sent as the bot in the main ticket channel.`);
