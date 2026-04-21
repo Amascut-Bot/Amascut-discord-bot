@@ -308,7 +308,10 @@ export default class AutoTriggerHandler {
 
                 for (const [_, attachment] of message.attachments) {
                     const newUrl = await this.client.util.reuploadImage(attachment.url);
-                    mediaGalleryBuilder.addItems(item => item.setURL(newUrl));
+
+                    if (newUrl != null) {
+                        mediaGalleryBuilder.addItems(item => item.setURL(newUrl));
+                    }
                 }
 
                 container.addMediaGalleryComponents(mediaGalleryBuilder);

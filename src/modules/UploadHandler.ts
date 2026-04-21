@@ -105,14 +105,14 @@ export default class UploadHandler {
                 if (embed.thumbnail?.url) {
                     uploadPromises.push(
                         this.client.util.reuploadImage(embed.thumbnail.url).then(newUrl => {
-                            embed.thumbnail.url = newUrl;
+                            newUrl != null ? embed.thumbnail.url = newUrl : embed.thumbnail.url = embed.thumbnail.url;
                         })
                     );
                 }
                 if (embed.image?.url) {
                     uploadPromises.push(
                         this.client.util.reuploadImage(embed.image.url).then(newUrl => {
-                            embed.image.url = newUrl;
+                            newUrl != null ? embed.image.url = newUrl : embed.image.url = embed.image.url;
                         })
                     );
                 }
@@ -323,14 +323,14 @@ export default class UploadHandler {
                 if (embed.thumbnail?.url) {
                     uploadPromises.push(
                         this.client.util.reuploadImage(embed.thumbnail.url).then(newUrl => {
-                            embed.thumbnail.url = newUrl;
+                            newUrl != null ? embed.thumbnail.url = newUrl : embed.thumbnail.url = embed.thumbnail.url;
                         })
                     );
                 }
                 if (embed.image?.url) {
                     uploadPromises.push(
                         this.client.util.reuploadImage(embed.image.url).then(newUrl => {
-                            embed.image.url = newUrl;
+                            newUrl != null ? embed.image.url = newUrl : embed.image.url = embed.image.url;
                         })
                     );
                 }
