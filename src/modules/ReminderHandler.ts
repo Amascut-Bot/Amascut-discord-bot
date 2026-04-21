@@ -21,12 +21,12 @@ export default class ReminderHandler {
     }
 
     public startReminders() {
-        cron.schedule('0 */2 * * *', async () => {
+        cron.schedule('0/30 * * * *', async () => {
             await this.sendMyvcReminders();
             await this.sendKeepsReminders(); // Uncomment when needed
         });
         this.client.logger.log({
-            message: 'Voice channel reminder system started (2-hour intervals)',
+            message: 'Voice channel reminder system started (30-minute intervals)',
             handler: this.constructor.name
         }, true);
     }
@@ -79,7 +79,9 @@ export default class ReminderHandler {
 
                 if (channelId === channels.trialedTeams) {
                     container.addSeparatorComponents(sep => sep.setSpacing(SeparatorSpacingSize.Small))
-                        .addTextDisplayComponents(text => text.setContent(`**Note:** Teams formed via <#${channels.trialedTeams}> must be comprised of atleast 4 out of 5 trialed members. Group members recruited from this channel must be notified prior if the group will not meet this requirement.`));
+                        .addTextDisplayComponents(text => text.setContent(`**Note:** Teams formed via <#${channels.trialedTeams}> must be comprised of atleast 4 out of 5 trialed members. Group members recruited from this channel must be notified prior if the group will not meet this requirement.`))
+                        container.addSeparatorComponents(sep => sep.setSpacing(SeparatorSpacingSize.Small))
+                        .addTextDisplayComponents(text => text.setContent(`**Warning:** Please **do not** respond to pings for tags you do not own, unless you own a higher role (e.g Master 1000 is pinged, and you own Master 2000). Violating this may result in your access to trialled teams being removed.`));
                 }
 
                 const newMessage = await channel.send({
