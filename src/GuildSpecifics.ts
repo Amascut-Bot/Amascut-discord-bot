@@ -236,6 +236,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             pet: '1409629724732293293',
             devoured: '1488094862128447588',
             tumekensLight: '1488094722651328613',
+            kspeedster: '1496408190017863680',
 
             // Enrage Roles
             enr500: '1404800709462982716',
@@ -329,6 +330,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             nexus5: '1416532184851808316',
             devoured: '1487808817193549854',
             tumekensLight: '1487809205980238017',
+            kspeedster: '1495123505094852679',
 
             // Enrage Roles
             enr500: '1401450408492404877',
