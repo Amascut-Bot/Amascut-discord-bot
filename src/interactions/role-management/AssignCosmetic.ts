@@ -209,11 +209,11 @@ export default class Pass extends BotInteraction {
             const changeLines: string[] = [];
 
             if (addedRoleMentions.length > 0) {
-                changeLines.push(`${addedRoleMentions.join(', ')} were assigned to <@${userResponse.id}> by <@${interaction.user.id}>.`);
+                changeLines.push(`${addedRoleMentions.join(', ')} was assigned to <@${userResponse.id}> by <@${interaction.user.id}>.`);
             }
 
             if (removedRoleMentions.length > 0) {
-                changeLines.push(`${removedRoleMentions.join(', ')} were removed from <@${userResponse.id}>.`);
+                changeLines.push(`${removedRoleMentions.join(', ')} was removed from <@${userResponse.id}>.`);
             }
 
             if (returnedMessage.url) {
