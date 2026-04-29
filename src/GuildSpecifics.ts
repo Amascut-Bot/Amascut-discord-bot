@@ -144,6 +144,7 @@ export function getChannels(guildId: string | undefined): Channels {
             godImageStorage: '1389417236367933470',
             reactionRoleLog: '1389413228794216648',
             autoBanLogs: '1445441478318096598',
+            reportLogs: '1402724855287255070',
 
             // the archives
             leaderboardSubmission: '1401295523020935218',

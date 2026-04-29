@@ -181,7 +181,7 @@ export default class reportHandler {
         }
 
         // Send to channel - DON'T SAVE TO DB YET
-        const reportChannel = await this.client.channels.fetch(this.client.channelIds.reportLog) as TextChannel;
+        const reportChannel = await this.client.channels.fetch(this.client.channelIds.reportLogs) as TextChannel;
         
         if (!reportChannel) {
             return await interaction.editReply('Error: Report channel not found.');
