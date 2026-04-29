@@ -5,6 +5,7 @@ import LeaderboardHandler from './LeaderboardHandler';
 import HostHandler from './HostHandler';
 import VouchHandler from './VouchHandler';
 import { RoleAssignmentLog } from '../entity/RoleAssignmentLog';
+import ReportHandler from './ReportHandler';
 
 // ===============================
 // MAIN CLASS
@@ -57,6 +58,10 @@ export default class ButtonHandler {
         if (id.startsWith('rejectRoleAssign_')) {
             this.rejectRoleAssign(interaction, id.substring('rejectRoleAssign_'.length));
             return;
+        }
+        if (id.startsWith('report_approve') || id.startsWith('report_reject')) {
+        new ReportHandler(this.client, interaction.customId, interaction);
+        return;
         }
 
         switch (id) {

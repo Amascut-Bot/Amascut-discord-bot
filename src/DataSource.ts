@@ -18,6 +18,9 @@ import { LearnerHourParticipation } from "./entity/LearnerHourParticipation"
 import { HostParticipation } from "./entity/HostParticipation"
 import { Vouch } from "./entity/Vouch"
 import { VouchBlacklist } from "./entity/VouchBlacklist"
+import { ReportBlacklist } from "./entity/ReportBlacklist"
+import { TrialReport} from "./entity/TrialReport"
+import { ReportVote } from "./entity/ReportVote"
 import { VouchVote } from "./entity/VouchVote"
 import { RoleAssignmentLog } from "./entity/RoleAssignmentLog"
 
@@ -46,6 +49,9 @@ export const AppDataSource = new DataSource({
         Vouch,
         VouchBlacklist,
         VouchVote,
+        TrialReport,
+        ReportBlacklist,
+        ReportVote,
         RoleAssignmentLog
     ],
     migrations: [],
