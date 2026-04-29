@@ -670,7 +670,7 @@ export default class TicketHandler {
             .setMaxLength(12);
 
         modal.addLabelComponents(label => label
-            .setLabel('Your RSN (RuneScape Name)')
+            .setLabel('Your RSN and preferred role')
             .setTextInputComponent(rsnInput)
         );
 

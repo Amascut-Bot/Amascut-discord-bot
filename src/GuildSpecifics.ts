@@ -50,6 +50,7 @@ export function getChannels(guildId: string | undefined): Channels {
             trialee2000TicketsCategory: '1412871767932010547',
             vouchTicketsCategory: `1464678728410992844`,
             vouchLog: '1485240645340889128',
+            reportLog: '1391860639063871583',
             vodSubmissions: `1464589392843767860`,
             vodReview: `1464589425932632155`,
             masterTrialee1000TicketsCategory: '1492216896852988026',

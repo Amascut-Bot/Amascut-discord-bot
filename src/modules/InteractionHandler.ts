@@ -9,6 +9,7 @@ import TicketHandler from './TicketHandler';
 import LeaderboardHandler from './LeaderboardHandler';
 import HostHandler from './HostHandler';
 import VouchHandler from './VouchHandler';
+import ReportHandler from './ReportHandler';
 
 export default interface InteractionHandler {
     client: Bot;
@@ -105,6 +106,12 @@ export default class InteractionHandler extends EventEmitter {
 
             if (interaction.customId.startsWith('vouch_')) {
                 return new VouchHandler(this.client, interaction.customId, interaction);
+            }
+            if (interaction.customId.startsWith('report_submitModal')) {
+                return new ReportHandler(this.client, interaction.customId, interaction);
+            }
+            if (interaction.customId.startsWith('checkreportsModal')) {
+            return new ReportHandler(this.client, interaction.customId, interaction);
             }
         }
 

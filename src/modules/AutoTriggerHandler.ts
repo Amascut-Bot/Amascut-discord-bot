@@ -73,6 +73,7 @@ export default class AutoTriggerHandler {
         }
         //alex is cute
         //patze is cute
+        //inboxed is cute
         const meowEmoji = this.client.emojiCache.get('meow');
         const heheEmoji = this.client.emojiCache.get('hehe');
         let triggered = false;
