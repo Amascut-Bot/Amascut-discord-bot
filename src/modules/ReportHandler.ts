@@ -181,7 +181,7 @@ export default class reportHandler {
         }
 
         // Send to channel - DON'T SAVE TO DB YET
-        const reportChannel = await this.client.channels.fetch(this.client.channelIds.reportLogs) as TextChannel;
+        const reportChannel = await this.client.channels.fetch(this.client.channelIds.vouchreportLogs) as TextChannel;
         
         if (!reportChannel) {
             return await interaction.editReply('Error: Report channel not found.');
@@ -198,6 +198,15 @@ export default class reportHandler {
                 { name: 'Description', value: description, inline: false }
             )
             .setTimestamp();
+
+        const reminderChannel = await this.client.channels.fetch(this.client.channelIds.admin) as TextChannel;
+        const reminderEmbed = new EmbedBuilder()
+            .setTitle('New report pending approval')
+            .setDescription(`A new report has been submitted for <@${targetUser.id}> - ${this.client.roles[roleKey]}. Please review and approve/reject it in <#${this.client.channelIds.vouchreportLogs}>.`)
+            .setColor(this.client.color)
+            .setTimestamp();
+
+        await reminderChannel.send({ embeds: [reminderEmbed] });
 
         const voteRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()

@@ -367,9 +367,8 @@ export default class TicketHandler {
             .addOptions([
                 new StringSelectMenuOptionBuilder().setLabel('Normal Mode').setValue('nm'),
                 new StringSelectMenuOptionBuilder().setLabel('100% Enrage').setValue('100'),
-                new StringSelectMenuOptionBuilder().setLabel('500% Enrage').setValue('500'),
             ])
-            .setMaxValues(3);
+            .setMaxValues(2);
 
         modal.addLabelComponents(label => label
             .setLabel('What do you want to learn? (Select any)')
@@ -667,7 +666,7 @@ export default class TicketHandler {
             .setCustomId('rsn')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
-            .setMaxLength(12);
+            .setMaxLength(1000);
 
         modal.addLabelComponents(label => label
             .setLabel('Your RSN and preferred role')
@@ -688,9 +687,9 @@ export default class TicketHandler {
         // Goals
         const assistanceInput = new TextInputBuilder()
             .setCustomId('secretword')
-            .setStyle(TextInputStyle.Paragraph)
+            .setStyle(TextInputStyle.Short)
             .setRequired(true)
-            .setMaxLength(1000);
+            .setMaxLength(12);
 
         modal.addLabelComponents(label => label
             .setLabel('What is the secret word?')
