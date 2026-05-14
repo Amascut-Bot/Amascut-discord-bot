@@ -41,9 +41,9 @@ export default class LeaderboardHandler {
                 break;
             }
             case 'lastMonth':{
-                timestamp.setDate(0);
-                dateFrom = new Date(timestamp.getFullYear(), timestamp.getMonth(), 1, 0, 0, 0);
                 dateTo = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate(), 23, 59, 59);
+                timestamp.setMonth(timestamp.getMonth() - 1);
+                dateFrom = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate(), 0, 0, 0);
                 description = 'Last Month';
                 break;
             }
@@ -61,8 +61,9 @@ export default class LeaderboardHandler {
                 break;
             }
             case 'lastYear':{
-                dateFrom = new Date(timestamp.getFullYear() - 1, 0, 1, 0, 0, 0);
-                dateTo = new Date(timestamp.getFullYear() - 1, 11, 31, 23, 59, 59);
+                dateTo = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate(), 23, 59, 59);
+                timestamp.setYear(timestamp.getFullYear() - 1);
+                dateFrom = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate(), 0, 0, 0);
                 description = 'Last Year';
                 break;
             }
