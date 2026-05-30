@@ -544,7 +544,7 @@ export default class ScheduledTrialHandler {
             .setRequired(false)
             .setMaxValues(5);
 
-        modal.addLabelComponents(label => label.setLabel('Add extra fills for points (optional, e.g. outside trial team)').setUserSelectMenuComponent(extraFillsSelect));
+        modal.addLabelComponents(label => label.setLabel('Add extra fills for points (optional)').setUserSelectMenuComponent(extraFillsSelect));
 
         const summaryInput = new TextInputBuilder()
             .setCustomId('summary')
