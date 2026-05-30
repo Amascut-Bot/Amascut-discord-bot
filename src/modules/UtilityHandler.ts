@@ -119,12 +119,11 @@ export default class UtilityHandler {
     }
 
     get trialTierOrder(): string[] {
-        return ['elite500', 'elite1000', 'elite2000', 'master1000', 'master2000'];
+        return ['elite1000', 'elite2000', 'master1000', 'master2000'];
     }
 
     get trialTierPriorities(): RolePriorityMap {
         return {
-            elite500: 1,
             elite1000: 2,
             elite2000: 3,
             master1000: 3,
@@ -134,7 +133,6 @@ export default class UtilityHandler {
 
     get trialNotifyRoles(): RoleMap {
         return {
-            elite500: 'notifyElite500',
             elite1000: 'notifyElite1000',
             elite2000: 'notifyElite2000',
             master1000: 'notifyMaster1000',
@@ -144,7 +142,6 @@ export default class UtilityHandler {
 
     get trialeeRoles(): RoleMap {
         return {
-            elite500: 'elite500trialee',
             elite1000: 'elite1000trialee',
             elite2000: 'elite2000trialee',
             master1000: 'master1000trialee',
@@ -267,8 +264,6 @@ export default class UtilityHandler {
         }
 
         switch (fallbackEnrage) {
-            case '500':
-                return 'elite500';
             case '1000':
                 return 'elite1000';
             case '2000':

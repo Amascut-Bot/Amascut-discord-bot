@@ -799,15 +799,13 @@ export default class HostHandler {
             return null;
         }
 
-        return /^(elite500|elite1000|elite2000|master1000|master2000)$/.test(normalizedRoleKey)
+        return /^(elite1000|elite2000|master1000|master2000)$/.test(normalizedRoleKey)
             ? normalizedRoleKey
             : null;
     }
 
     private static trialRoleKeyToLabel(roleKey: string): string {
         switch (roleKey) {
-            case 'elite500':
-                return 'Elite 500';
             case 'elite1000':
                 return 'Elite 1000';
             case 'elite2000':
