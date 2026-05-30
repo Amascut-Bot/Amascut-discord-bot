@@ -42,6 +42,7 @@ export default class ScheduledTrialHandler {
     private async route(): Promise<void> {
         const id = this.id;
         try {
+            if (id.startsWith('schedtrial_createmodal_')) return await this.handleCreateModal(id.substring('schedtrial_createmodal_'.length));
             if (id.startsWith('schedtrial_signup_')) return await this.handleSignup(id.substring('schedtrial_signup_'.length));
             if (id.startsWith('schedtrial_cancel_')) return await this.handleCancel(id.substring('schedtrial_cancel_'.length));
             if (id.startsWith('schedtrial_removeselect_')) return await this.handleRemoveSelect(id.substring('schedtrial_removeselect_'.length));
@@ -131,6 +132,105 @@ export default class ScheduledTrialHandler {
     private async canManage(trial: ScheduledTrial): Promise<boolean> {
         if (this.interaction.user.id === trial.hostId) return true;
         return (await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], this.interaction)) === true;
+    }
+
+    /**
+     * Parses an in-game (UTC) "YYYY-MM-DD HH:MM" string into a Date, or null if invalid.
+     */
+    private parseInGameTime(input: string): Date | null {
+        const match = input.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})$/);
+        if (!match) return null;
+
+        const [, year, month, day, hour, minute] = match.map(Number);
+        const date = new Date(Date.UTC(year, month - 1, day, hour, minute, 0, 0));
+
+        if (
+            date.getUTCFullYear() !== year ||
+            date.getUTCMonth() !== month - 1 ||
+            date.getUTCDate() !== day ||
+            date.getUTCHours() !== hour ||
+            date.getUTCMinutes() !== minute
+        ) {
+            return null;
+        }
+
+        return date;
+    }
+
+    // ===============================
+    // Modal: create scheduled trial (from /schedule-trial)
+    // ===============================
+
+    private async handleCreateModal(rest: string): Promise<void> {
+        const interaction = this.interaction as ModalSubmitInteraction;
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        if (!interaction.guild) {
+            await interaction.editReply('This command can only be used in a server.');
+            return;
+        }
+
+        // rest === `${tier}_${maxTrialees}` — tier keys contain no underscores
+        const splitIndex = rest.lastIndexOf('_');
+        const tier = splitIndex >= 0 ? rest.substring(0, splitIndex) : rest;
+        const maxTrialees = Number.parseInt(splitIndex >= 0 ? rest.substring(splitIndex + 1) : '1', 10);
+
+        if (!tier || Number.isNaN(maxTrialees) || maxTrialees < 1) {
+            await interaction.editReply('Could not read the trial details. Please run the command again.');
+            return;
+        }
+
+        const inGameTimeInput = interaction.fields.getTextInputValue('in_game_time');
+        const message = interaction.fields.getTextInputValue('message');
+
+        const scheduledTime = this.parseInGameTime(inGameTimeInput);
+        if (!scheduledTime) {
+            await interaction.editReply('Could not read that time. Use the in-game (UTC) format `YYYY-MM-DD HH:MM`, e.g. `2026-06-01 18:30`.');
+            return;
+        }
+
+        if (scheduledTime.getTime() <= Date.now()) {
+            await interaction.editReply('That time is in the past. Please pick a future in-game (UTC) time.');
+            return;
+        }
+
+        const channelId = this.client.channelIds.trialScheduling;
+        if (!channelId) {
+            await interaction.editReply('No trial scheduling channel is configured for this server.');
+            return;
+        }
+
+        const channel = await interaction.guild.channels.fetch(channelId).catch(() => null) as TextChannel | null;
+        if (!channel) {
+            await interaction.editReply('Could not find the trial scheduling channel.');
+            return;
+        }
+
+        const scheduledTrial = new ScheduledTrial();
+        scheduledTrial.guildId = interaction.guild.id;
+        scheduledTrial.channelId = channel.id;
+        scheduledTrial.messageId = null;
+        scheduledTrial.hostId = interaction.user.id;
+        scheduledTrial.tier = tier;
+        scheduledTrial.scheduledTime = scheduledTime;
+        scheduledTrial.maxTrialees = maxTrialees;
+        scheduledTrial.trialees = [];
+        scheduledTrial.message = message && message.length > 0 ? message : null;
+        scheduledTrial.reminderSent = false;
+        scheduledTrial.status = 'scheduled';
+
+        const saved = await this.repo.save(scheduledTrial);
+
+        const cardMessage = await channel.send({
+            components: [ScheduledTrialHandler.buildCard(this.client, saved)],
+            flags: MessageFlags.IsComponentsV2,
+            allowedMentions: { parse: [] }
+        });
+
+        saved.messageId = cardMessage.id;
+        await this.repo.save(saved);
+
+        await interaction.editReply(`Trial scheduled! Head over to <#${channel.id}> to find the sign-up card.`);
     }
 
     // ===============================
