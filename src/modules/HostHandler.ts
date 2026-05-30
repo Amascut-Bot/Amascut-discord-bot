@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, GuildMember, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, StringSelectMenuBuilder, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, GuildMember, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder } from 'discord.js';
 import Bot from '../Bot';
 import * as uuid from 'uuid';
 import * as fs from 'fs';
@@ -15,19 +15,9 @@ interface RoleIntersection {
     [key: string]: string[];
 }
 
-interface TrialRoleContext {
-    mode: string | null;
-    targetRoleKey: string | null;
-}
-
 interface TrialPostContext {
     mode: string;
     targetRoleKey: string | null;
-}
-
-interface TrialFinishModalContext {
-    hostMessageId: string;
-    trialContext: TrialRoleContext | null;
 }
 
 export default class HostHandler {
@@ -69,22 +59,6 @@ export default class HostHandler {
             return;
         }
 
-        if (id.startsWith("host_trial_finish_submit_")) {
-            const trialFinishModalContext = HostHandler.parseTrialFinishModalContext(id);
-            this.handleHostFinishByType(
-                interaction as ModalSubmitInteraction,
-                trialFinishModalContext?.hostMessageId ?? id.substring(25),
-                2,
-                trialFinishModalContext?.trialContext ?? null
-            );
-            return;
-        }
-
-        if (id.startsWith("host_trial_finish_") && interaction.isButton()) {
-            this.finishHost(interaction as ButtonInteraction<'cached'>, 2, HostHandler.parseTrialFinishButtonContext(id));
-            return;
-        }
-
         switch (id) {
             case 'host_learner_finish': this.finishHost(interaction as ButtonInteraction<'cached'>, 0); break;
             case 'host_learner_disband': this.disbandHost(interaction, 0); break;
@@ -93,15 +67,12 @@ export default class HostHandler {
             case 'host_lorebook_finish': this.finishHost(interaction as ButtonInteraction<'cached'>, 1); break;
             case 'host_lorebook_disband': this.disbandHost(interaction, 1); break;
             case 'host_lorebook_quickfinish': this.quickFinishHost(interaction, 1); break;
-
-            case 'host_trial_finish': this.finishHost(interaction as ButtonInteraction<'cached'>, 2, null); break;
-            case 'host_trial_disband': this.disbandHost(interaction, 2); break;
         }
     }
 
     //#region Modal Handlers
 
-    private async handleHostFinishByType(interaction: ModalSubmitInteraction, hostMessageId: string, type: number, trialContext: TrialRoleContext | null = null) {
+    private async handleHostFinishByType(interaction: ModalSubmitInteraction, hostMessageId: string, type: number) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const hostSelect = interaction.fields.getSelectedUsers('host_select', true);
@@ -109,45 +80,23 @@ export default class HostHandler {
         const learnerSelect = interaction.fields.getSelectedUsers('learner_select', true);
         const summary = interaction.fields.getTextInputValue('summary');
 
-        const trialPassSelection = type === 2 ? interaction.fields.getStringSelectValues('trial_pass_select')[0] : null;
-        const pass = type === 2 ? trialPassSelection !== 'fail' : false;
-        const selectedRoleKey = trialPassSelection?.startsWith('pass:') ? HostHandler.normalizeTrialRoleKey(trialPassSelection.substring(5)) : null;
-
         const hosts = hostSelect.map(x => x.id);
         const learners = learnerSelect.map(x => x.id);
         const fillers = fillerSelect.map(x => x.id).filter(x => !learners.includes(x) && !hosts.includes(x));
-        let passResult: string | null = null;
 
         const message = interaction.message;
-        const fallbackEnrage = trialContext?.mode && /^\d+$/.test(trialContext.mode) ? trialContext.mode : null;
 
-        if (type === 0 || type === 1) {
-            for (let index = 0; index < learners.length; index++) {
-                await HostHandler.saveHost(this.client, type, message!.url ?? null, hosts, fillers);
-            }
-        } else {
-            if (pass) {
-                const trialee = await interaction.guild!.members.fetch(learners[0]);
-                passResult = await this.passHost(
-                    interaction.member as GuildMember,
-                    trialee,
-                    selectedRoleKey ?? trialContext?.targetRoleKey ?? null,
-                    fallbackEnrage
-                ) ?? null;
-            }
-            // recording fails is not necessary
-
+        for (let index = 0; index < learners.length; index++) {
             await HostHandler.saveHost(this.client, type, message!.url ?? null, hosts, fillers);
         }
 
-        const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book' : type === 2 ? 'Trial' : 'Undefined';
-        const attendingTypeLabel = type === 0 ? 'Learners' : type === 1 ? 'Learners' : type === 2 ? 'Trialees' : 'Undefined';
+        const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book' : 'Undefined';
 
         const summaryContainer = this.client.cv2.getContainerBuilder(null, `${hostTypeLabel} hosted by <@${interaction.user.id}> - Summary`);
 
         const teachersText = `### Hosts:\n${hosts.map(x => `<@${x}>`).join('\n')}`;
         const fillersText = `### Participants:\n${fillers.map(x => `<@${x}>`).join('\n')}`;
-        const learnersText = `### ${attendingTypeLabel}:\n${learners.map(x => `<@${x}>`).join('\n')}${type === 2 ? pass ? '(passed)' : '(failed)' : ''}`;
+        const learnersText = `### Learners:\n${learners.map(x => `<@${x}>`).join('\n')}`;
 
         summaryContainer.addTextDisplayComponents(t => t.setContent(teachersText))
             .addTextDisplayComponents(t => t.setContent(fillersText))
@@ -156,10 +105,7 @@ export default class HostHandler {
 
         summaryContainer.addTextDisplayComponents(t => t.setContent(summary));
 
-        const targetChannel = type === 0 ? await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel
-            : type === 1 ? await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel
-                : type === 2 ? await this.client.channels.fetch(this.client.channelIds.trialLounge) as TextChannel
-                    : await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel;
+        const targetChannel = await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel;
 
         await targetChannel.send({
             components: [summaryContainer],
@@ -169,7 +115,7 @@ export default class HostHandler {
 
         await HostHandler.disableHost(interaction.message!);
 
-        await interaction.editReply(type === 2 && passResult ? `${hostTypeLabel} finished! ${passResult}` : `${hostTypeLabel} finished!`);
+        await interaction.editReply(`${hostTypeLabel} finished!`);
     }
 
     //#endregion
@@ -339,7 +285,7 @@ export default class HostHandler {
 
 
         //set up the host card in it
-        await HostHandler.postHost(postChannel, mode, message, learner ? [learner] : null, [interaction.user.id], null, type, targetRoleKey);
+        await HostHandler.postHost(postChannel, mode, message, learner ? [learner] : null, [interaction.user.id], null, type);
 
         return await interaction.editReply(`Host card successfully created! Head over to <#${postChannel.id}> to find your host.`);
     }
@@ -377,10 +323,6 @@ export default class HostHandler {
         } else {
             return await interaction.editReply('Host could not be disbanded because the host message was not found!');
         }
-    }
-
-    private async passHost(host: GuildMember, member: GuildMember, targetRoleKey: string | null = null, fallbackEnrage: string | null = null): Promise<string | undefined> {
-        return HostHandler.awardTrialPass(this.client, host, member, targetRoleKey, fallbackEnrage);
     }
 
     /**
@@ -521,7 +463,7 @@ export default class HostHandler {
         }
     }
 
-    private async finishHost(interaction: ButtonInteraction<'cached'>, type: number, trialContext: TrialRoleContext | null = null) {
+    private async finishHost(interaction: ButtonInteraction<'cached'>, type: number) {
         if (type === 0) {
             //check if user is teacher, admin or owner
             if (!await this.client.util.hasRolePermissions(this.client, ['teacher', 'admin', 'owner'], interaction)) {
@@ -536,17 +478,8 @@ export default class HostHandler {
             }
         }
 
-        if (type === 2) {
-            //check if user is trial team, admin or owner
-            if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
-                return await interaction.editReply('This action can only be used by Trial Team Members!');
-            }
-        }
-
         const modal = new ModalBuilder()
-            .setCustomId(type === 2
-                ? HostHandler.buildTrialFinishModalCustomId(interaction.message.id, trialContext)
-                : `host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_finish_${interaction.message.id}`)
+            .setCustomId(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : 'undefined'}_finish_${interaction.message.id}`)
             .setTitle('Summary');
 
         const hostSelect = new UserSelectMenuBuilder()
@@ -572,17 +505,6 @@ export default class HostHandler {
             modal.addLabelComponents(label => label.setLabel('Who was learning?').setUserSelectMenuComponent(learnerSelect));
         } else if (type === 1) {
             modal.addLabelComponents(label => label.setLabel('Who was getting the lorebook?').setUserSelectMenuComponent(learnerSelect));
-        } else if (type === 2) {
-            modal.addLabelComponents(label => label.setLabel('Who was the trialee?').setUserSelectMenuComponent(learnerSelect));
-
-            const trialPassOptions = HostHandler.getTrialPassOptions(this.client, trialContext);
-            const passSelect = new StringSelectMenuBuilder()
-                .setCustomId('trial_pass_select')
-                .setRequired(true)
-                .setMaxValues(1)
-                .addOptions(...trialPassOptions.options);
-
-            modal.addLabelComponents(label => label.setLabel(trialPassOptions.label).setStringSelectMenuComponent(passSelect));
         }
 
         const summaryInput = new TextInputBuilder()
@@ -794,104 +716,6 @@ export default class HostHandler {
         return roleKey.match(/(500|1000|2000)$/)?.[1] ?? 'nm';
     }
 
-    private static buildTrialFinishButtonCustomId(mode: string, targetRoleKey: string | null): string {
-        return `host_trial_finish_${mode}_${targetRoleKey ?? 'none'}`;
-    }
-
-    private static parseTrialFinishButtonContext(id: string): TrialRoleContext | null {
-        if (!id.startsWith('host_trial_finish_')) {
-            return null;
-        }
-
-        const rawContext = id.substring('host_trial_finish_'.length);
-        const separatorIndex = rawContext.indexOf('_');
-
-        if (separatorIndex === -1) {
-            return {
-                mode: rawContext.length > 0 ? rawContext : null,
-                targetRoleKey: null
-            };
-        }
-
-        const mode = rawContext.substring(0, separatorIndex);
-        const rawTargetRoleKey = rawContext.substring(separatorIndex + 1);
-
-        return {
-            mode: mode.length > 0 ? mode : null,
-            targetRoleKey: HostHandler.normalizeTrialRoleKey(rawTargetRoleKey === 'none' ? null : rawTargetRoleKey)
-        };
-    }
-
-    private static buildTrialFinishModalCustomId(hostMessageId: string, trialContext: TrialRoleContext | null): string {
-        return `host_trial_finish_submit_${hostMessageId}_${trialContext?.mode ?? 'none'}_${trialContext?.targetRoleKey ?? 'none'}`;
-    }
-
-    private static parseTrialFinishModalContext(id: string): TrialFinishModalContext | null {
-        if (!id.startsWith('host_trial_finish_submit_')) {
-            return null;
-        }
-
-        const rawContext = id.substring('host_trial_finish_submit_'.length);
-        const parts = rawContext.split('_');
-
-        if (parts.length < 3) {
-            return null;
-        }
-
-        const [hostMessageId, mode, rawTargetRoleKey] = parts;
-
-        return {
-            hostMessageId,
-            trialContext: {
-                mode: mode === 'none' ? null : mode,
-                targetRoleKey: HostHandler.normalizeTrialRoleKey(rawTargetRoleKey === 'none' ? null : rawTargetRoleKey)
-            }
-        };
-    }
-
-    private static getTrialPassOptions(client: Bot, trialContext: TrialRoleContext | null): { label: string, options: { label: string, value: string }[] } {
-        if (trialContext?.targetRoleKey) {
-            return {
-                label: 'Did they pass or fail?',
-                options: [
-                    { label: 'Pass', value: 'pass' },
-                    { label: 'Fail', value: 'fail' }
-                ]
-            };
-        }
-
-        const roleKeys = trialContext?.mode && /^\d+$/.test(trialContext.mode)
-            ? client.util.trialHierarchy.filter(roleKey => roleKey.endsWith(trialContext.mode!))
-            : [...client.util.trialHierarchy];
-
-        return {
-            label: roleKeys.length > 1
-                ? 'Did they pass or fail? Choose the exact tier for this host card.'
-                : 'Did they pass or fail?',
-            options: [
-                ...roleKeys.map(roleKey => ({
-                    label: `Pass - ${HostHandler.trialRoleKeyToLabel(roleKey)}`,
-                    value: `pass:${roleKey}`
-                })),
-                { label: 'Fail', value: 'fail' }
-            ]
-        };
-    }
-
-    private static buildTrialHostMessage(message: string | null, targetRoleKey: string | null): string | null {
-        const parts: string[] = [];
-
-        if (targetRoleKey) {
-            parts.push(`Target trial tier: ${HostHandler.trialRoleKeyToLabel(targetRoleKey)}`);
-        }
-
-        if (message && message.length > 0) {
-            parts.push(message);
-        }
-
-        return parts.length > 0 ? parts.join('\n') : null;
-    }
-
     private static getHostData(hostJson: string) {
         // extract data from current host card
         const data = new Map<string, string>();
@@ -1029,25 +853,19 @@ export default class HostHandler {
         }
     }
 
-    public static async postHost(channel: TextChannel, mode: string, message: string | null, users: string[] | null = null, hosts: string[] | null = null, time: string | null = null, type: number = -1, targetRoleKey: string | null = null): Promise<boolean> {
-        const hostMessage = type === 2
-            ? HostHandler.buildTrialHostMessage(message, targetRoleKey)
-            : message;
-
-        const hostJson = this.loadHostConfig(mode, hostMessage);
+    public static async postHost(channel: TextChannel, mode: string, message: string | null, users: string[] | null = null, hosts: string[] | null = null, time: string | null = null, type: number = -1): Promise<boolean> {
+        const hostJson = this.loadHostConfig(mode, message);
 
         if (hostJson) {
             const hostContainer = JSON.parse(hostJson);
 
             if (hosts !== null) {
-                const typeLabel = type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined';
+                const typeLabel = type === 0 ? 'learner' : type === 1 ? 'lorebook' : 'undefined';
 
                 const buttons: ButtonBuilder[] = [];
 
                 const finishButton = new ButtonBuilder()
-                    .setCustomId(type === 2
-                        ? HostHandler.buildTrialFinishButtonCustomId(mode, targetRoleKey)
-                        : `host_${typeLabel}_finish`)
+                    .setCustomId(`host_${typeLabel}_finish`)
                     .setLabel('Finish')
                     .setStyle(ButtonStyle.Primary);
 
