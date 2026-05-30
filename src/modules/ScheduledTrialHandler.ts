@@ -339,6 +339,11 @@ export default class ScheduledTrialHandler {
             return;
         }
 
+        if (member.id === trial.hostId) {
+            await interaction.editReply('You are the host of this trial and cannot also take a fill slot.');
+            return;
+        }
+
         if (trial.trialees.includes(member.id)) {
             await interaction.editReply('You are already signed up as a trialee. Withdraw from trialees first if you want to fill.');
             return;
