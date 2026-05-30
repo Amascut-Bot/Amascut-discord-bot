@@ -16,6 +16,7 @@ import {
     TextChannel,
     TextInputBuilder,
     TextInputStyle,
+    UserSelectMenuBuilder,
 } from 'discord.js';
 import { Repository } from 'typeorm';
 import Bot from '../Bot';
@@ -66,15 +67,30 @@ export default class ScheduledTrialHandler {
     public static buildCard(client: Bot, trial: ScheduledTrial): ContainerBuilder {
         const tierLabel = HostHandler.trialRoleKeyToLabel(trial.tier);
         const roleMention = client.roles[trial.tier] ?? tierLabel;
-        const unix = Math.floor(trial.scheduledTime.getTime() / 1000);
+        const fills = trial.fills ?? [];
+        const isTicket = trial.kind === 'ticket';
 
-        const container = client.cv2.getContainerBuilder(null, `## Scheduled Trial — ${tierLabel}`);
+        const fillList = fills.length > 0
+            ? fills.map(userId => `<@${userId}>`).join('\n')
+            : '_None yet_';
 
-        container.addTextDisplayComponents(t => t.setContent(
-            `**Host:** <@${trial.hostId}>\n` +
-            `**Role:** ${roleMention}\n` +
-            `**Time:** <t:${unix}:F> (<t:${unix}:R>)`
-        ));
+        const container = client.cv2.getContainerBuilder(null, `## ${isTicket ? 'Trial' : 'Scheduled Trial'} — ${tierLabel}`);
+
+        if (isTicket) {
+            const trialeeMention = trial.trialees[0] ? `<@${trial.trialees[0]}>` : '_unknown_';
+            container.addTextDisplayComponents(t => t.setContent(
+                `**Host:** <@${trial.hostId}>\n` +
+                `**Trialee:** ${trialeeMention}\n` +
+                `**Role:** ${roleMention}`
+            ));
+        } else {
+            const unix = Math.floor(trial.scheduledTime.getTime() / 1000);
+            container.addTextDisplayComponents(t => t.setContent(
+                `**Host:** <@${trial.hostId}>\n` +
+                `**Role:** ${roleMention}\n` +
+                `**Time:** <t:${unix}:F> (<t:${unix}:R>)`
+            ));
+        }
 
         if (trial.message) {
             container.addTextDisplayComponents(t => t.setContent(`**Message:** ${trial.message}`));
@@ -82,25 +98,25 @@ export default class ScheduledTrialHandler {
 
         container.addSeparatorComponents(s => s.setSpacing(SeparatorSpacingSize.Small));
 
-        const fills = trial.fills ?? [];
-        const trialeeList = trial.trialees.length > 0
-            ? trial.trialees.map(userId => `<@${userId}>`).join('\n')
-            : '_None yet_';
-        const fillList = fills.length > 0
-            ? fills.map(userId => `<@${userId}>`).join('\n')
-            : '_None yet_';
-
-        container.addTextDisplayComponents(t => t.setContent(`**Trialees (${trial.trialees.length}/${trial.maxTrialees}, min ${trial.minTrialees}):**\n${trialeeList}`));
+        if (!isTicket) {
+            const trialeeList = trial.trialees.length > 0
+                ? trial.trialees.map(userId => `<@${userId}>`).join('\n')
+                : '_None yet_';
+            container.addTextDisplayComponents(t => t.setContent(`**Trialees (${trial.trialees.length}/${trial.maxTrialees}, min ${trial.minTrialees}):**\n${trialeeList}`));
+        }
         container.addTextDisplayComponents(t => t.setContent(`**Trial Team Fills (${fills.length}/${MAX_FILLS}):**\n${fillList}`));
         container.addTextDisplayComponents(t => t.setContent(`_Total players: ${ScheduledTrialHandler.totalPlayers(trial)}/${MAX_PARTICIPANTS} (incl. host)_`));
 
-        const buttons = [
-            new ButtonBuilder().setCustomId(`schedtrial_signup_${trial.id}`).setLabel('Trialee sign up / withdraw').setStyle(ButtonStyle.Primary),
+        const buttons: ButtonBuilder[] = [];
+        if (!isTicket) {
+            buttons.push(new ButtonBuilder().setCustomId(`schedtrial_signup_${trial.id}`).setLabel('Trialee sign up / withdraw').setStyle(ButtonStyle.Primary));
+        }
+        buttons.push(
             new ButtonBuilder().setCustomId(`schedtrial_fillsignup_${trial.id}`).setLabel('Fill sign up / withdraw').setStyle(ButtonStyle.Secondary),
             new ButtonBuilder().setCustomId(`schedtrial_finish_${trial.id}`).setLabel('Finish').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId(`schedtrial_remove_${trial.id}`).setLabel('Remove').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId(`schedtrial_cancel_${trial.id}`).setLabel('Cancel').setStyle(ButtonStyle.Danger),
-        ];
+            new ButtonBuilder().setCustomId(`schedtrial_cancel_${trial.id}`).setLabel(isTicket ? 'Disband' : 'Cancel').setStyle(ButtonStyle.Danger),
+        );
         container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons));
 
         return container;
@@ -428,12 +444,14 @@ export default class ScheduledTrialHandler {
         }
 
         const fills = trial.fills ?? [];
-        if (trial.trialees.length === 0 && fills.length === 0) {
-            await interaction.reply({ content: 'Nobody has signed up yet.', flags: MessageFlags.Ephemeral });
+        // For ticket trials the trialee is the fixed ticket opener and cannot be removed — fills only.
+        const removableTrialees = trial.kind === 'ticket' ? [] : trial.trialees;
+        if (removableTrialees.length === 0 && fills.length === 0) {
+            await interaction.reply({ content: 'There are no removable participants yet.', flags: MessageFlags.Ephemeral });
             return;
         }
 
-        const trialeeOptions = await Promise.all(trial.trialees.map(async userId => {
+        const trialeeOptions = await Promise.all(removableTrialees.map(async userId => {
             const member = await interaction.guild.members.fetch(userId).catch(() => null);
             return new StringSelectMenuOptionBuilder().setLabel(`Trialee: ${member?.displayName ?? userId}`).setValue(userId);
         }));
@@ -519,6 +537,13 @@ export default class ScheduledTrialHandler {
             modal.addLabelComponents(label => label.setLabel('Who passed? (unselected = failed)').setStringSelectMenuComponent(passedSelect));
         }
 
+        const extraFillsSelect = new UserSelectMenuBuilder()
+            .setCustomId('extra_fills')
+            .setRequired(false)
+            .setMaxValues(5);
+
+        modal.addLabelComponents(label => label.setLabel('Add extra fills for points (optional, e.g. outside trial team)').setUserSelectMenuComponent(extraFillsSelect));
+
         const summaryInput = new TextInputBuilder()
             .setCustomId('summary')
             .setStyle(TextInputStyle.Paragraph)
@@ -558,6 +583,16 @@ export default class ScheduledTrialHandler {
         const failedIds = trial.trialees.filter(userId => !passedIds.includes(userId));
         const summary = interaction.fields.getTextInputValue('summary');
 
+        // Signed-up fills + any extra fills added at finish (e.g. outside the trial team) — all get leaderboard points.
+        let extraFillIds: string[] = [];
+        try {
+            const selected = interaction.fields.getSelectedUsers('extra_fills', false);
+            extraFillIds = selected ? selected.map(user => user.id) : [];
+        } catch (err) {
+            extraFillIds = [];
+        }
+        const allFills = [...new Set([...(trial.fills ?? []), ...extraFillIds])];
+
         const hostMember = interaction.member as GuildMember;
         const resultLines: string[] = [];
 
@@ -571,15 +606,20 @@ export default class ScheduledTrialHandler {
             resultLines.push(`<@${passId}>: ${result ?? 'No role changes.'}`);
         }
 
+        // Record leaderboard participation: host + all fills (saveHost skips anyone already counted as host).
+        await HostHandler.saveHost(this.client, 2, null, [trial.hostId], allFills).catch((err) => {
+            this.client.logger.error({ message: 'Scheduled trial saveHost failed', error: err, handler: this.constructor.name });
+        });
+
         try {
             const loungeId = this.client.channelIds.trialLounge;
             if (loungeId) {
                 const lounge = await this.client.channels.fetch(loungeId) as TextChannel;
                 const tierLabel = HostHandler.trialRoleKeyToLabel(trial.tier);
-                const fills = trial.fills ?? [];
-                const container = this.client.cv2.getContainerBuilder(null, `Scheduled ${tierLabel} Trial hosted by <@${hostMember.id}> - Summary`);
+                const kindLabel = trial.kind === 'ticket' ? '' : 'Scheduled ';
+                const container = this.client.cv2.getContainerBuilder(null, `${kindLabel}${tierLabel} Trial hosted by <@${hostMember.id}> - Summary`);
                 container.addTextDisplayComponents(t => t.setContent(`### Host:\n<@${trial.hostId}>`));
-                container.addTextDisplayComponents(t => t.setContent(`### Fills:\n${fills.length ? fills.map(userId => `<@${userId}>`).join('\n') : '_None_'}`));
+                container.addTextDisplayComponents(t => t.setContent(`### Fills:\n${allFills.length ? allFills.map(userId => `<@${userId}>`).join('\n') : '_None_'}`));
                 container.addTextDisplayComponents(t => t.setContent(`### Passed:\n${passedIds.length ? passedIds.map(userId => `<@${userId}>`).join('\n') : '_None_'}`));
                 container.addTextDisplayComponents(t => t.setContent(`### Failed:\n${failedIds.length ? failedIds.map(userId => `<@${userId}>`).join('\n') : '_None_'}`));
                 container.addSeparatorComponents(s => s.setSpacing(SeparatorSpacingSize.Small));

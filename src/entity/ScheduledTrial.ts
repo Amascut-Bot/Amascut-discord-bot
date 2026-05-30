@@ -17,6 +17,10 @@ export class ScheduledTrial {
     @Column()
     hostId: string
 
+    // 'scheduled' (open sign-up card) | 'ticket' (clean card inside a trialee's ticket thread)
+    @Column({ default: 'scheduled' })
+    kind: string
+
     // Trial tier role key (e.g. "grandmaster2000")
     @Column()
     tier: string

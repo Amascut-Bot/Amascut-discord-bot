@@ -6,6 +6,8 @@ import * as path from 'path';
 import TicketHandler from './TicketHandler';
 import ComponentsV2Utils from './ComponentsV2Utils';
 import { HostParticipation } from '../entity/HostParticipation';
+import { ScheduledTrial } from '../entity/ScheduledTrial';
+import ScheduledTrialHandler from './ScheduledTrialHandler';
 
 export default interface HostHandler { client: Bot; id: string; interaction: Interaction }
 
@@ -296,85 +298,43 @@ export default class HostHandler {
         }
 
         if (type === 2) {
-            // ask for time, trialee, and additional message
-            const genid = `host-message-modal-${uuid.v4()}`
-            let modalInteraction: ModalSubmitInteraction | null = null;
+            // Trial tickets now use the clean scheduled-trial style card (host + trialee + fills).
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-            const modal = new ModalBuilder()
-                .setCustomId(genid)
-                .setTitle('Create Host');
-
-            // Trialee
             if (!learner) {
-                const trialeeSelect = new UserSelectMenuBuilder()
-                    .setCustomId('trialee_select')
-                    .setRequired(false)
-                    .setMaxValues(1);
-
-                modal.addLabelComponents(label => label.setLabel('Who is the trialee? (optional)').setUserSelectMenuComponent(trialeeSelect));
+                return await interaction.editReply('This must be used inside a trialee ticket so the trialee can be detected.');
             }
 
-            // Time
-            const timeInput = new TextInputBuilder()
-                .setCustomId('time')
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(false)
-                .setMaxLength(100);
+            const scheduledTrialRepository = this.client.dataSource.getRepository(ScheduledTrial);
 
-            modal.addLabelComponents(label => label.setLabel('When is the trial? (optional)').setTextInputComponent(timeInput));
+            const trial = new ScheduledTrial();
+            trial.guildId = interaction.guild!.id;
+            trial.channelId = postChannel.id;
+            trial.messageId = null;
+            trial.hostId = interaction.user.id;
+            trial.kind = 'ticket';
+            trial.tier = targetRoleKey!;
+            trial.scheduledTime = new Date();
+            trial.minTrialees = 1;
+            trial.maxTrialees = 1;
+            trial.trialees = [learner];
+            trial.fills = [];
+            trial.message = null;
+            trial.reminderSent = true; // immediate ticket trial — never sends a scheduled reminder
+            trial.status = 'scheduled';
 
-            // Message
-            const messageInput = new TextInputBuilder()
-                .setCustomId('message')
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(false)
-                .setMaxLength(200);
+            const saved = await scheduledTrialRepository.save(trial);
 
-            modal.addLabelComponents(label => label.setLabel('Additional Message (optional)').setTextInputComponent(messageInput));
+            const cardMessage = await postChannel.send({
+                components: [ScheduledTrialHandler.buildCard(this.client, saved)],
+                flags: MessageFlags.IsComponentsV2,
+                allowedMentions: { parse: [] }
+            });
 
-            await interaction.showModal(modal);
+            saved.messageId = cardMessage.id;
+            await scheduledTrialRepository.save(saved);
 
-            const filter = (i: ModalSubmitInteraction) => i.customId === genid && i.user.id === interaction.user.id;
-
-            try {
-                modalInteraction = await interaction.awaitModalSubmit({ filter, time: 900_000 }); // 15 minutes
-
-                const trialeeSelect = !learner ? modalInteraction.fields.getSelectedUsers('trialee_select', false) : null;
-                const timeInput = modalInteraction.fields.getTextInputValue('time');
-                const messageInput = modalInteraction.fields.getTextInputValue('message');
-
-                message = `Trial hosted by <@${interaction.user.id}>:
-`;
-                if (trialeeSelect && trialeeSelect.size > 0) {
-                    message += `Trialee: <@${trialeeSelect.first()!.id}>
-`;
-                } else {
-                    message += `Trialee: <@${learner}>
-`;
-                }
-
-                if (timeInput) message += `Time: ${timeInput}
-`;
-                if (messageInput) message += `Message: ${messageInput}
-`;
-
-                message = message.trim();
-
-                await HostHandler.postHost(postChannel, mode, message, learner ? [learner] : null, [interaction.user.id], null, type, targetRoleKey);
-
-                return await modalInteraction.reply({ content: `Host card successfully created! Head over to <#${postChannel.id}> to find your host.`, flags: MessageFlags.Ephemeral });
-            } catch (err) {
-                if (modalInteraction) {
-                    this.client.logger.error({ message: 'Trial host creation failed', error: err, handler: this.constructor.name });
-                    if (modalInteraction.deferred || modalInteraction.replied) {
-                        await modalInteraction.editReply({ content: 'Host creation failed. Please try again.' }).catch(() => { });
-                    } else {
-                        await modalInteraction.reply({ content: 'Host creation failed. Please try again.', flags: MessageFlags.Ephemeral }).catch(() => { });
-                    }
-                }
-
-                return;
-            }
+            return await interaction.editReply('Trial host card created!');
         }
 
 
