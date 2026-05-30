@@ -451,14 +451,15 @@ export default class ScheduledTrialHandler {
             return;
         }
 
-        const trialeeOptions = await Promise.all(removableTrialees.map(async userId => {
-            const member = await interaction.guild.members.fetch(userId).catch(() => null);
+        // Cache-only lookups — must reply within 3s, so avoid awaiting member fetches here.
+        const trialeeOptions = removableTrialees.map(userId => {
+            const member = interaction.guild.members.cache.get(userId);
             return new StringSelectMenuOptionBuilder().setLabel(`Trialee: ${member?.displayName ?? userId}`).setValue(userId);
-        }));
-        const fillOptions = await Promise.all(fills.map(async userId => {
-            const member = await interaction.guild.members.fetch(userId).catch(() => null);
+        });
+        const fillOptions = fills.map(userId => {
+            const member = interaction.guild.members.cache.get(userId);
             return new StringSelectMenuOptionBuilder().setLabel(`Fill: ${member?.displayName ?? userId}`).setValue(userId);
-        }));
+        });
 
         const select = new StringSelectMenuBuilder()
             .setCustomId(`schedtrial_removeselect_${trial.id}`)
@@ -521,10 +522,11 @@ export default class ScheduledTrialHandler {
             .setTitle('Finish Trial');
 
         if (trial.trialees.length > 0) {
-            const options = await Promise.all(trial.trialees.map(async userId => {
-                const member = await interaction.guild.members.fetch(userId).catch(() => null);
+            // Use cached members only — must call showModal within 3s, so avoid awaiting fetches here.
+            const options = trial.trialees.map(userId => {
+                const member = interaction.guild.members.cache.get(userId);
                 return new StringSelectMenuOptionBuilder().setLabel(member?.displayName ?? userId).setValue(userId);
-            }));
+            });
 
             const passedSelect = new StringSelectMenuBuilder()
                 .setCustomId('passed_select')
