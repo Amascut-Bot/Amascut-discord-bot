@@ -119,7 +119,7 @@ export default class UtilityHandler {
     }
 
     get trialTierOrder(): string[] {
-        return ['elite1000', 'elite2000', 'master1000', 'master2000'];
+        return ['elite1000', 'elite2000', 'master1000', 'master2000', 'grandmaster2000'];
     }
 
     get trialTierPriorities(): RolePriorityMap {
@@ -127,7 +127,8 @@ export default class UtilityHandler {
             elite1000: 2,
             elite2000: 3,
             master1000: 3,
-            master2000: 4
+            master2000: 4,
+            grandmaster2000: 5
         };
     }
 
@@ -136,7 +137,8 @@ export default class UtilityHandler {
             elite1000: 'notifyElite1000',
             elite2000: 'notifyElite2000',
             master1000: 'notifyMaster1000',
-            master2000: 'notifyMaster2000'
+            master2000: 'notifyMaster2000',
+            grandmaster2000: 'notifyGrandmaster2000'
         };
     }
 
@@ -145,7 +147,8 @@ export default class UtilityHandler {
             elite1000: 'elite1000trialee',
             elite2000: 'elite2000trialee',
             master1000: 'master1000trialee',
-            master2000: 'master2000trialee'
+            master2000: 'master2000trialee',
+            grandmaster2000: 'grandmaster2000trialee'
         };
     }
 
@@ -203,6 +206,10 @@ export default class UtilityHandler {
 
     public isMasterTrialTier = (role: string): boolean => {
         return role.startsWith('master');
+    }
+
+    public isGrandmasterTrialTier = (role: string): boolean => {
+        return role.startsWith('grandmaster');
     }
 
     public getTrialTierPriority = (role: string): number | null => {
@@ -288,7 +295,11 @@ export default class UtilityHandler {
             return [];
         }
 
-        const coverRoles = this.isMasterTrialTier(role) ? ['master', 'elite'] : ['elite'];
+        const coverRoles = this.isGrandmasterTrialTier(role)
+            ? ['grandmaster', 'master', 'elite']
+            : this.isMasterTrialTier(role)
+                ? ['master', 'elite']
+                : ['elite'];
         const notifyRole = this.trialNotifyRoles[role];
 
         return [...new Set([role, ...coverRoles, ...(notifyRole ? [notifyRole] : [])])];

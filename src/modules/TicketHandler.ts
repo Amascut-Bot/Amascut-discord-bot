@@ -703,9 +703,7 @@ export default class TicketHandler {
                 new StringSelectMenuOptionBuilder().setLabel('Master - 1000% Enrage').setValue('master1000'),
                 new StringSelectMenuOptionBuilder().setLabel('Master - 2000% Enrage').setValue('master2000'),
 
-                // new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 500% Enrage').setValue('gm500'),
-                // new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 1000% Enrage').setValue('gm1000'),
-                // new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 2000% Enrage').setValue('gm2000'),
+                new StringSelectMenuOptionBuilder().setLabel('Grandmaster - 2000% Enrage').setValue('grandmaster2000'),
             ])
             .setMaxValues(1);
 
@@ -1967,6 +1965,9 @@ export default class TicketHandler {
                         case 'master2000':
                             parentCategoryId = this.client.channelIds.masterTrialee2000TicketsCategory;
                             break;
+                        case 'grandmaster2000':
+                            parentCategoryId = this.client.channelIds.grandmasterTrialee2000TicketsCategory;
+                            break;
                         default:
                             parentCategoryId = this.client.channelIds.trialeeTicketsCategory;
                     }
@@ -2135,6 +2136,10 @@ export default class TicketHandler {
 
                     case 'master2000':
                         await member.roles.add(this.client.roleIds.master2000trialee).catch(() => { });
+                        break;
+
+                    case 'grandmaster2000':
+                        await member.roles.add(this.client.roleIds.grandmaster2000trialee).catch(() => { });
                         break;
 
                     default:

@@ -799,7 +799,7 @@ export default class HostHandler {
             return null;
         }
 
-        return /^(elite1000|elite2000|master1000|master2000)$/.test(normalizedRoleKey)
+        return /^(elite1000|elite2000|master1000|master2000|grandmaster2000)$/.test(normalizedRoleKey)
             ? normalizedRoleKey
             : null;
     }
@@ -814,6 +814,8 @@ export default class HostHandler {
                 return 'Master 1000';
             case 'master2000':
                 return 'Master 2000';
+            case 'grandmaster2000':
+                return 'Grandmaster 2000';
             default:
                 return roleKey;
         }

@@ -30,7 +30,8 @@ export default class AssignMatchmaking extends BotInteraction {
             'Elite 1000': 'elite1000',
             'Elite 2000': 'elite2000',
             'Master 1000': 'master1000',
-            'Master 2000': 'master2000'
+            'Master 2000': 'master2000',
+            'Grandmaster 2000': 'grandmaster2000'
         };
 
         const filtered = Object.keys(options)

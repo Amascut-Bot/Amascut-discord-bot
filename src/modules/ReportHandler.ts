@@ -83,6 +83,7 @@ export default class reportHandler {
                 new StringSelectMenuOptionBuilder().setLabel('Elite 2000').setValue('elite2000'),
                 new StringSelectMenuOptionBuilder().setLabel('Master 1000').setValue('master1000'),
                 new StringSelectMenuOptionBuilder().setLabel('Master 2000').setValue('master2000'),
+                new StringSelectMenuOptionBuilder().setLabel('Grandmaster 2000').setValue('grandmaster2000'),
             ])
             .setMaxValues(1);
 
@@ -296,10 +297,12 @@ private async approveReport(interaction: ButtonInteraction<'cached'>) {
                     const roleIdToRemove = this.client.roleIds[roleKey];
                     if (roleIdToRemove) {
                         const downgradeMap: Record<string, string> = {
-                            master2000: 'elite2000', //Map reported roles to downgraded roles
+                            grandmaster2000: 'master2000', //Map reported roles to downgraded roles
+                            master2000: 'elite2000',
                             master1000: 'elite1000',
                         };
                         const notifyMap: Record<string, string> = { //Map notify roles to reported role to remove if approved
+                            grandmaster2000: 'notifyGrandmaster2000',
                             master2000: 'notifyMaster2000',
                             master1000: 'notifyMaster1000',
                             elite2000: 'notifyElite2000',
@@ -313,6 +316,7 @@ private async approveReport(interaction: ButtonInteraction<'cached'>) {
                             await reportedMember.roles.remove(this.client.roleIds[notifyKey]).catch(() => { });
                         }
 
+                        const grandmasterSubRoles = ['grandmaster2000']; //Roles that provide the "Grandmaster" umbrella role
                         const masterSubRoles = ['master2000', 'master1000']; //Roles that provide the "Master" umbrella role
                         const eliteSubRoles = ['elite2000', 'elite1000']; //Roles that provide the "Elite" umbrella role
 
@@ -337,7 +341,12 @@ private async approveReport(interaction: ButtonInteraction<'cached'>) {
                         const updatedMember = await interaction.guild?.members.fetch(reportedUserId);
                         const updatedRoleIds = updatedMember?.roles.cache.map(r => r.id) ?? [];
 
-                        if (masterSubRoles.includes(roleKey)) {
+                        if (grandmasterSubRoles.includes(roleKey)) {
+                            const stillHasGrandmaster = grandmasterSubRoles.some(k => updatedRoleIds.includes(this.client.roleIds[k]));
+                            if (!stillHasGrandmaster && this.client.roleIds.grandmaster) {
+                                await updatedMember?.roles.remove(this.client.roleIds.grandmaster).catch(() => { });
+                            }
+                        } else if (masterSubRoles.includes(roleKey)) {
                             const stillHasMaster = masterSubRoles.some(k => updatedRoleIds.includes(this.client.roleIds[k]));
                             if (!stillHasMaster && this.client.roleIds.master) {
                                 await updatedMember?.roles.remove(this.client.roleIds.master).catch(() => { });
@@ -346,6 +355,16 @@ private async approveReport(interaction: ButtonInteraction<'cached'>) {
                             const stillHasElite = eliteSubRoles.some(k => updatedRoleIds.includes(this.client.roleIds[k]));
                             if (!stillHasElite && this.client.roleIds.elite) {
                                 await updatedMember?.roles.remove(this.client.roleIds.elite).catch(() => { });
+                            }
+                        }
+
+                        // If downgraded into master tier, ensure master + elite umbrella roles are given
+                        if (downgradeKey && masterSubRoles.includes(downgradeKey)) {
+                            if (this.client.roleIds.master) {
+                                await updatedMember?.roles.add(this.client.roleIds.master).catch(() => { });
+                            }
+                            if (this.client.roleIds.elite) {
+                                await updatedMember?.roles.add(this.client.roleIds.elite).catch(() => { });
                             }
                         }
 
@@ -454,7 +473,8 @@ private async showCheckReportsModal(interaction: ChatInputCommandInteraction<'ca
             new StringSelectMenuOptionBuilder().setLabel('Elite 1000').setValue('elite1000'),
             new StringSelectMenuOptionBuilder().setLabel('Elite 2000').setValue('elite2000'),
             new StringSelectMenuOptionBuilder().setLabel('Master 1000').setValue('master1000'),
-            new StringSelectMenuOptionBuilder().setLabel('Master 2000').setValue('master2000'),                
+            new StringSelectMenuOptionBuilder().setLabel('Master 2000').setValue('master2000'),
+            new StringSelectMenuOptionBuilder().setLabel('Grandmaster 2000').setValue('grandmaster2000'),
         ])
         .setMaxValues(1);
 
