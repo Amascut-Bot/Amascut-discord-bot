@@ -60,7 +60,6 @@ export default class VouchHandler {
         const roleSelect = new StringSelectMenuBuilder()
             .setCustomId('vouch_role')
             .addOptions([
-                new StringSelectMenuOptionBuilder().setLabel('Elite 500').setValue('elite500'),
                 new StringSelectMenuOptionBuilder().setLabel('Elite 1000').setValue('elite1000'),
                 new StringSelectMenuOptionBuilder().setLabel('Elite 2000').setValue('elite2000'),
             ])
