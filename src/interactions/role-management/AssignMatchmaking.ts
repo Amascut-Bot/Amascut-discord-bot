@@ -27,7 +27,6 @@ export default class AssignMatchmaking extends BotInteraction {
         if (focusedOption.name !== 'role') return;
 
         const options = {
-            'Elite 500': 'elite500',
             'Elite 1000': 'elite1000',
             'Elite 2000': 'elite2000',
             'Master 1000': 'master1000',

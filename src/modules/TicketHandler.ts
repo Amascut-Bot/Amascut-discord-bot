@@ -636,7 +636,6 @@ export default class TicketHandler {
         const tierSelect = new StringSelectMenuBuilder()
             .setCustomId('tier')
             .addOptions([
-                new StringSelectMenuOptionBuilder().setLabel('Elite - 500% Enrage').setValue('elite500'),
                 new StringSelectMenuOptionBuilder().setLabel('Elite - 1000% Enrage').setValue('elite1000'),
                 new StringSelectMenuOptionBuilder().setLabel('Elite - 2000% Enrage').setValue('elite2000'),
 
@@ -1883,9 +1882,6 @@ export default class TicketHandler {
                     break;
                 case 'trialee':
                     switch (formData?.tier) {
-                        case 'elite500':
-                            parentCategoryId = this.client.channelIds.trialee500TicketsCategory;
-                            break;
                         case 'elite1000':
                             parentCategoryId = this.client.channelIds.trialee1000TicketsCategory;
                             break;
@@ -2031,10 +2027,6 @@ export default class TicketHandler {
 
                 // give user the notify role for trialees
                 switch (formData.tier) {
-                    case 'elite500':
-                        await member.roles.add(this.client.roleIds.elite500trialee).catch(() => { });
-                        break;
-
                     case 'elite1000':
                         await member.roles.add(this.client.roleIds.elite1000trialee).catch(() => { });
                         break;

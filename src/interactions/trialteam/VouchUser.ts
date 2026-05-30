@@ -24,7 +24,6 @@ export default class VouchUser extends BotInteraction {
             .addUserOption(option => option.setName('user').setDescription('User to vouch for').setRequired(true))
             .addStringOption(option => option.setName('role').setDescription('Elite role').setRequired(true)
                 .addChoices(
-                    { name: 'Elite 500', value: 'elite500' },
                     { name: 'Elite 1000', value: 'elite1000' },
                     { name: 'Elite 2000', value: 'elite2000' }
                 ))
