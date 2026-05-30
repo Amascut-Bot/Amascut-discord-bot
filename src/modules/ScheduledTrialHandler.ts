@@ -408,8 +408,10 @@ export default class ScheduledTrialHandler {
         trial.status = 'cancelled';
         await this.repo.save(trial);
 
+        // Only notify for scheduled trials (public channel). Ticket trials live in the private
+        // trial-team thread, where pinging the trialee would add them to that thread.
         const involved = [...trial.trialees, ...(trial.fills ?? [])];
-        if (involved.length > 0) {
+        if (trial.kind !== 'ticket' && involved.length > 0) {
             try {
                 const channel = await this.client.channels.fetch(trial.channelId) as TextChannel;
                 await channel.send({
@@ -422,7 +424,7 @@ export default class ScheduledTrialHandler {
         }
 
         await this.deleteCard(trial);
-        await interaction.editReply('Scheduled trial cancelled.');
+        await interaction.editReply(trial.kind === 'ticket' ? 'Trial disbanded.' : 'Scheduled trial cancelled.');
     }
 
     // ===============================
