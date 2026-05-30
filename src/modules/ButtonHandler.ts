@@ -6,6 +6,7 @@ import HostHandler from './HostHandler';
 import VouchHandler from './VouchHandler';
 import { RoleAssignmentLog } from '../entity/RoleAssignmentLog';
 import ReportHandler from './ReportHandler';
+import ScheduledTrialHandler from './ScheduledTrialHandler';
 
 // ===============================
 // MAIN CLASS
@@ -37,6 +38,11 @@ export default class ButtonHandler {
 
         if (id.startsWith('host_')) {
             new HostHandler(this.client, interaction.customId, interaction);
+            return;
+        }
+
+        if (id.startsWith('schedtrial_')) {
+            new ScheduledTrialHandler(this.client, interaction.customId, interaction);
             return;
         }
 

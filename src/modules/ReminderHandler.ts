@@ -3,6 +3,8 @@ import * as cron from 'node-cron';
 import { TextChannel, MessageFlags, ContainerBuilder, TextDisplayBuilder, SeparatorSpacingSize } from 'discord.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { LessThanOrEqual } from 'typeorm';
+import { ScheduledTrial } from '../entity/ScheduledTrial';
 
 interface ReminderData {
     messageIds: { [channelId: string]: string };
@@ -25,10 +27,56 @@ export default class ReminderHandler {
             await this.sendMyvcReminders();
             await this.sendKeepsReminders(); // Uncomment when needed
         });
+        // Scheduled-trial reminders: check every minute for trials starting within 30 minutes
+        cron.schedule('* * * * *', async () => {
+            await this.sendScheduledTrialReminders();
+        });
         this.client.logger.log({
             message: 'Voice channel reminder system started (30-minute intervals)',
             handler: this.constructor.name
         }, true);
+    }
+
+    /**
+     * Pings the host + signed-up trialees 30 minutes before a scheduled trial.
+     * Skips trials with no sign-ups; each trial is reminded at most once.
+     */
+    private async sendScheduledTrialReminders() {
+        try {
+            const repository = this.client.dataSource.getRepository(ScheduledTrial);
+            const cutoff = new Date(Date.now() + 30 * 60 * 1000);
+            const upcoming = await repository.find({
+                where: { status: 'scheduled', reminderSent: false, scheduledTime: LessThanOrEqual(cutoff) }
+            });
+
+            for (const trial of upcoming) {
+                if (trial.trialees.length === 0) continue; // skip if nobody signed up
+
+                try {
+                    const channel = await this.client.channels.fetch(trial.channelId) as TextChannel;
+                    const unix = Math.floor(trial.scheduledTime.getTime() / 1000);
+                    await channel.send({
+                        content: `⏰ **Trial reminder** — starting <t:${unix}:R> (<t:${unix}:F>).\n**Host:** <@${trial.hostId}>\n**Trialees:** ${trial.trialees.map(userId => `<@${userId}>`).join(' ')}`,
+                        allowedMentions: { users: [trial.hostId, ...trial.trialees] }
+                    });
+                } catch (error) {
+                    this.client.logger.error({
+                        message: `Failed to send scheduled trial reminder ${trial.id}`,
+                        handler: this.constructor.name,
+                        error: error as Error
+                    });
+                }
+
+                trial.reminderSent = true;
+                await repository.save(trial);
+            }
+        } catch (error) {
+            this.client.logger.error({
+                message: 'Scheduled trial reminder job failed',
+                handler: this.constructor.name,
+                error: error as Error
+            });
+        }
     }
 
     private async sendMyvcReminders() {

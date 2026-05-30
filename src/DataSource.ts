@@ -23,6 +23,7 @@ import { TrialReport} from "./entity/TrialReport"
 import { ReportVote } from "./entity/ReportVote"
 import { VouchVote } from "./entity/VouchVote"
 import { RoleAssignmentLog } from "./entity/RoleAssignmentLog"
+import { ScheduledTrial } from "./entity/ScheduledTrial"
 
 export const AppDataSource = new DataSource({
     type: "sqlite",
@@ -52,7 +53,8 @@ export const AppDataSource = new DataSource({
         TrialReport,
         ReportBlacklist,
         ReportVote,
-        RoleAssignmentLog
+        RoleAssignmentLog,
+        ScheduledTrial
     ],
     migrations: [],
     subscribers: [],

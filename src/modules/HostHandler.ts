@@ -420,9 +420,18 @@ export default class HostHandler {
     }
 
     private async passHost(host: GuildMember, member: GuildMember, targetRoleKey: string | null = null, fallbackEnrage: string | null = null): Promise<string | undefined> {
+        return HostHandler.awardTrialPass(this.client, host, member, targetRoleKey, fallbackEnrage);
+    }
+
+    /**
+     * Awards the resolved trial tier (and its umbrella/notify cover roles) to a member, posts the
+     * achievement announcement, and records a reversible role-assignment log. Shared by the
+     * ticket-based trial finish flow and the scheduled-trial finish flow.
+     */
+    public static async awardTrialPass(client: Bot, host: GuildMember, member: GuildMember, targetRoleKey: string | null = null, fallbackEnrage: string | null = null): Promise<string | undefined> {
         const resolvedTargetRoleKey = targetRoleKey;
         const enrage = fallbackEnrage;
-        const roleKey = this.client.util.resolveTrialAwardRole(member, resolvedTargetRoleKey, enrage);
+        const roleKey = client.util.resolveTrialAwardRole(member, resolvedTargetRoleKey, enrage);
 
         if (!roleKey) {
             return resolvedTargetRoleKey
@@ -433,19 +442,19 @@ export default class HostHandler {
         }
 
         try {
-            const trialedRoleId = this.client.roleIds[roleKey];
+            const trialedRoleId = client.roleIds[roleKey];
             const existingRoleIds = member.roles.cache.map((role) => role.id);
-            const rolePriority = this.client.util.getTrialTierPriority(roleKey);
+            const rolePriority = client.util.getTrialTierPriority(roleKey);
 
             if (trialedRoleId && existingRoleIds.includes(trialedRoleId)) {
-                return `<@${member.id}> already has ${this.client.roles[roleKey]}. No role changes were made.`;
+                return `<@${member.id}> already has ${client.roles[roleKey]}. No role changes were made.`;
             }
 
-            if (rolePriority !== null && this.client.util.hasTrialRoleAbovePriority(existingRoleIds, rolePriority)) {
-                return `<@${member.id}> already has a higher-priority role than ${this.client.roles[roleKey]}. No role changes were made.`;
+            if (rolePriority !== null && client.util.hasTrialRoleAbovePriority(existingRoleIds, rolePriority)) {
+                return `<@${member.id}> already has a higher-priority role than ${client.roles[roleKey]}. No role changes were made.`;
             }
 
-            const roleTransition = this.client.util.getTrialRoleTransition(existingRoleIds, roleKey);
+            const roleTransition = client.util.getTrialRoleTransition(existingRoleIds, roleKey);
             const rolesToAdd = roleTransition.addedRoleIds;
             const rolesToRemove = roleTransition.removedRoleIds;
             const grantedRoleMentions = roleTransition.addedRoleMentions;
@@ -458,7 +467,7 @@ export default class HostHandler {
             }
 
             if (!hasRoleChanges) {
-                return `<@${member.id}> already had every applicable role for ${this.client.roles[roleKey]}.`;
+                return `<@${member.id}> already had every applicable role for ${client.roles[roleKey]}.`;
             }
 
             if (rolesToRemove.length > 0) {
@@ -470,10 +479,10 @@ export default class HostHandler {
             }
 
             const trialedRoleObject = await member.guild?.roles.fetch(trialedRoleId);
-            const { colours } = this.client.util;
+            const { colours } = client.util;
 
-            const confirmationChannel = this.client.channelIds.achievements
-                ? await this.client.channels.fetch(this.client.channelIds.achievements) as TextChannel
+            const confirmationChannel = client.channelIds.achievements
+                ? await client.channels.fetch(client.channelIds.achievements) as TextChannel
                 : null;
 
             let confirmationMessage: Message | null = null;
@@ -486,16 +495,16 @@ export default class HostHandler {
                     })
                     .setTimestamp()
                     .setColor(trialedRoleObject?.hexColor || colours.discord.green)
-                    .setDescription(`Congratulations to <@${member.id}> on achieving ${this.client.roles[roleKey]}!`);
+                    .setDescription(`Congratulations to <@${member.id}> on achieving ${client.roles[roleKey]}!`);
 
                 const message = await confirmationChannel.send({ embeds: [embed] });
                 confirmationMessage = message;
                 messageUrl = message.url;
             }
 
-            const logChannelId = this.client.channelIds.roleAssignLogs;
+            const logChannelId = client.channelIds.roleAssignLogs;
             if (logChannelId) {
-                const logChannel = await this.client.channels.fetch(logChannelId) as TextChannel;
+                const logChannel = await client.channels.fetch(logChannelId) as TextChannel;
                 const changeLines: string[] = [];
 
                 if (grantedRoleMentions.length > 0) {
@@ -510,7 +519,7 @@ export default class HostHandler {
                     changeLines.push(`**Message**: ${messageUrl}`);
                 }
 
-                const roleAssignmentLog = await this.client.util.createRoleAssignmentLog({
+                const roleAssignmentLog = await client.util.createRoleAssignmentLog({
                     targetUserId: member.id,
                     actorUserId: host.user.id,
                     source: 'host-pass',
@@ -528,7 +537,7 @@ export default class HostHandler {
                 const buttonRow = new ActionRowBuilder<ButtonBuilder>()
                     .addComponents(
                         new ButtonBuilder()
-                            .setCustomId(this.client.util.getRejectRoleAssignCustomId(roleAssignmentLog.id))
+                            .setCustomId(client.util.getRejectRoleAssignCustomId(roleAssignmentLog.id))
                             .setLabel('Reject Approval')
                             .setStyle(ButtonStyle.Danger)
                     );
@@ -548,7 +557,7 @@ export default class HostHandler {
 
             return resultLines.join(' ');
         } catch (err) {
-            this.client.logger.error({ message: 'Pass host error:', error: err });
+            client.logger.error({ message: 'Pass host error:', error: err });
         }
     }
 
@@ -804,7 +813,7 @@ export default class HostHandler {
             : null;
     }
 
-    private static trialRoleKeyToLabel(roleKey: string): string {
+    public static trialRoleKeyToLabel(roleKey: string): string {
         switch (roleKey) {
             case 'elite1000':
                 return 'Elite 1000';
