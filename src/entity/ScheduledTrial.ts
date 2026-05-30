@@ -24,12 +24,19 @@ export class ScheduledTrial {
     @Column({ type: 'datetime' })
     scheduledTime: Date
 
+    @Column({ type: 'int', default: 1 })
+    minTrialees: number
+
     @Column({ type: 'int' })
     maxTrialees: number
 
     // Signed-up trialee user IDs
     @Column({ type: 'simple-json' })
     trialees: string[]
+
+    // Signed-up trial-team fill user IDs
+    @Column({ type: 'simple-json', nullable: true })
+    fills: string[]
 
     @Column({ type: 'text', nullable: true })
     message: string | null

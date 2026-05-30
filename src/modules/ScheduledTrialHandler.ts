@@ -22,6 +22,10 @@ import Bot from '../Bot';
 import { ScheduledTrial } from '../entity/ScheduledTrial';
 import HostHandler from './HostHandler';
 
+// A trial team caps at 5 players total (host + trialees + fills), with at most 3 trial-team fills.
+const MAX_PARTICIPANTS = 5; // includes the host
+const MAX_FILLS = 3;
+
 export default class ScheduledTrialHandler {
     client: Bot;
     id: string;
@@ -43,6 +47,7 @@ export default class ScheduledTrialHandler {
         const id = this.id;
         try {
             if (id.startsWith('schedtrial_createmodal_')) return await this.handleCreateModal(id.substring('schedtrial_createmodal_'.length));
+            if (id.startsWith('schedtrial_fillsignup_')) return await this.handleFillSignup(id.substring('schedtrial_fillsignup_'.length));
             if (id.startsWith('schedtrial_signup_')) return await this.handleSignup(id.substring('schedtrial_signup_'.length));
             if (id.startsWith('schedtrial_cancel_')) return await this.handleCancel(id.substring('schedtrial_cancel_'.length));
             if (id.startsWith('schedtrial_removeselect_')) return await this.handleRemoveSelect(id.substring('schedtrial_removeselect_'.length));
@@ -77,15 +82,23 @@ export default class ScheduledTrialHandler {
 
         container.addSeparatorComponents(s => s.setSpacing(SeparatorSpacingSize.Small));
 
+        const fills = trial.fills ?? [];
         const trialeeList = trial.trialees.length > 0
             ? trial.trialees.map(userId => `<@${userId}>`).join('\n')
             : '_None yet_';
-        container.addTextDisplayComponents(t => t.setContent(`**Trialees (${trial.trialees.length}/${trial.maxTrialees}):**\n${trialeeList}`));
+        const fillList = fills.length > 0
+            ? fills.map(userId => `<@${userId}>`).join('\n')
+            : '_None yet_';
+
+        container.addTextDisplayComponents(t => t.setContent(`**Trialees (${trial.trialees.length}/${trial.maxTrialees}, min ${trial.minTrialees}):**\n${trialeeList}`));
+        container.addTextDisplayComponents(t => t.setContent(`**Trial Team Fills (${fills.length}/${MAX_FILLS}):**\n${fillList}`));
+        container.addTextDisplayComponents(t => t.setContent(`_Total players: ${ScheduledTrialHandler.totalPlayers(trial)}/${MAX_PARTICIPANTS} (incl. host)_`));
 
         const buttons = [
-            new ButtonBuilder().setCustomId(`schedtrial_signup_${trial.id}`).setLabel('Sign up / Withdraw').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId(`schedtrial_signup_${trial.id}`).setLabel('Trialee sign up / withdraw').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId(`schedtrial_fillsignup_${trial.id}`).setLabel('Fill sign up / withdraw').setStyle(ButtonStyle.Secondary),
             new ButtonBuilder().setCustomId(`schedtrial_finish_${trial.id}`).setLabel('Finish').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId(`schedtrial_remove_${trial.id}`).setLabel('Remove trialee').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId(`schedtrial_remove_${trial.id}`).setLabel('Remove').setStyle(ButtonStyle.Secondary),
             new ButtonBuilder().setCustomId(`schedtrial_cancel_${trial.id}`).setLabel('Cancel').setStyle(ButtonStyle.Danger),
         ];
         container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons));
@@ -126,7 +139,13 @@ export default class ScheduledTrialHandler {
     private async getTrial(idStr: string): Promise<ScheduledTrial | null> {
         const id = Number.parseInt(idStr, 10);
         if (Number.isNaN(id)) return null;
-        return await this.repo.findOne({ where: { id } });
+        const trial = await this.repo.findOne({ where: { id } });
+        if (trial && !trial.fills) trial.fills = []; // backfill rows created before fills existed
+        return trial;
+    }
+
+    private static totalPlayers(trial: ScheduledTrial): number {
+        return 1 + trial.trialees.length + (trial.fills?.length ?? 0); // host + trialees + fills
     }
 
     private async canManage(trial: ScheduledTrial): Promise<boolean> {
@@ -170,13 +189,19 @@ export default class ScheduledTrialHandler {
             return;
         }
 
-        // rest === `${tier}_${maxTrialees}` — tier keys contain no underscores
-        const splitIndex = rest.lastIndexOf('_');
-        const tier = splitIndex >= 0 ? rest.substring(0, splitIndex) : rest;
-        const maxTrialees = Number.parseInt(splitIndex >= 0 ? rest.substring(splitIndex + 1) : '1', 10);
+        // rest === `${tier}_${minTrialees}_${maxTrialees}` — tier keys contain no underscores
+        const parts = rest.split('_');
+        const tier = parts[0];
+        const minTrialees = Number.parseInt(parts[1] ?? '1', 10);
+        const maxTrialees = Number.parseInt(parts[2] ?? '1', 10);
 
-        if (!tier || Number.isNaN(maxTrialees) || maxTrialees < 1) {
+        if (!tier || Number.isNaN(minTrialees) || Number.isNaN(maxTrialees) || minTrialees < 1 || maxTrialees < 1) {
             await interaction.editReply('Could not read the trial details. Please run the command again.');
+            return;
+        }
+
+        if (minTrialees > maxTrialees) {
+            await interaction.editReply('The minimum number of trialees cannot be greater than the maximum.');
             return;
         }
 
@@ -213,8 +238,10 @@ export default class ScheduledTrialHandler {
         scheduledTrial.hostId = interaction.user.id;
         scheduledTrial.tier = tier;
         scheduledTrial.scheduledTime = scheduledTime;
+        scheduledTrial.minTrialees = minTrialees;
         scheduledTrial.maxTrialees = maxTrialees;
         scheduledTrial.trialees = [];
+        scheduledTrial.fills = [];
         scheduledTrial.message = message && message.length > 0 ? message : null;
         scheduledTrial.reminderSent = false;
         scheduledTrial.status = 'scheduled';
@@ -248,12 +275,18 @@ export default class ScheduledTrialHandler {
         }
 
         const member = interaction.member as GuildMember;
+        trial.fills = trial.fills ?? [];
 
         if (trial.trialees.includes(member.id)) {
             trial.trialees = trial.trialees.filter(userId => userId !== member.id);
             await this.repo.save(trial);
             await this.renderCard(trial);
             await interaction.editReply('You have withdrawn from this trial.');
+            return;
+        }
+
+        if (trial.fills.includes(member.id)) {
+            await interaction.editReply('You are already signed up as a fill. Withdraw from fills first if you want to trial.');
             return;
         }
 
@@ -266,14 +299,70 @@ export default class ScheduledTrialHandler {
         }
 
         if (trial.trialees.length >= trial.maxTrialees) {
-            await interaction.editReply('This trial is already full.');
+            await interaction.editReply('All trialee slots are already filled.');
+            return;
+        }
+
+        if (ScheduledTrialHandler.totalPlayers(trial) >= MAX_PARTICIPANTS) {
+            await interaction.editReply(`This trial is already full (${MAX_PARTICIPANTS} players including the host).`);
             return;
         }
 
         trial.trialees.push(member.id);
         await this.repo.save(trial);
         await this.renderCard(trial);
-        await interaction.editReply('You have signed up for this trial!');
+        await interaction.editReply('You have signed up as a trialee!');
+    }
+
+    // ===============================
+    // Button: trial-team fill sign up / withdraw
+    // ===============================
+
+    private async handleFillSignup(idStr: string): Promise<void> {
+        const interaction = this.interaction as ButtonInteraction<'cached'>;
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const trial = await this.getTrial(idStr);
+        if (!trial || trial.status !== 'scheduled') {
+            await interaction.editReply('This scheduled trial is no longer available.');
+            return;
+        }
+
+        const member = interaction.member as GuildMember;
+        trial.fills = trial.fills ?? [];
+
+        if (trial.fills.includes(member.id)) {
+            trial.fills = trial.fills.filter(userId => userId !== member.id);
+            await this.repo.save(trial);
+            await this.renderCard(trial);
+            await interaction.editReply('You have withdrawn from the fills.');
+            return;
+        }
+
+        if (trial.trialees.includes(member.id)) {
+            await interaction.editReply('You are already signed up as a trialee. Withdraw from trialees first if you want to fill.');
+            return;
+        }
+
+        if (!(await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction))) {
+            await interaction.editReply('Only trial team members can sign up as a fill.');
+            return;
+        }
+
+        if (trial.fills.length >= MAX_FILLS) {
+            await interaction.editReply(`All fill slots are already taken (max ${MAX_FILLS}).`);
+            return;
+        }
+
+        if (ScheduledTrialHandler.totalPlayers(trial) >= MAX_PARTICIPANTS) {
+            await interaction.editReply(`This trial is already full (${MAX_PARTICIPANTS} players including the host).`);
+            return;
+        }
+
+        trial.fills.push(member.id);
+        await this.repo.save(trial);
+        await this.renderCard(trial);
+        await interaction.editReply('You have signed up as a fill!');
     }
 
     // ===============================
@@ -298,12 +387,13 @@ export default class ScheduledTrialHandler {
         trial.status = 'cancelled';
         await this.repo.save(trial);
 
-        if (trial.trialees.length > 0) {
+        const involved = [...trial.trialees, ...(trial.fills ?? [])];
+        if (involved.length > 0) {
             try {
                 const channel = await this.client.channels.fetch(trial.channelId) as TextChannel;
                 await channel.send({
-                    content: `The scheduled ${HostHandler.trialRoleKeyToLabel(trial.tier)} trial hosted by <@${trial.hostId}> has been cancelled.\n${trial.trialees.map(userId => `<@${userId}>`).join(' ')}`,
-                    allowedMentions: { users: [trial.hostId, ...trial.trialees] }
+                    content: `The scheduled ${HostHandler.trialRoleKeyToLabel(trial.tier)} trial hosted by <@${trial.hostId}> has been cancelled.\n${involved.map(userId => `<@${userId}>`).join(' ')}`,
+                    allowedMentions: { users: [trial.hostId, ...involved] }
                 });
             } catch (err) {
                 // ignore notification failure
@@ -328,29 +418,34 @@ export default class ScheduledTrialHandler {
         }
 
         if (!await this.canManage(trial)) {
-            await interaction.reply({ content: 'Only the host or a trial team member can remove trialees.', flags: MessageFlags.Ephemeral });
+            await interaction.reply({ content: 'Only the host or a trial team member can remove participants.', flags: MessageFlags.Ephemeral });
             return;
         }
 
-        if (trial.trialees.length === 0) {
-            await interaction.reply({ content: 'No trialees have signed up yet.', flags: MessageFlags.Ephemeral });
+        const fills = trial.fills ?? [];
+        if (trial.trialees.length === 0 && fills.length === 0) {
+            await interaction.reply({ content: 'Nobody has signed up yet.', flags: MessageFlags.Ephemeral });
             return;
         }
 
-        const options = await Promise.all(trial.trialees.map(async userId => {
+        const trialeeOptions = await Promise.all(trial.trialees.map(async userId => {
             const member = await interaction.guild.members.fetch(userId).catch(() => null);
-            return new StringSelectMenuOptionBuilder().setLabel(member?.displayName ?? userId).setValue(userId);
+            return new StringSelectMenuOptionBuilder().setLabel(`Trialee: ${member?.displayName ?? userId}`).setValue(userId);
+        }));
+        const fillOptions = await Promise.all(fills.map(async userId => {
+            const member = await interaction.guild.members.fetch(userId).catch(() => null);
+            return new StringSelectMenuOptionBuilder().setLabel(`Fill: ${member?.displayName ?? userId}`).setValue(userId);
         }));
 
         const select = new StringSelectMenuBuilder()
             .setCustomId(`schedtrial_removeselect_${trial.id}`)
-            .setPlaceholder('Select a trialee to remove')
-            .addOptions(options)
+            .setPlaceholder('Select a participant to remove')
+            .addOptions([...trialeeOptions, ...fillOptions])
             .setMinValues(1)
             .setMaxValues(1);
 
         await interaction.reply({
-            content: 'Select a trialee to remove from this trial:',
+            content: 'Select a participant to remove from this trial:',
             components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select)],
             flags: MessageFlags.Ephemeral
         });
@@ -367,12 +462,13 @@ export default class ScheduledTrialHandler {
         }
 
         if (!await this.canManage(trial)) {
-            await interaction.editReply({ content: 'Only the host or a trial team member can remove trialees.', components: [] });
+            await interaction.editReply({ content: 'Only the host or a trial team member can remove participants.', components: [] });
             return;
         }
 
         const removeId = interaction.values[0];
         trial.trialees = trial.trialees.filter(userId => userId !== removeId);
+        trial.fills = (trial.fills ?? []).filter(userId => userId !== removeId);
         await this.repo.save(trial);
         await this.renderCard(trial);
 
@@ -411,6 +507,7 @@ export default class ScheduledTrialHandler {
                 .setCustomId('passed_select')
                 .setPlaceholder('Select trialees who passed (leave empty if none)')
                 .addOptions(options)
+                .setRequired(false)
                 .setMinValues(0)
                 .setMaxValues(trial.trialees.length);
 
@@ -474,7 +571,10 @@ export default class ScheduledTrialHandler {
             if (loungeId) {
                 const lounge = await this.client.channels.fetch(loungeId) as TextChannel;
                 const tierLabel = HostHandler.trialRoleKeyToLabel(trial.tier);
+                const fills = trial.fills ?? [];
                 const container = this.client.cv2.getContainerBuilder(null, `Scheduled ${tierLabel} Trial hosted by <@${hostMember.id}> - Summary`);
+                container.addTextDisplayComponents(t => t.setContent(`### Host:\n<@${trial.hostId}>`));
+                container.addTextDisplayComponents(t => t.setContent(`### Fills:\n${fills.length ? fills.map(userId => `<@${userId}>`).join('\n') : '_None_'}`));
                 container.addTextDisplayComponents(t => t.setContent(`### Passed:\n${passedIds.length ? passedIds.map(userId => `<@${userId}>`).join('\n') : '_None_'}`));
                 container.addTextDisplayComponents(t => t.setContent(`### Failed:\n${failedIds.length ? failedIds.map(userId => `<@${userId}>`).join('\n') : '_None_'}`));
                 container.addSeparatorComponents(s => s.setSpacing(SeparatorSpacingSize.Small));

@@ -27,7 +27,8 @@ export default class ScheduleTrial extends BotInteraction {
             .setName(this.name)
             .setDescription(this.description)
             .addStringOption((option) => option.setName('tier').setDescription('Trial tier to schedule').setChoices(...this.tierOptions).setRequired(true))
-            .addIntegerOption((option) => option.setName('max-trialees').setDescription('Maximum number of trialees that can sign up').setMinValue(1).setMaxValue(25).setRequired(true));
+            .addIntegerOption((option) => option.setName('min-trialees').setDescription('Minimum number of trialees needed').setMinValue(1).setMaxValue(4).setRequired(true))
+            .addIntegerOption((option) => option.setName('max-trialees').setDescription('Maximum number of trialees that can sign up').setMinValue(1).setMaxValue(4).setRequired(true));
     }
 
     /**
@@ -42,10 +43,11 @@ export default class ScheduleTrial extends BotInteraction {
 
     async run(interaction: ChatInputCommandInteraction) {
         const tier = interaction.options.getString('tier', true);
+        const minTrialees = interaction.options.getInteger('min-trialees', true);
         const maxTrialees = interaction.options.getInteger('max-trialees', true);
 
         const modal = new ModalBuilder()
-            .setCustomId(`schedtrial_createmodal_${tier}_${maxTrialees}`)
+            .setCustomId(`schedtrial_createmodal_${tier}_${minTrialees}_${maxTrialees}`)
             .setTitle('Schedule Trial');
 
         const timeInput = new TextInputBuilder()

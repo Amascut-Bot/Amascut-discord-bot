@@ -50,14 +50,17 @@ export default class ReminderHandler {
             });
 
             for (const trial of upcoming) {
-                if (trial.trialees.length === 0) continue; // skip if nobody signed up
+                const fills = trial.fills ?? [];
+                if (trial.trialees.length === 0 && fills.length === 0) continue; // skip if nobody signed up
 
                 try {
                     const channel = await this.client.channels.fetch(trial.channelId) as TextChannel;
                     const unix = Math.floor(trial.scheduledTime.getTime() / 1000);
+                    const trialeesText = trial.trialees.length ? trial.trialees.map(userId => `<@${userId}>`).join(' ') : '_none_';
+                    const fillsText = fills.length ? fills.map(userId => `<@${userId}>`).join(' ') : '_none_';
                     await channel.send({
-                        content: `⏰ **Trial reminder** — starting <t:${unix}:R> (<t:${unix}:F>).\n**Host:** <@${trial.hostId}>\n**Trialees:** ${trial.trialees.map(userId => `<@${userId}>`).join(' ')}`,
-                        allowedMentions: { users: [trial.hostId, ...trial.trialees] }
+                        content: `⏰ **Trial reminder** — starting <t:${unix}:R> (<t:${unix}:F>).\n**Host:** <@${trial.hostId}>\n**Trialees:** ${trialeesText}\n**Fills:** ${fillsText}`,
+                        allowedMentions: { users: [trial.hostId, ...trial.trialees, ...fills] }
                     });
                 } catch (error) {
                     this.client.logger.error({
