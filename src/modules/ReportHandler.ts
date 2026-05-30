@@ -79,11 +79,10 @@ export default class reportHandler {
         const roleSelect = new StringSelectMenuBuilder()
             .setCustomId('report_role')
             .addOptions([
-                new StringSelectMenuOptionBuilder().setLabel('Elite 500').setValue('elite500'),
                 new StringSelectMenuOptionBuilder().setLabel('Elite 1000').setValue('elite1000'),
                 new StringSelectMenuOptionBuilder().setLabel('Elite 2000').setValue('elite2000'),
                 new StringSelectMenuOptionBuilder().setLabel('Master 1000').setValue('master1000'),
-                new StringSelectMenuOptionBuilder().setLabel('Master 2000').setValue('master2000'),                
+                new StringSelectMenuOptionBuilder().setLabel('Master 2000').setValue('master2000'),
             ])
             .setMaxValues(1);
 
@@ -305,7 +304,6 @@ private async approveReport(interaction: ButtonInteraction<'cached'>) {
                             master1000: 'notifyMaster1000',
                             elite2000: 'notifyElite2000',
                             elite1000: 'notifyElite1000',
-                            elite500: 'notifyElite500',
                         };
 
                         await reportedMember.roles.remove(roleIdToRemove);
@@ -316,7 +314,7 @@ private async approveReport(interaction: ButtonInteraction<'cached'>) {
                         }
 
                         const masterSubRoles = ['master2000', 'master1000']; //Roles that provide the "Master" umbrella role
-                        const eliteSubRoles = ['elite2000', 'elite1000', 'elite500']; //Roles that provide the "Elite" umbrella role
+                        const eliteSubRoles = ['elite2000', 'elite1000']; //Roles that provide the "Elite" umbrella role
 
                         const role = interaction.guild?.roles.cache.get(this.client.roleIds[roleKey]);
 
@@ -453,7 +451,6 @@ private async showCheckReportsModal(interaction: ChatInputCommandInteraction<'ca
     const roleSelect = new StringSelectMenuBuilder()
         .setCustomId('checkreports_role')
         .addOptions([
-            new StringSelectMenuOptionBuilder().setLabel('Elite 500').setValue('elite500'),
             new StringSelectMenuOptionBuilder().setLabel('Elite 1000').setValue('elite1000'),
             new StringSelectMenuOptionBuilder().setLabel('Elite 2000').setValue('elite2000'),
             new StringSelectMenuOptionBuilder().setLabel('Master 1000').setValue('master1000'),
