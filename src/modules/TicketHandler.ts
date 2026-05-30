@@ -631,11 +631,8 @@ export default class TicketHandler {
         const modeSelect = new StringSelectMenuBuilder()
             .setCustomId('enrage')
             .addOptions([
-                new StringSelectMenuOptionBuilder().setLabel('500% Enrage').setValue('500'),
-                new StringSelectMenuOptionBuilder().setLabel('750% Enrage').setValue('750'),
                 new StringSelectMenuOptionBuilder().setLabel('1000% Enrage').setValue('1000'),
                 new StringSelectMenuOptionBuilder().setLabel('2000% Enrage').setValue('2000'),
-                new StringSelectMenuOptionBuilder().setLabel('4000% Enrage').setValue('4000'),
             ])
             .setMaxValues(5);
 
