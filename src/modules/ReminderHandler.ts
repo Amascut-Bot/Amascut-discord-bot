@@ -60,7 +60,7 @@ export default class ReminderHandler {
                     const fillsText = fills.length ? fills.map(userId => `<@${userId}>`).join(' ') : '_none_';
                     await channel.send({
                         content: `⏰ **Trial reminder** — starting <t:${unix}:R> (<t:${unix}:F>).\n**Host:** <@${trial.hostId}>\n**Trialees:** ${trialeesText}\n**Fills:** ${fillsText}`,
-                        allowedMentions: { users: [trial.hostId, ...trial.trialees, ...fills] }
+                        allowedMentions: { users: [...new Set([trial.hostId, ...trial.trialees, ...fills])] }
                     });
                 } catch (error) {
                     this.client.logger.error({

@@ -393,7 +393,7 @@ export default class ScheduledTrialHandler {
                 const channel = await this.client.channels.fetch(trial.channelId) as TextChannel;
                 await channel.send({
                     content: `The scheduled ${HostHandler.trialRoleKeyToLabel(trial.tier)} trial hosted by <@${trial.hostId}> has been cancelled.\n${involved.map(userId => `<@${userId}>`).join(' ')}`,
-                    allowedMentions: { users: [trial.hostId, ...involved] }
+                    allowedMentions: { users: [...new Set([trial.hostId, ...involved])] }
                 });
             } catch (err) {
                 // ignore notification failure
