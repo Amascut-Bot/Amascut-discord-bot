@@ -610,10 +610,14 @@ export default class ScheduledTrialHandler {
             resultLines.push(`<@${passId}>: ${result ?? 'No role changes.'}`);
         }
 
-        // Record leaderboard participation: host + all fills (saveHost skips anyone already counted as host).
-        await HostHandler.saveHost(this.client, 2, null, [trial.hostId], allFills).catch((err) => {
-            this.client.logger.error({ message: 'Scheduled trial saveHost failed', error: err, handler: this.constructor.name });
-        });
+        // Leaderboard points scale with the number of trialees; grandmaster trials are worth 2x per trialee.
+        const pointsPerParticipant = trial.trialees.length * (this.client.util.isGrandmasterTrialTier(trial.tier) ? 2 : 1);
+        if (pointsPerParticipant > 0) {
+            // host + all fills (saveHost skips anyone already counted as host).
+            await HostHandler.saveHost(this.client, 2, null, [trial.hostId], allFills, pointsPerParticipant).catch((err) => {
+                this.client.logger.error({ message: 'Scheduled trial saveHost failed', error: err, handler: this.constructor.name });
+            });
+        }
 
         try {
             const loungeId = this.client.channelIds.trialLounge;

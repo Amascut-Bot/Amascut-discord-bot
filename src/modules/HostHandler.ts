@@ -1125,7 +1125,7 @@ export default class HostHandler {
 
     //#region Database
 
-    public static async saveHost(client: Bot, type: number, link: string | null, hosts: string[], participants: string[]): Promise<void> {
+    public static async saveHost(client: Bot, type: number, link: string | null, hosts: string[], participants: string[], points: number = 1): Promise<void> {
         const { dataSource } = client;
         const hostParticipationRepository = dataSource.getRepository(HostParticipation);
 
@@ -1136,6 +1136,7 @@ export default class HostHandler {
             const hostParticipation = new HostParticipation();
             hostParticipation.host = 1;
             hostParticipation.participate = 1;
+            hostParticipation.points = points;
             if (link) hostParticipation.link = link;
             hostParticipation.type = type;
             hostParticipation.user = host;
@@ -1150,6 +1151,7 @@ export default class HostHandler {
             const hostParticipation = new HostParticipation();
             hostParticipation.host = 0;
             hostParticipation.participate = 1;
+            hostParticipation.points = points;
             if (link) hostParticipation.link = link;
             hostParticipation.type = type;
             hostParticipation.user = filler;

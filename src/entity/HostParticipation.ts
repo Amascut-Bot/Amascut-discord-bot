@@ -22,6 +22,10 @@ export class HostParticipation {
     @Column({ default: 1})
     participate: number
 
+    // leaderboard points this row is worth (trials scale by trialee count; grandmaster trials are 2x)
+    @Column({ default: 1 })
+    points: number
+
     // link to host message, if host came through a card
     @Column({ nullable: true })
     link: string
