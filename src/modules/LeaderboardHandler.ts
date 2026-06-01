@@ -83,8 +83,8 @@ export default class LeaderboardHandler {
 
         const query = `select
                         user,
-                        sum(case when host = 1 then 1 else 0 end) as amount_hosted,
-                        sum(case when participate = 1 then 1 else 0 end) as amount_participated
+                        sum(case when host = 1 then points else 0 end) as amount_hosted,
+                        sum(case when participate = 1 then points else 0 end) as amount_participated
                         from host_participation
                         where type = @type
                         and created_at between '@dateFrom' and '@dateTo'

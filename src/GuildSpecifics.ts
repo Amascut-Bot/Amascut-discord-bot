@@ -53,7 +53,9 @@ export function getChannels(guildId: string | undefined): Channels {
             vodSubmissions: `1464589392843767860`,
             vodReview: `1464589425932632155`,
             masterTrialee1000TicketsCategory: '1492216896852988026',
-            masterTrialee2000TicketsCategory: '1492216981972058122'
+            masterTrialee2000TicketsCategory: '1492216981972058122',
+            grandmasterTrialee2000TicketsCategory: '1492216981972058122',
+            trialScheduling: '1391860639584096316'
         }
     }
 
@@ -108,6 +110,8 @@ export function getChannels(guildId: string | undefined): Channels {
             trialee2000TicketsCategory: '1483844787357614210',
             masterTrialee1000TicketsCategory: '1491863628649861220',
             masterTrialee2000TicketsCategory: '1491863719624577136',
+            grandmasterTrialee2000TicketsCategory: '1510307914382966937',
+            trialScheduling: '1510312969987166389',
 
             // trial team
             trialCategory: '1416026683659780148',
@@ -200,11 +204,16 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             master2000trialee: '1492215881726562364',
             master1000trialee: '1492215850726592541',
 
+            grandmaster: '1510306129304092833',
+            grandmaster2000: '1510307006743839016',
+            grandmaster2000trialee: '1510306188837785753',
+
             // Notify Roles
             notifyElite2000: '1492216554279141387',
             notifyElite1000: '1492216530174218485',
             notifyMaster2000: '1492215943340757154',
             notifyMaster1000: '1492215963758756062',
+            notifyGrandmaster2000: '1510306383000502392',
 
             // KC Roles
             kc100: '1409628812915904652', // Cat-Bound Initiate
@@ -290,11 +299,16 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             master2000trialee: '1491553995083223162',
             master1000trialee: '1491553904155164743',
 
+            grandmaster: '1489789872351875112',
+            grandmaster2000: '1489790751767527685',
+            grandmaster2000trialee: '1510232765839179786',
+
             // Notify Roles
             notifyElite2000: '1462531083135357031',
             notifyElite1000: '1462531053230227699',
             notifyMaster2000: '1489811960479613049',
             notifyMaster1000: '1489811866552107058',
+            notifyGrandmaster2000: '1510232258299302059',
 
             // KC Roles
             kc100: '1401429471692722292', // Cat-Bound Initiate

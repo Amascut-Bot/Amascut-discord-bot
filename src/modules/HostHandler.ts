@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, GuildMember, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, StringSelectMenuBuilder, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, GuildMember, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, SeparatorSpacingSize, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder } from 'discord.js';
 import Bot from '../Bot';
 import * as uuid from 'uuid';
 import * as fs from 'fs';
@@ -6,6 +6,8 @@ import * as path from 'path';
 import TicketHandler from './TicketHandler';
 import ComponentsV2Utils from './ComponentsV2Utils';
 import { HostParticipation } from '../entity/HostParticipation';
+import { ScheduledTrial } from '../entity/ScheduledTrial';
+import ScheduledTrialHandler from './ScheduledTrialHandler';
 
 export default interface HostHandler { client: Bot; id: string; interaction: Interaction }
 
@@ -13,19 +15,9 @@ interface RoleIntersection {
     [key: string]: string[];
 }
 
-interface TrialRoleContext {
-    mode: string | null;
-    targetRoleKey: string | null;
-}
-
 interface TrialPostContext {
     mode: string;
     targetRoleKey: string | null;
-}
-
-interface TrialFinishModalContext {
-    hostMessageId: string;
-    trialContext: TrialRoleContext | null;
 }
 
 export default class HostHandler {
@@ -67,22 +59,6 @@ export default class HostHandler {
             return;
         }
 
-        if (id.startsWith("host_trial_finish_submit_")) {
-            const trialFinishModalContext = HostHandler.parseTrialFinishModalContext(id);
-            this.handleHostFinishByType(
-                interaction as ModalSubmitInteraction,
-                trialFinishModalContext?.hostMessageId ?? id.substring(25),
-                2,
-                trialFinishModalContext?.trialContext ?? null
-            );
-            return;
-        }
-
-        if (id.startsWith("host_trial_finish_") && interaction.isButton()) {
-            this.finishHost(interaction as ButtonInteraction<'cached'>, 2, HostHandler.parseTrialFinishButtonContext(id));
-            return;
-        }
-
         switch (id) {
             case 'host_learner_finish': this.finishHost(interaction as ButtonInteraction<'cached'>, 0); break;
             case 'host_learner_disband': this.disbandHost(interaction, 0); break;
@@ -91,15 +67,12 @@ export default class HostHandler {
             case 'host_lorebook_finish': this.finishHost(interaction as ButtonInteraction<'cached'>, 1); break;
             case 'host_lorebook_disband': this.disbandHost(interaction, 1); break;
             case 'host_lorebook_quickfinish': this.quickFinishHost(interaction, 1); break;
-
-            case 'host_trial_finish': this.finishHost(interaction as ButtonInteraction<'cached'>, 2, null); break;
-            case 'host_trial_disband': this.disbandHost(interaction, 2); break;
         }
     }
 
     //#region Modal Handlers
 
-    private async handleHostFinishByType(interaction: ModalSubmitInteraction, hostMessageId: string, type: number, trialContext: TrialRoleContext | null = null) {
+    private async handleHostFinishByType(interaction: ModalSubmitInteraction, hostMessageId: string, type: number) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const hostSelect = interaction.fields.getSelectedUsers('host_select', true);
@@ -107,45 +80,23 @@ export default class HostHandler {
         const learnerSelect = interaction.fields.getSelectedUsers('learner_select', true);
         const summary = interaction.fields.getTextInputValue('summary');
 
-        const trialPassSelection = type === 2 ? interaction.fields.getStringSelectValues('trial_pass_select')[0] : null;
-        const pass = type === 2 ? trialPassSelection !== 'fail' : false;
-        const selectedRoleKey = trialPassSelection?.startsWith('pass:') ? HostHandler.normalizeTrialRoleKey(trialPassSelection.substring(5)) : null;
-
         const hosts = hostSelect.map(x => x.id);
         const learners = learnerSelect.map(x => x.id);
         const fillers = fillerSelect.map(x => x.id).filter(x => !learners.includes(x) && !hosts.includes(x));
-        let passResult: string | null = null;
 
         const message = interaction.message;
-        const fallbackEnrage = trialContext?.mode && /^\d+$/.test(trialContext.mode) ? trialContext.mode : null;
 
-        if (type === 0 || type === 1) {
-            for (let index = 0; index < learners.length; index++) {
-                await HostHandler.saveHost(this.client, type, message!.url ?? null, hosts, fillers);
-            }
-        } else {
-            if (pass) {
-                const trialee = await interaction.guild!.members.fetch(learners[0]);
-                passResult = await this.passHost(
-                    interaction.member as GuildMember,
-                    trialee,
-                    selectedRoleKey ?? trialContext?.targetRoleKey ?? null,
-                    fallbackEnrage
-                ) ?? null;
-            }
-            // recording fails is not necessary
-
+        for (let index = 0; index < learners.length; index++) {
             await HostHandler.saveHost(this.client, type, message!.url ?? null, hosts, fillers);
         }
 
-        const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book' : type === 2 ? 'Trial' : 'Undefined';
-        const attendingTypeLabel = type === 0 ? 'Learners' : type === 1 ? 'Learners' : type === 2 ? 'Trialees' : 'Undefined';
+        const hostTypeLabel = type === 0 ? 'Learner Hour' : type === 1 ? 'Lore Book' : 'Undefined';
 
         const summaryContainer = this.client.cv2.getContainerBuilder(null, `${hostTypeLabel} hosted by <@${interaction.user.id}> - Summary`);
 
         const teachersText = `### Hosts:\n${hosts.map(x => `<@${x}>`).join('\n')}`;
         const fillersText = `### Participants:\n${fillers.map(x => `<@${x}>`).join('\n')}`;
-        const learnersText = `### ${attendingTypeLabel}:\n${learners.map(x => `<@${x}>`).join('\n')}${type === 2 ? pass ? '(passed)' : '(failed)' : ''}`;
+        const learnersText = `### Learners:\n${learners.map(x => `<@${x}>`).join('\n')}`;
 
         summaryContainer.addTextDisplayComponents(t => t.setContent(teachersText))
             .addTextDisplayComponents(t => t.setContent(fillersText))
@@ -154,10 +105,7 @@ export default class HostHandler {
 
         summaryContainer.addTextDisplayComponents(t => t.setContent(summary));
 
-        const targetChannel = type === 0 ? await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel
-            : type === 1 ? await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel
-                : type === 2 ? await this.client.channels.fetch(this.client.channelIds.trialLounge) as TextChannel
-                    : await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel;
+        const targetChannel = await this.client.channels.fetch(this.client.channelIds.teachersChat) as TextChannel;
 
         await targetChannel.send({
             components: [summaryContainer],
@@ -167,7 +115,7 @@ export default class HostHandler {
 
         await HostHandler.disableHost(interaction.message!);
 
-        await interaction.editReply(type === 2 && passResult ? `${hostTypeLabel} finished! ${passResult}` : `${hostTypeLabel} finished!`);
+        await interaction.editReply(`${hostTypeLabel} finished!`);
     }
 
     //#endregion
@@ -296,90 +244,48 @@ export default class HostHandler {
         }
 
         if (type === 2) {
-            // ask for time, trialee, and additional message
-            const genid = `host-message-modal-${uuid.v4()}`
-            let modalInteraction: ModalSubmitInteraction | null = null;
+            // Trial tickets now use the clean scheduled-trial style card (host + trialee + fills).
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-            const modal = new ModalBuilder()
-                .setCustomId(genid)
-                .setTitle('Create Host');
-
-            // Trialee
             if (!learner) {
-                const trialeeSelect = new UserSelectMenuBuilder()
-                    .setCustomId('trialee_select')
-                    .setRequired(false)
-                    .setMaxValues(1);
-
-                modal.addLabelComponents(label => label.setLabel('Who is the trialee? (optional)').setUserSelectMenuComponent(trialeeSelect));
+                return await interaction.editReply('This must be used inside a trialee ticket so the trialee can be detected.');
             }
 
-            // Time
-            const timeInput = new TextInputBuilder()
-                .setCustomId('time')
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(false)
-                .setMaxLength(100);
+            const scheduledTrialRepository = this.client.dataSource.getRepository(ScheduledTrial);
 
-            modal.addLabelComponents(label => label.setLabel('When is the trial? (optional)').setTextInputComponent(timeInput));
+            const trial = new ScheduledTrial();
+            trial.guildId = interaction.guild!.id;
+            trial.channelId = postChannel.id;
+            trial.messageId = null;
+            trial.hostId = interaction.user.id;
+            trial.kind = 'ticket';
+            trial.tier = targetRoleKey!;
+            trial.scheduledTime = new Date();
+            trial.minTrialees = 1;
+            trial.maxTrialees = 1;
+            trial.trialees = [learner];
+            trial.fills = [];
+            trial.message = null;
+            trial.reminderSent = true; // immediate ticket trial — never sends a scheduled reminder
+            trial.status = 'scheduled';
 
-            // Message
-            const messageInput = new TextInputBuilder()
-                .setCustomId('message')
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(false)
-                .setMaxLength(200);
+            const saved = await scheduledTrialRepository.save(trial);
 
-            modal.addLabelComponents(label => label.setLabel('Additional Message (optional)').setTextInputComponent(messageInput));
+            const cardMessage = await postChannel.send({
+                components: [ScheduledTrialHandler.buildCard(this.client, saved)],
+                flags: MessageFlags.IsComponentsV2,
+                allowedMentions: { parse: [] }
+            });
 
-            await interaction.showModal(modal);
+            saved.messageId = cardMessage.id;
+            await scheduledTrialRepository.save(saved);
 
-            const filter = (i: ModalSubmitInteraction) => i.customId === genid && i.user.id === interaction.user.id;
-
-            try {
-                modalInteraction = await interaction.awaitModalSubmit({ filter, time: 900_000 }); // 15 minutes
-
-                const trialeeSelect = !learner ? modalInteraction.fields.getSelectedUsers('trialee_select', false) : null;
-                const timeInput = modalInteraction.fields.getTextInputValue('time');
-                const messageInput = modalInteraction.fields.getTextInputValue('message');
-
-                message = `Trial hosted by <@${interaction.user.id}>:
-`;
-                if (trialeeSelect && trialeeSelect.size > 0) {
-                    message += `Trialee: <@${trialeeSelect.first()!.id}>
-`;
-                } else {
-                    message += `Trialee: <@${learner}>
-`;
-                }
-
-                if (timeInput) message += `Time: ${timeInput}
-`;
-                if (messageInput) message += `Message: ${messageInput}
-`;
-
-                message = message.trim();
-
-                await HostHandler.postHost(postChannel, mode, message, learner ? [learner] : null, [interaction.user.id], null, type, targetRoleKey);
-
-                return await modalInteraction.reply({ content: `Host card successfully created! Head over to <#${postChannel.id}> to find your host.`, flags: MessageFlags.Ephemeral });
-            } catch (err) {
-                if (modalInteraction) {
-                    this.client.logger.error({ message: 'Trial host creation failed', error: err, handler: this.constructor.name });
-                    if (modalInteraction.deferred || modalInteraction.replied) {
-                        await modalInteraction.editReply({ content: 'Host creation failed. Please try again.' }).catch(() => { });
-                    } else {
-                        await modalInteraction.reply({ content: 'Host creation failed. Please try again.', flags: MessageFlags.Ephemeral }).catch(() => { });
-                    }
-                }
-
-                return;
-            }
+            return await interaction.editReply('Trial host card created!');
         }
 
 
         //set up the host card in it
-        await HostHandler.postHost(postChannel, mode, message, learner ? [learner] : null, [interaction.user.id], null, type, targetRoleKey);
+        await HostHandler.postHost(postChannel, mode, message, learner ? [learner] : null, [interaction.user.id], null, type);
 
         return await interaction.editReply(`Host card successfully created! Head over to <#${postChannel.id}> to find your host.`);
     }
@@ -419,10 +325,15 @@ export default class HostHandler {
         }
     }
 
-    private async passHost(host: GuildMember, member: GuildMember, targetRoleKey: string | null = null, fallbackEnrage: string | null = null): Promise<string | undefined> {
+    /**
+     * Awards the resolved trial tier (and its umbrella/notify cover roles) to a member, posts the
+     * achievement announcement, and records a reversible role-assignment log. Shared by the
+     * ticket-based trial finish flow and the scheduled-trial finish flow.
+     */
+    public static async awardTrialPass(client: Bot, host: GuildMember, member: GuildMember, targetRoleKey: string | null = null, fallbackEnrage: string | null = null): Promise<string | undefined> {
         const resolvedTargetRoleKey = targetRoleKey;
         const enrage = fallbackEnrage;
-        const roleKey = this.client.util.resolveTrialAwardRole(member, resolvedTargetRoleKey, enrage);
+        const roleKey = client.util.resolveTrialAwardRole(member, resolvedTargetRoleKey, enrage);
 
         if (!roleKey) {
             return resolvedTargetRoleKey
@@ -433,19 +344,19 @@ export default class HostHandler {
         }
 
         try {
-            const trialedRoleId = this.client.roleIds[roleKey];
+            const trialedRoleId = client.roleIds[roleKey];
             const existingRoleIds = member.roles.cache.map((role) => role.id);
-            const rolePriority = this.client.util.getTrialTierPriority(roleKey);
+            const rolePriority = client.util.getTrialTierPriority(roleKey);
 
             if (trialedRoleId && existingRoleIds.includes(trialedRoleId)) {
-                return `<@${member.id}> already has ${this.client.roles[roleKey]}. No role changes were made.`;
+                return `<@${member.id}> already has ${client.roles[roleKey]}. No role changes were made.`;
             }
 
-            if (rolePriority !== null && this.client.util.hasTrialRoleAbovePriority(existingRoleIds, rolePriority)) {
-                return `<@${member.id}> already has a higher-priority role than ${this.client.roles[roleKey]}. No role changes were made.`;
+            if (rolePriority !== null && client.util.hasTrialRoleAbovePriority(existingRoleIds, rolePriority)) {
+                return `<@${member.id}> already has a higher-priority role than ${client.roles[roleKey]}. No role changes were made.`;
             }
 
-            const roleTransition = this.client.util.getTrialRoleTransition(existingRoleIds, roleKey);
+            const roleTransition = client.util.getTrialRoleTransition(existingRoleIds, roleKey);
             const rolesToAdd = roleTransition.addedRoleIds;
             const rolesToRemove = roleTransition.removedRoleIds;
             const grantedRoleMentions = roleTransition.addedRoleMentions;
@@ -458,7 +369,7 @@ export default class HostHandler {
             }
 
             if (!hasRoleChanges) {
-                return `<@${member.id}> already had every applicable role for ${this.client.roles[roleKey]}.`;
+                return `<@${member.id}> already had every applicable role for ${client.roles[roleKey]}.`;
             }
 
             if (rolesToRemove.length > 0) {
@@ -470,10 +381,10 @@ export default class HostHandler {
             }
 
             const trialedRoleObject = await member.guild?.roles.fetch(trialedRoleId);
-            const { colours } = this.client.util;
+            const { colours } = client.util;
 
-            const confirmationChannel = this.client.channelIds.achievements
-                ? await this.client.channels.fetch(this.client.channelIds.achievements) as TextChannel
+            const confirmationChannel = client.channelIds.achievements
+                ? await client.channels.fetch(client.channelIds.achievements) as TextChannel
                 : null;
 
             let confirmationMessage: Message | null = null;
@@ -486,16 +397,16 @@ export default class HostHandler {
                     })
                     .setTimestamp()
                     .setColor(trialedRoleObject?.hexColor || colours.discord.green)
-                    .setDescription(`Congratulations to <@${member.id}> on achieving ${this.client.roles[roleKey]}!`);
+                    .setDescription(`Congratulations to <@${member.id}> on achieving ${client.roles[roleKey]}!`);
 
                 const message = await confirmationChannel.send({ embeds: [embed] });
                 confirmationMessage = message;
                 messageUrl = message.url;
             }
 
-            const logChannelId = this.client.channelIds.roleAssignLogs;
+            const logChannelId = client.channelIds.roleAssignLogs;
             if (logChannelId) {
-                const logChannel = await this.client.channels.fetch(logChannelId) as TextChannel;
+                const logChannel = await client.channels.fetch(logChannelId) as TextChannel;
                 const changeLines: string[] = [];
 
                 if (grantedRoleMentions.length > 0) {
@@ -510,7 +421,7 @@ export default class HostHandler {
                     changeLines.push(`**Message**: ${messageUrl}`);
                 }
 
-                const roleAssignmentLog = await this.client.util.createRoleAssignmentLog({
+                const roleAssignmentLog = await client.util.createRoleAssignmentLog({
                     targetUserId: member.id,
                     actorUserId: host.user.id,
                     source: 'host-pass',
@@ -528,7 +439,7 @@ export default class HostHandler {
                 const buttonRow = new ActionRowBuilder<ButtonBuilder>()
                     .addComponents(
                         new ButtonBuilder()
-                            .setCustomId(this.client.util.getRejectRoleAssignCustomId(roleAssignmentLog.id))
+                            .setCustomId(client.util.getRejectRoleAssignCustomId(roleAssignmentLog.id))
                             .setLabel('Reject Approval')
                             .setStyle(ButtonStyle.Danger)
                     );
@@ -548,11 +459,11 @@ export default class HostHandler {
 
             return resultLines.join(' ');
         } catch (err) {
-            this.client.logger.error({ message: 'Pass host error:', error: err });
+            client.logger.error({ message: 'Pass host error:', error: err });
         }
     }
 
-    private async finishHost(interaction: ButtonInteraction<'cached'>, type: number, trialContext: TrialRoleContext | null = null) {
+    private async finishHost(interaction: ButtonInteraction<'cached'>, type: number) {
         if (type === 0) {
             //check if user is teacher, admin or owner
             if (!await this.client.util.hasRolePermissions(this.client, ['teacher', 'admin', 'owner'], interaction)) {
@@ -567,17 +478,8 @@ export default class HostHandler {
             }
         }
 
-        if (type === 2) {
-            //check if user is trial team, admin or owner
-            if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
-                return await interaction.editReply('This action can only be used by Trial Team Members!');
-            }
-        }
-
         const modal = new ModalBuilder()
-            .setCustomId(type === 2
-                ? HostHandler.buildTrialFinishModalCustomId(interaction.message.id, trialContext)
-                : `host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined'}_finish_${interaction.message.id}`)
+            .setCustomId(`host_${type === 0 ? 'learner' : type === 1 ? 'lorebook' : 'undefined'}_finish_${interaction.message.id}`)
             .setTitle('Summary');
 
         const hostSelect = new UserSelectMenuBuilder()
@@ -603,17 +505,6 @@ export default class HostHandler {
             modal.addLabelComponents(label => label.setLabel('Who was learning?').setUserSelectMenuComponent(learnerSelect));
         } else if (type === 1) {
             modal.addLabelComponents(label => label.setLabel('Who was getting the lorebook?').setUserSelectMenuComponent(learnerSelect));
-        } else if (type === 2) {
-            modal.addLabelComponents(label => label.setLabel('Who was the trialee?').setUserSelectMenuComponent(learnerSelect));
-
-            const trialPassOptions = HostHandler.getTrialPassOptions(this.client, trialContext);
-            const passSelect = new StringSelectMenuBuilder()
-                .setCustomId('trial_pass_select')
-                .setRequired(true)
-                .setMaxValues(1)
-                .addOptions(...trialPassOptions.options);
-
-            modal.addLabelComponents(label => label.setLabel(trialPassOptions.label).setStringSelectMenuComponent(passSelect));
         }
 
         const summaryInput = new TextInputBuilder()
@@ -799,12 +690,12 @@ export default class HostHandler {
             return null;
         }
 
-        return /^(elite1000|elite2000|master1000|master2000)$/.test(normalizedRoleKey)
+        return /^(elite1000|elite2000|master1000|master2000|grandmaster2000)$/.test(normalizedRoleKey)
             ? normalizedRoleKey
             : null;
     }
 
-    private static trialRoleKeyToLabel(roleKey: string): string {
+    public static trialRoleKeyToLabel(roleKey: string): string {
         switch (roleKey) {
             case 'elite1000':
                 return 'Elite 1000';
@@ -814,6 +705,8 @@ export default class HostHandler {
                 return 'Master 1000';
             case 'master2000':
                 return 'Master 2000';
+            case 'grandmaster2000':
+                return 'Grandmaster 2000';
             default:
                 return roleKey;
         }
@@ -821,104 +714,6 @@ export default class HostHandler {
 
     private static getModeFromTrialRoleKey(roleKey: string): string {
         return roleKey.match(/(500|1000|2000)$/)?.[1] ?? 'nm';
-    }
-
-    private static buildTrialFinishButtonCustomId(mode: string, targetRoleKey: string | null): string {
-        return `host_trial_finish_${mode}_${targetRoleKey ?? 'none'}`;
-    }
-
-    private static parseTrialFinishButtonContext(id: string): TrialRoleContext | null {
-        if (!id.startsWith('host_trial_finish_')) {
-            return null;
-        }
-
-        const rawContext = id.substring('host_trial_finish_'.length);
-        const separatorIndex = rawContext.indexOf('_');
-
-        if (separatorIndex === -1) {
-            return {
-                mode: rawContext.length > 0 ? rawContext : null,
-                targetRoleKey: null
-            };
-        }
-
-        const mode = rawContext.substring(0, separatorIndex);
-        const rawTargetRoleKey = rawContext.substring(separatorIndex + 1);
-
-        return {
-            mode: mode.length > 0 ? mode : null,
-            targetRoleKey: HostHandler.normalizeTrialRoleKey(rawTargetRoleKey === 'none' ? null : rawTargetRoleKey)
-        };
-    }
-
-    private static buildTrialFinishModalCustomId(hostMessageId: string, trialContext: TrialRoleContext | null): string {
-        return `host_trial_finish_submit_${hostMessageId}_${trialContext?.mode ?? 'none'}_${trialContext?.targetRoleKey ?? 'none'}`;
-    }
-
-    private static parseTrialFinishModalContext(id: string): TrialFinishModalContext | null {
-        if (!id.startsWith('host_trial_finish_submit_')) {
-            return null;
-        }
-
-        const rawContext = id.substring('host_trial_finish_submit_'.length);
-        const parts = rawContext.split('_');
-
-        if (parts.length < 3) {
-            return null;
-        }
-
-        const [hostMessageId, mode, rawTargetRoleKey] = parts;
-
-        return {
-            hostMessageId,
-            trialContext: {
-                mode: mode === 'none' ? null : mode,
-                targetRoleKey: HostHandler.normalizeTrialRoleKey(rawTargetRoleKey === 'none' ? null : rawTargetRoleKey)
-            }
-        };
-    }
-
-    private static getTrialPassOptions(client: Bot, trialContext: TrialRoleContext | null): { label: string, options: { label: string, value: string }[] } {
-        if (trialContext?.targetRoleKey) {
-            return {
-                label: 'Did they pass or fail?',
-                options: [
-                    { label: 'Pass', value: 'pass' },
-                    { label: 'Fail', value: 'fail' }
-                ]
-            };
-        }
-
-        const roleKeys = trialContext?.mode && /^\d+$/.test(trialContext.mode)
-            ? client.util.trialHierarchy.filter(roleKey => roleKey.endsWith(trialContext.mode!))
-            : [...client.util.trialHierarchy];
-
-        return {
-            label: roleKeys.length > 1
-                ? 'Did they pass or fail? Choose the exact tier for this host card.'
-                : 'Did they pass or fail?',
-            options: [
-                ...roleKeys.map(roleKey => ({
-                    label: `Pass - ${HostHandler.trialRoleKeyToLabel(roleKey)}`,
-                    value: `pass:${roleKey}`
-                })),
-                { label: 'Fail', value: 'fail' }
-            ]
-        };
-    }
-
-    private static buildTrialHostMessage(message: string | null, targetRoleKey: string | null): string | null {
-        const parts: string[] = [];
-
-        if (targetRoleKey) {
-            parts.push(`Target trial tier: ${HostHandler.trialRoleKeyToLabel(targetRoleKey)}`);
-        }
-
-        if (message && message.length > 0) {
-            parts.push(message);
-        }
-
-        return parts.length > 0 ? parts.join('\n') : null;
     }
 
     private static getHostData(hostJson: string) {
@@ -1058,25 +853,19 @@ export default class HostHandler {
         }
     }
 
-    public static async postHost(channel: TextChannel, mode: string, message: string | null, users: string[] | null = null, hosts: string[] | null = null, time: string | null = null, type: number = -1, targetRoleKey: string | null = null): Promise<boolean> {
-        const hostMessage = type === 2
-            ? HostHandler.buildTrialHostMessage(message, targetRoleKey)
-            : message;
-
-        const hostJson = this.loadHostConfig(mode, hostMessage);
+    public static async postHost(channel: TextChannel, mode: string, message: string | null, users: string[] | null = null, hosts: string[] | null = null, time: string | null = null, type: number = -1): Promise<boolean> {
+        const hostJson = this.loadHostConfig(mode, message);
 
         if (hostJson) {
             const hostContainer = JSON.parse(hostJson);
 
             if (hosts !== null) {
-                const typeLabel = type === 0 ? 'learner' : type === 1 ? 'lorebook' : type === 2 ? 'trial' : 'undefined';
+                const typeLabel = type === 0 ? 'learner' : type === 1 ? 'lorebook' : 'undefined';
 
                 const buttons: ButtonBuilder[] = [];
 
                 const finishButton = new ButtonBuilder()
-                    .setCustomId(type === 2
-                        ? HostHandler.buildTrialFinishButtonCustomId(mode, targetRoleKey)
-                        : `host_${typeLabel}_finish`)
+                    .setCustomId(`host_${typeLabel}_finish`)
                     .setLabel('Finish')
                     .setStyle(ButtonStyle.Primary);
 
@@ -1154,7 +943,7 @@ export default class HostHandler {
 
     //#region Database
 
-    public static async saveHost(client: Bot, type: number, link: string | null, hosts: string[], participants: string[]): Promise<void> {
+    public static async saveHost(client: Bot, type: number, link: string | null, hosts: string[], participants: string[], points: number = 1): Promise<void> {
         const { dataSource } = client;
         const hostParticipationRepository = dataSource.getRepository(HostParticipation);
 
@@ -1165,6 +954,7 @@ export default class HostHandler {
             const hostParticipation = new HostParticipation();
             hostParticipation.host = 1;
             hostParticipation.participate = 1;
+            hostParticipation.points = points;
             if (link) hostParticipation.link = link;
             hostParticipation.type = type;
             hostParticipation.user = host;
@@ -1179,6 +969,7 @@ export default class HostHandler {
             const hostParticipation = new HostParticipation();
             hostParticipation.host = 0;
             hostParticipation.participate = 1;
+            hostParticipation.points = points;
             if (link) hostParticipation.link = link;
             hostParticipation.type = type;
             hostParticipation.user = filler;
