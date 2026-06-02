@@ -634,7 +634,7 @@ export default class TicketHandler {
                 new StringSelectMenuOptionBuilder().setLabel('1000% Enrage').setValue('1000'),
                 new StringSelectMenuOptionBuilder().setLabel('2000% Enrage').setValue('2000'),
             ])
-            .setMaxValues(5);
+            .setMaxValues(2);
 
         modal.addLabelComponents(label => label
             .setLabel('Which enrage do you want to trial people?')
