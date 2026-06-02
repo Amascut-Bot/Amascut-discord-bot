@@ -10,6 +10,7 @@ import LeaderboardHandler from './LeaderboardHandler';
 import HostHandler from './HostHandler';
 import VouchHandler from './VouchHandler';
 import ReportHandler from './ReportHandler';
+import ScheduledTrialHandler from './ScheduledTrialHandler';
 
 export default interface InteractionHandler {
     client: Bot;
@@ -106,6 +107,9 @@ export default class InteractionHandler extends EventEmitter {
 
             if (interaction.customId.startsWith('vouch_')) {
                 return new VouchHandler(this.client, interaction.customId, interaction);
+            }
+            if (interaction.customId.startsWith('schedtrial_')) {
+                return new ScheduledTrialHandler(this.client, interaction.customId, interaction);
             }
             if (interaction.customId.startsWith('report_submitModal')) {
                 return new ReportHandler(this.client, interaction.customId, interaction);
@@ -230,6 +234,10 @@ export default class InteractionHandler extends EventEmitter {
         if (interaction.isStringSelectMenu() && interaction.inCachedGuild()) {
             if (interaction.customId.startsWith('host_')) {
                 return new HostHandler(this.client, interaction.customId, interaction);
+            }
+
+            if (interaction.customId.startsWith('schedtrial_')) {
+                return new ScheduledTrialHandler(this.client, interaction.customId, interaction);
             }
 
             return new StringSelectHandler(this.client, interaction.customId, interaction);
