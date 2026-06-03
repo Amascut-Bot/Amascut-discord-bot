@@ -23,9 +23,9 @@ import Bot from '../Bot';
 import { ScheduledTrial } from '../entity/ScheduledTrial';
 import HostHandler from './HostHandler';
 
-// A trial team caps at 5 players total (host + trialees + fills), with at most 3 trial-team fills.
+// A trial team caps at 5 players total (host + trialees + fills). The fill cap is derived from the
+// configured minimum trialees: 5 total - host - minTrialees, floored at 0.
 const MAX_PARTICIPANTS = 5; // includes the host
-const MAX_FILLS = 3;
 
 export default class ScheduledTrialHandler {
     client: Bot;
@@ -50,6 +50,7 @@ export default class ScheduledTrialHandler {
             if (id.startsWith('schedtrial_createmodal_')) return await this.handleCreateModal(id.substring('schedtrial_createmodal_'.length));
             if (id.startsWith('schedtrial_fillsignup_')) return await this.handleFillSignup(id.substring('schedtrial_fillsignup_'.length));
             if (id.startsWith('schedtrial_signup_')) return await this.handleSignup(id.substring('schedtrial_signup_'.length));
+            if (id.startsWith('schedtrial_base_')) return await this.handleBaseSignup(id.substring('schedtrial_base_'.length));
             if (id.startsWith('schedtrial_cancel_')) return await this.handleCancel(id.substring('schedtrial_cancel_'.length));
             if (id.startsWith('schedtrial_removeselect_')) return await this.handleRemoveSelect(id.substring('schedtrial_removeselect_'.length));
             if (id.startsWith('schedtrial_remove_')) return await this.handleRemovePrompt(id.substring('schedtrial_remove_'.length));
@@ -104,7 +105,10 @@ export default class ScheduledTrialHandler {
                 : '_None yet_';
             container.addTextDisplayComponents(t => t.setContent(`**Trialees (${trial.trialees.length}/${trial.maxTrialees}, min ${trial.minTrialees}):**\n${trialeeList}`));
         }
-        container.addTextDisplayComponents(t => t.setContent(`**Trial Team Fills (${fills.length}/${MAX_FILLS}):**\n${fillList}`));
+        container.addTextDisplayComponents(t => t.setContent(`**Trial Team Fills (${fills.length}/${ScheduledTrialHandler.maxFills(trial)}):**\n${fillList}`));
+        if (!isTicket) {
+            container.addTextDisplayComponents(t => t.setContent(`**Base:** ${trial.baseId ? `<@${trial.baseId}>` : '_None yet_'}`));
+        }
         container.addTextDisplayComponents(t => t.setContent(`_Total players: ${ScheduledTrialHandler.totalPlayers(trial)}/${MAX_PARTICIPANTS} (incl. host)_`));
 
         const buttons: ButtonBuilder[] = [];
@@ -118,6 +122,16 @@ export default class ScheduledTrialHandler {
             new ButtonBuilder().setCustomId(`schedtrial_cancel_${trial.id}`).setLabel(isTicket ? 'Disband' : 'Cancel').setStyle(ButtonStyle.Danger),
         );
         container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons));
+
+        // The base control lives on its OWN action row — the row above already holds the max 5 buttons,
+        // so pushing onto it would throw "Invalid Form Body" at runtime.
+        if (!isTicket) {
+            const baseButton = new ButtonBuilder()
+                .setCustomId(`schedtrial_base_${trial.id}`)
+                .setLabel(trial.baseId ? 'Base sign up / step down' : 'Base sign up')
+                .setStyle(ButtonStyle.Secondary);
+            container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(baseButton));
+        }
 
         return container;
     }
@@ -162,6 +176,10 @@ export default class ScheduledTrialHandler {
 
     private static totalPlayers(trial: ScheduledTrial): number {
         return 1 + trial.trialees.length + (trial.fills?.length ?? 0); // host + trialees + fills
+    }
+
+    private static maxFills(trial: ScheduledTrial): number {
+        return Math.max(0, MAX_PARTICIPANTS - 1 - trial.minTrialees); // 5 total - host - min trialees
     }
 
     private async canManage(trial: ScheduledTrial): Promise<boolean> {
@@ -258,6 +276,7 @@ export default class ScheduledTrialHandler {
         scheduledTrial.maxTrialees = maxTrialees;
         scheduledTrial.trialees = [];
         scheduledTrial.fills = [];
+        scheduledTrial.baseId = null;
         scheduledTrial.message = message && message.length > 0 ? message : null;
         scheduledTrial.reminderSent = false;
         scheduledTrial.status = 'scheduled';
@@ -272,6 +291,34 @@ export default class ScheduledTrialHandler {
 
         saved.messageId = cardMessage.id;
         await this.repo.save(saved);
+
+        // Ping the global trial-team role + the tier's trialee role so sign-ups are driven. Posted in
+        // trialee-chat on MAIN; falls back to the scheduling channel where trialeeChat is unconfigured.
+        try {
+            const teamRoleId = this.client.roleIds.trialTeam;
+            const trialeeRoleKey = this.client.util.getTrialeeRoleKey(tier);
+            const trialeeRoleId = trialeeRoleKey ? this.client.roleIds[trialeeRoleKey] : undefined;
+            const pingRoleIds = [teamRoleId, trialeeRoleId].filter((roleId): roleId is string => !!roleId && roleId !== '000000000000000000');
+
+            if (pingRoleIds.length > 0) {
+                const pingChannelId = this.client.channelIds.trialeeChat || channel.id;
+                let pingChannel = await interaction.guild.channels.fetch(pingChannelId).catch(() => null) as TextChannel | null;
+                if (!pingChannel && pingChannelId !== channel.id) {
+                    pingChannel = channel;
+                }
+                if (pingChannel) {
+                    const tierLabel = HostHandler.trialRoleKeyToLabel(tier);
+                    const unix = Math.floor(scheduledTime.getTime() / 1000);
+                    const mentions = pingRoleIds.map(roleId => `<@&${roleId}>`).join(' ');
+                    await pingChannel.send({
+                        content: `${mentions}\nA **${tierLabel}** trial has been scheduled for <t:${unix}:F> (<t:${unix}:R>). Head over to <#${channel.id}> to sign up!`,
+                        allowedMentions: { roles: pingRoleIds }
+                    });
+                }
+            }
+        } catch (err) {
+            this.client.logger.error({ message: 'Scheduled trial ping failed', error: err, handler: this.constructor.name });
+        }
 
         await interaction.editReply(`Trial scheduled! Head over to <#${channel.id}> to find the sign-up card.`);
     }
@@ -295,6 +342,7 @@ export default class ScheduledTrialHandler {
 
         if (trial.trialees.includes(member.id)) {
             trial.trialees = trial.trialees.filter(userId => userId !== member.id);
+            if (trial.baseId === member.id) trial.baseId = null; // leaving participant can no longer be base
             await this.repo.save(trial);
             await this.renderCard(trial);
             await interaction.editReply('You have withdrawn from this trial.');
@@ -349,6 +397,7 @@ export default class ScheduledTrialHandler {
 
         if (trial.fills.includes(member.id)) {
             trial.fills = trial.fills.filter(userId => userId !== member.id);
+            if (trial.baseId === member.id) trial.baseId = null; // leaving participant can no longer be base
             await this.repo.save(trial);
             await this.renderCard(trial);
             await interaction.editReply('You have withdrawn from the fills.');
@@ -370,8 +419,9 @@ export default class ScheduledTrialHandler {
             return;
         }
 
-        if (trial.fills.length >= MAX_FILLS) {
-            await interaction.editReply(`All fill slots are already taken (max ${MAX_FILLS}).`);
+        const maxFills = ScheduledTrialHandler.maxFills(trial);
+        if (trial.fills.length >= maxFills) {
+            await interaction.editReply(`All fill slots are already taken (max ${maxFills}).`);
             return;
         }
 
@@ -384,6 +434,50 @@ export default class ScheduledTrialHandler {
         await this.repo.save(trial);
         await this.renderCard(trial);
         await interaction.editReply('You have signed up as a fill!');
+    }
+
+    // ===============================
+    // Button: base sign up / step down
+    // ===============================
+
+    private async handleBaseSignup(idStr: string): Promise<void> {
+        const interaction = this.interaction as ButtonInteraction<'cached'>;
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const trial = await this.getTrial(idStr);
+        if (!trial || trial.status !== 'scheduled' || trial.kind === 'ticket') {
+            await interaction.editReply('This scheduled trial is no longer available.');
+            return;
+        }
+
+        const member = interaction.member as GuildMember;
+        trial.fills = trial.fills ?? [];
+
+        // Caller already holds base -> toggle off (release).
+        if (trial.baseId === member.id) {
+            trial.baseId = null;
+            await this.repo.save(trial);
+            await this.renderCard(trial);
+            await interaction.editReply('You are no longer the base for this trial.');
+            return;
+        }
+
+        // Base already held by a different participant -> reject (no takeover).
+        if (trial.baseId) {
+            await interaction.editReply(`A base is already assigned to <@${trial.baseId}>.`);
+            return;
+        }
+
+        // Must already be a signed-up participant (trialee or fill) to claim base.
+        if (!trial.trialees.includes(member.id) && !trial.fills.includes(member.id)) {
+            await interaction.editReply('You must be signed up as a trialee or fill before you can sign up as the base.');
+            return;
+        }
+
+        trial.baseId = member.id;
+        await this.repo.save(trial);
+        await this.renderCard(trial);
+        await interaction.editReply('You are now the base for this trial.');
     }
 
     // ===============================
@@ -495,6 +589,7 @@ export default class ScheduledTrialHandler {
         const removeId = interaction.values[0];
         trial.trialees = trial.trialees.filter(userId => userId !== removeId);
         trial.fills = (trial.fills ?? []).filter(userId => userId !== removeId);
+        if (trial.baseId === removeId) trial.baseId = null; // removed participant can no longer be base
         await this.repo.save(trial);
         await this.renderCard(trial);
 

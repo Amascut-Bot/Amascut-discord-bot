@@ -54,7 +54,18 @@ export default class ReminderHandler {
                 if (trial.trialees.length === 0 && fills.length === 0) continue; // skip if nobody signed up
 
                 try {
-                    const channel = await this.client.channels.fetch(trial.channelId) as TextChannel;
+                    // On MAIN the 30-min reminder is routed to trialee-chat; test (and any guild without a
+                    // configured trialeeChat) keeps the trial's own channel. If the configured target cannot
+                    // be fetched, fall back to the trial's channel before giving up — never log-and-drop while
+                    // the original channel still exists.
+                    const targetChannelId = this.client.channelIds.trialeeChat || trial.channelId;
+                    let channel = await this.client.channels.fetch(targetChannelId).catch(() => null) as TextChannel | null;
+                    if (!channel && targetChannelId !== trial.channelId) {
+                        channel = await this.client.channels.fetch(trial.channelId).catch(() => null) as TextChannel | null;
+                    }
+                    if (!channel) {
+                        throw new Error(`Could not resolve a reminder channel for trial ${trial.id}`);
+                    }
                     const unix = Math.floor(trial.scheduledTime.getTime() / 1000);
                     const trialeesText = trial.trialees.length ? trial.trialees.map(userId => `<@${userId}>`).join(' ') : '_none_';
                     const fillsText = fills.length ? fills.map(userId => `<@${userId}>`).join(' ') : '_none_';
