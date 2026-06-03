@@ -468,9 +468,9 @@ export default class ScheduledTrialHandler {
             return;
         }
 
-        // Must already be a signed-up participant (trialee or fill) to claim base.
-        if (!trial.trialees.includes(member.id) && !trial.fills.includes(member.id)) {
-            await interaction.editReply('You must be signed up as a trialee or fill before you can sign up as the base.');
+        // Must be the host or an already-signed-up participant (trialee or fill) to claim base.
+        if (member.id !== trial.hostId && !trial.trialees.includes(member.id) && !trial.fills.includes(member.id)) {
+            await interaction.editReply('You must be the host or signed up as a trialee or fill before you can sign up as the base.');
             return;
         }
 
