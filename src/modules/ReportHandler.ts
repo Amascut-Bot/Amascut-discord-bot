@@ -417,19 +417,24 @@ private async approveReport(interaction: ButtonInteraction<'cached'>) {
             }
         }
 
-        // Update embed
-        const revokeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-                .setCustomId('report_revoke')
-                .setLabel('Revoke')
-                .setStyle(ButtonStyle.Secondary)
-        );
+        // Update embed. If this approval triggered the role removal, the report row was
+        // flipped to 'role_removed' and the report is no longer revocable, so render no
+        // Revoke button. Only show Revoke while the row remains 'approved'.
+        const roleWasRemoved = allApprovedReports.length >= reportHandler.REQUIRED_REPORTS;
+        const components = roleWasRemoved
+            ? []
+            : [new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('report_revoke')
+                    .setLabel('Revoke')
+                    .setStyle(ButtonStyle.Secondary)
+            )];
 
         await interaction.message.edit({
             embeds: [EmbedBuilder.from(embed)
                 .setColor(0x00ff00)
                 .setTitle('Report - APPROVED')],
-            components: [revokeRow]
+            components
         });
 
         await interaction.followUp({ content: `Report approved! (${allApprovedReports.length}/${reportHandler.REQUIRED_REPORTS})`, flags: MessageFlags.Ephemeral });
