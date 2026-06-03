@@ -42,6 +42,10 @@ export class ScheduledTrial {
     @Column({ type: 'simple-json', nullable: true })
     fills: string[]
 
+    // User ID of the signed-up participant flagged as the base (one base max), or null
+    @Column({ type: 'text', nullable: true })
+    baseId: string | null
+
     @Column({ type: 'text', nullable: true })
     message: string | null
 

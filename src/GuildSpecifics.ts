@@ -55,7 +55,7 @@ export function getChannels(guildId: string | undefined): Channels {
             masterTrialee1000TicketsCategory: '1492216896852988026',
             masterTrialee2000TicketsCategory: '1492216981972058122',
             grandmasterTrialee2000TicketsCategory: '1492216981972058122',
-            trialScheduling: '1391860639584096316'
+            trialScheduling: '1495724268041011383'
         }
     }
 
@@ -112,6 +112,7 @@ export function getChannels(guildId: string | undefined): Channels {
             masterTrialee2000TicketsCategory: '1491863719624577136',
             grandmasterTrialee2000TicketsCategory: '1510307914382966937',
             trialScheduling: '1510312969987166389',
+            trialeeChat: '1468293993258553355',
 
             // trial team
             trialCategory: '1416026683659780148',
