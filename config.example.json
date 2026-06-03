@@ -1,0 +1,12 @@
+{
+    "colours": {
+        "green": 5763719,
+        "red": 15548997,
+        "blue": 5793266
+    },
+    "owners": ["YOUR_DISCORD_USER_ID"],
+    "kph": 30,
+    "guildMessageDisabled": [],
+    "lastChannelId": "",
+    "lastMessageId": ""
+}
