@@ -65,9 +65,9 @@ export default class ButtonHandler {
             this.rejectRoleAssign(interaction, id.substring('rejectRoleAssign_'.length));
             return;
         }
-        if (id.startsWith('report_approve') || id.startsWith('report_reject')) {
-        new ReportHandler(this.client, interaction.customId, interaction);
-        return;
+        if (id.startsWith('report_approve') || id.startsWith('report_reject') || id.startsWith('report_revoke')) {
+            new ReportHandler(this.client, interaction.customId, interaction);
+            return;
         }
 
         switch (id) {
