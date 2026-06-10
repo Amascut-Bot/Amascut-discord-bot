@@ -30,6 +30,9 @@ export class TrialReport {
     @Column({ default: 'pending' })
     status: string
 
+    @Column({ type: 'text', nullable: true })
+    messageId: string | null
+
     @CreateDateColumn({ name: 'created_at'})
     createdAt: Date
 }

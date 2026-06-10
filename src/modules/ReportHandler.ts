@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder, FileUploadBuilder, Interaction, Message, MessageFlags, ModalBuilder, ModalSubmitInteraction, RoleSelectMenuBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder, FileUploadBuilder, Interaction, MessageFlags, ModalBuilder, ModalSubmitInteraction, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder } from 'discord.js';
 import Bot from '../Bot';
 import { TrialReport } from '../entity/TrialReport';
 import { ReportBlacklist } from '../entity/ReportBlacklist';
@@ -36,6 +36,12 @@ export default class reportHandler {
         // Direct reject - just update embed
         if (id === 'report_reject' && interaction.isButton()) {
             this.rejectReport(interaction as ButtonInteraction<'cached'>);
+            return;
+        }
+
+        // Revoke an already-approved report
+        if (id === 'report_revoke' && interaction.isButton()) {
+            this.revokeReport(interaction as ButtonInteraction<'cached'>);
             return;
         }
 
@@ -280,7 +286,8 @@ private async approveReport(interaction: ButtonInteraction<'cached'>) {
             role: roleKey,
             description: description,
             status: 'approved',
-            ticketChannelId: interaction.channel!.id
+            ticketChannelId: interaction.channel!.id,
+            messageId: interaction.message.id
         });
         await reportRepository.save(report);
 
@@ -410,12 +417,24 @@ private async approveReport(interaction: ButtonInteraction<'cached'>) {
             }
         }
 
-        // Update embed
+        // Update embed. If this approval triggered the role removal, the report row was
+        // flipped to 'role_removed' and the report is no longer revocable, so render no
+        // Revoke button. Only show Revoke while the row remains 'approved'.
+        const roleWasRemoved = allApprovedReports.length >= reportHandler.REQUIRED_REPORTS;
+        const components = roleWasRemoved
+            ? []
+            : [new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('report_revoke')
+                    .setLabel('Revoke')
+                    .setStyle(ButtonStyle.Secondary)
+            )];
+
         await interaction.message.edit({
             embeds: [EmbedBuilder.from(embed)
                 .setColor(0x00ff00)
                 .setTitle('Report - APPROVED')],
-            components: []
+            components
         });
 
         await interaction.followUp({ content: `Report approved! (${allApprovedReports.length}/${reportHandler.REQUIRED_REPORTS})`, flags: MessageFlags.Ephemeral });
@@ -449,6 +468,99 @@ private async rejectReport(interaction: ButtonInteraction<'cached'>) {
         await interaction.followUp({ content: 'Report rejected.', flags: MessageFlags.Ephemeral });
     } catch (error) {
         this.client.logger.error({ message: 'Failed to reject report', error, handler: this.constructor.name });
+    }
+}
+
+private async revokeReport(interaction: ButtonInteraction<'cached'>) {
+    // Permission gate FIRST - before any defer or state change.
+    if (!await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction)) {
+        this.client.logger.log(
+            {
+                message: `Attempted restricted permissions. { command: Revoke Report, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                handler: this.constructor.name,
+            },
+            true
+        );
+        return await interaction.reply({
+            content: 'Only admin/owner can revoke.',
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    await interaction.deferUpdate();
+
+    try {
+        const reportRepository = this.client.dataSource.getRepository(TrialReport);
+        const report = await reportRepository.findOne({ where: { messageId: interaction.message.id } });
+
+        if (!report) {
+            return await interaction.followUp({
+                content: 'No matching report record was found for this message, so it cannot be revoked.',
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        if (report.status !== 'approved') {
+            return await interaction.followUp({
+                content: 'This report is not in an approved state and cannot be revoked.',
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        // Authoritative step: persist the status flip BEFORE any UI/audit work.
+        report.status = 'revoked';
+        await reportRepository.save(report);
+
+        this.client.logger.log(
+            {
+                message: `Report #${report.id} revoked by ${interaction.user.username} (${interaction.user.id}). Reported user: ${report.reportedUser}, role: ${report.role}.`,
+                handler: this.constructor.name,
+            },
+            true
+        );
+
+        // Re-render the original approved message to a revoked visual state.
+        const originalEmbed = interaction.message.embeds[0];
+        if (originalEmbed) {
+            await interaction.message.edit({
+                embeds: [EmbedBuilder.from(originalEmbed)
+                    .setColor(0x808080)
+                    .setTitle('Report - REVOKED')],
+                components: []
+            }).catch((error) => {
+                this.client.logger.error({ message: 'Failed to re-render revoked report message', error, handler: this.constructor.name });
+            });
+        }
+
+        // Audit log - guarded so an unconfigured/unfetchable channel cannot abort the revoke.
+        try {
+            const logChannel = this.client.channelIds.roleAssignLogs
+                ? await this.client.channels.fetch(this.client.channelIds.roleAssignLogs) as TextChannel : null;
+
+            if (logChannel) {
+                await logChannel.send({
+                    embeds: [new EmbedBuilder()
+                        .setColor(0x808080)
+                        .setTitle('Report Revoked')
+                        .setDescription(`An approved report against <@${report.reportedUser}> for the role ${this.client.roles[report.role]} has been revoked by <@${interaction.user.id}>.`)
+                        .addFields(
+                            { name: 'Reported User', value: `<@${report.reportedUser}>` },
+                            { name: 'Role', value: `${this.client.roles[report.role]}` },
+                            { name: 'RSN', value: `${report.rsn}` },
+                            { name: 'Reporter', value: `<@${report.reporter}>` },
+                            { name: 'Revoked By', value: `<@${interaction.user.id}>` }
+                        )
+                        .setTimestamp()]
+                });
+            }
+        } catch (auditError) {
+            this.client.logger.error({ message: 'Failed to post revoke audit log', error: auditError, handler: this.constructor.name });
+        }
+
+        await interaction.followUp({ content: 'Report revoked.', flags: MessageFlags.Ephemeral });
+    } catch (error) {
+        this.client.logger.error({ message: 'Failed to revoke report', error, handler: this.constructor.name });
+        await interaction.followUp({ content: 'Error revoking report.', flags: MessageFlags.Ephemeral }).catch(() => { });
     }
 }
 
