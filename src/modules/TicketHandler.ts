@@ -1107,6 +1107,8 @@ export default class TicketHandler {
 
             if (ticketUserId) {
                 await channel.permissionOverwrites.delete(ticketUserId);
+                // Strip ticket-scoped roles granted on open (learner-ticket / trialee role).
+                await this.removeTicketRoles(channel, ticketUserId);
             }
 
             const closedEmbed = new EmbedBuilder()
@@ -1189,6 +1191,53 @@ export default class TicketHandler {
         const userPermissions = channel.permissionOverwrites.cache.get(interaction.user.id);
 
         return userPermissions !== undefined;
+    }
+
+    /** Learner tickets live under the learner category and (unlike other types) have no name prefix. */
+    private isLearnerTicket(channel: TextChannel): boolean {
+        return channel.parentId === this.client.channelIds.learnerTicketsCategory;
+    }
+
+    /** Trial-application tickets are named `trialee-XXXX`. */
+    private isTrialeeTicket(channel: TextChannel): boolean {
+        return channel.name.startsWith('trialee');
+    }
+
+    /**
+     * Strip the roles that were granted for the lifetime of a ticket: the learner-ticket role on
+     * learner tickets, and whichever per-tier trialee role the member still holds on trial-application
+     * tickets. Best-effort — a member who has left the guild or a missing/sentinel role id is skipped.
+     */
+    private async removeTicketRoles(channel: TextChannel, userId: string): Promise<void> {
+        let member: GuildMember;
+        try {
+            member = await channel.guild.members.fetch(userId);
+        } catch {
+            return; // member left the guild — nothing to strip
+        }
+
+        const sentinel = '000000000000000000';
+        const roleIds: string[] = [];
+
+        if (this.isLearnerTicket(channel)) {
+            const learnerTicketRoleId = this.client.roleIds.learnerTicket;
+            if (learnerTicketRoleId && learnerTicketRoleId !== sentinel) {
+                roleIds.push(learnerTicketRoleId);
+            }
+        }
+
+        if (this.isTrialeeTicket(channel)) {
+            for (const roleKey of Object.values(this.client.util.trialeeRoles)) {
+                const roleId = this.client.roleIds[roleKey];
+                if (roleId && roleId !== sentinel && member.roles.cache.has(roleId)) {
+                    roleIds.push(roleId);
+                }
+            }
+        }
+
+        if (roleIds.length > 0) {
+            await member.roles.remove(roleIds).catch(() => { });
+        }
     }
 
     //#endregion
@@ -1519,6 +1568,18 @@ export default class TicketHandler {
                 AttachFiles: true,
                 EmbedLinks: true
             });
+
+            // Re-grant the learner-ticket role stripped on close. (Trialee roles are intentionally
+            // not re-added: a passed trial has already swapped the trialee role for the earned tier.)
+            if (this.isLearnerTicket(channel)) {
+                const learnerTicketRoleId = this.client.roleIds.learnerTicket;
+                if (learnerTicketRoleId && learnerTicketRoleId !== '000000000000000000') {
+                    try {
+                        const member = await channel.guild.members.fetch(ticketUserId);
+                        await member.roles.add(learnerTicketRoleId).catch(() => { });
+                    } catch { /* member left the guild */ }
+                }
+            }
 
             // Find and delete the support team controls message
             const controlsMessage = messages.find(msg =>
@@ -2059,6 +2120,12 @@ export default class TicketHandler {
                         ManageChannels: true,
                     }
                 );
+
+                // Grant the learner-ticket role for the lifetime of the ticket (removed on close).
+                const learnerTicketRoleId = this.client.roleIds.learnerTicket;
+                if (learnerTicketRoleId && learnerTicketRoleId !== '000000000000000000') {
+                    await member.roles.add(learnerTicketRoleId).catch(() => { });
+                }
             }
 
             if (ticketType === 'lorebookkill') {
