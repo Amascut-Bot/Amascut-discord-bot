@@ -177,6 +177,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             vouchTeam: '1484617729515323596',
             teacher: '1412871872374116463',
             helperLearner: '1412871872374116463',
+            learnerTicket: '1517933435140833352',
             lorebook: '1441892735144558776',
 
             CONTENT_CREATOR_ROLE: '1391860635456901393',
@@ -273,6 +274,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             vouchTeam: '1484617729515323596',
             teacher: '1412881470673916077',
             helperLearner: '1404509333185892422',
+            learnerTicket: '1517932957745287321',
             lorebook: '1405001670101827617',
             editor: '1389397640533250058',
 
