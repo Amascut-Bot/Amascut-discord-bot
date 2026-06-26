@@ -56,6 +56,7 @@ export default class TicketHandler {
             case 'ticket:create_trialteam': this.handleTicketTrialTeam(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_trialee': this.handleTicketTrialee(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket:create_trialreport': this.handleTicketTrialReport(interaction as ButtonInteraction<'cached'>); break;
+            case 'ticket:learner_switch': this.handleLearnerSwitch(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close': this.handleTicketClose(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_confirm': this.handleTicketCloseConfirm(interaction as ButtonInteraction<'cached'>); break;
             case 'ticket_close_cancel': this.handleTicketCloseCancel(interaction as ButtonInteraction<'cached'>); break;
@@ -1158,13 +1159,89 @@ export default class TicketHandler {
         await interaction.update({ content: 'Ticket closure cancelled.', embeds: [], components: [] });
     }
 
+    /**
+     * Resolve the learner/ticket owner's user id for a ticket channel: prefer the persisted `Ticket`
+     * row (keyed on channel id), and fall back to the member-scoped ViewChannel overwrite the way the
+     * close flow does. Returns `null` if no owner can be determined.
+     */
+    private async resolveTicketOwnerId(channel: TextChannel): Promise<string | null> {
+        try {
+            const ticket = await this.client.dataSource.getRepository(Ticket).findOne({ where: { channelId: channel.id } });
+            if (ticket?.userOpen) return ticket.userOpen;
+        } catch { /* DB miss — fall through to permission-overwrite scan */ }
+
+        const adminRoleId = this.client.roleIds.admin;
+        const ownerRoleId = this.client.roleIds.owner;
+        for (const [id, overwrite] of channel.permissionOverwrites.cache) {
+            if (overwrite.type === OverwriteType.Member && overwrite.allow.has('ViewChannel')) {
+                if (id !== adminRoleId && id !== ownerRoleId && id !== this.client.user?.id) {
+                    return id;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Toggle a learner ticket between the NM and 100s streams. Teacher/staff gated. Swaps the typed
+     * role ("tag"), moves the channel to the matching category (preserving its overwrites), and renames
+     * the channel suffix. Ordering: permission gate → deferUpdate → role swap (authoritative) →
+     * channel move/rename (isolated) → ephemeral confirmation.
+     */
+    private async handleLearnerSwitch(interaction: ButtonInteraction<'cached'>): Promise<void> {
+        const channel = interaction.channel as TextChannel;
+
+        const allowed = await this.client.util.hasRolePermissions(this.client, ['teacher', 'admin', 'owner'], interaction);
+        if (!allowed) {
+            await interaction.reply({ content: 'Only teachers and staff can switch a learner ticket\'s type.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+
+        const current = this.getLearnerTicketType(channel);
+        if (!current) {
+            await interaction.reply({ content: 'This is not a learner ticket, so its type cannot be switched.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+
+        await interaction.deferUpdate();
+
+        const target: 'nm' | '100' = current === 'nm' ? '100' : 'nm';
+        const targetLabel = target === 'nm' ? 'Normal Mode' : '100% Enrage';
+
+        // Role swap is the authoritative effect — do it first.
+        const ticketUserId = await this.resolveTicketOwnerId(channel);
+        if (ticketUserId) {
+            try {
+                const member = await channel.guild.members.fetch(ticketUserId);
+                const currentRoleId = this.learnerRoleIdForType(current);
+                const targetRoleId = this.learnerRoleIdForType(target);
+                if (currentRoleId) await member.roles.remove(currentRoleId).catch(() => { });
+                if (targetRoleId) await member.roles.add(targetRoleId).catch(() => { });
+            } catch { /* member left the guild — skip role swap */ }
+        }
+
+        // Move the channel to the target category. lockPermissions:false preserves the ticket's overwrites.
+        try {
+            await channel.setParent(this.learnerCategoryIdForType(target), { lockPermissions: false });
+        } catch (error) {
+            this.client.logger.error({ message: 'Failed to move learner ticket to new category', error, handler: this.constructor.name });
+        }
+
+        // Rename the suffix to match the new stream (best-effort; Discord rate-limits renames to 2/10min).
+        try {
+            await channel.setName(`${channel.name.replace(/-(nm|100)$/, '')}-${target}`);
+        } catch { /* rename rate-limited or failed — non-fatal, the role/category swap already persisted */ }
+
+        await interaction.followUp({ content: `Ticket switched to **${targetLabel}**.`, flags: MessageFlags.Ephemeral });
+    }
+
     private async canCloseTicket(interaction: ButtonInteraction<'cached'>): Promise<boolean> {
         const hasRolePermissions = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
         if (hasRolePermissions) return true;
 
         const channel = interaction.channel as TextChannel;
 
-        if (channel.parentId === this.client.channelIds.learnerTicketsCategory) {
+        if (this.isLearnerTicket(channel)) {
             const isTeacher = await this.client.util.hasRolePermissions(this.client, ['teacher'], interaction);
             if (isTeacher) return true;
         }
@@ -1193,9 +1270,35 @@ export default class TicketHandler {
         return userPermissions !== undefined;
     }
 
-    /** Learner tickets live under the learner category and (unlike other types) have no name prefix. */
+    /**
+     * Learner tickets live under one of the two typed learner categories (NM / 100s) and — unlike
+     * other ticket types — have no name prefix. Returns the type from the channel's parent category
+     * (the source of truth for a ticket's stream), or `null` if the channel is not a learner ticket.
+     */
+    private getLearnerTicketType(channel: TextChannel): 'nm' | '100' | null {
+        if (channel.parentId === this.client.channelIds.learnerTicket100Category) return '100';
+        if (channel.parentId === this.client.channelIds.learnerTicketNMCategory) return 'nm';
+        return null;
+    }
+
     private isLearnerTicket(channel: TextChannel): boolean {
-        return channel.parentId === this.client.channelIds.learnerTicketsCategory;
+        return this.getLearnerTicketType(channel) !== null;
+    }
+
+    /** Resolve the primary learner stream from a (possibly multi-value) mode selection. NM wins when both are picked. */
+    private resolveLearnerType(mode: string | null): 'nm' | '100' {
+        return (mode ?? '').split('-').includes('nm') ? 'nm' : '100';
+    }
+
+    /** The Discord category id for a learner stream. */
+    private learnerCategoryIdForType(type: 'nm' | '100'): string {
+        return type === '100' ? this.client.channelIds.learnerTicket100Category : this.client.channelIds.learnerTicketNMCategory;
+    }
+
+    /** The learner-ticket role ("tag") id for a stream, or `null` if missing/sentinel. */
+    private learnerRoleIdForType(type: 'nm' | '100'): string | null {
+        const roleId = type === '100' ? this.client.roleIds.learnerTicket100 : this.client.roleIds.learnerTicketNM;
+        return roleId && roleId !== '000000000000000000' ? roleId : null;
     }
 
     /** Trial-application tickets are named `trialee-XXXX`. */
@@ -1220,9 +1323,11 @@ export default class TicketHandler {
         const roleIds: string[] = [];
 
         if (this.isLearnerTicket(channel)) {
-            const learnerTicketRoleId = this.client.roleIds.learnerTicket;
-            if (learnerTicketRoleId && learnerTicketRoleId !== sentinel) {
-                roleIds.push(learnerTicketRoleId);
+            for (const type of ['nm', '100'] as const) {
+                const roleId = this.learnerRoleIdForType(type);
+                if (roleId && member.roles.cache.has(roleId)) {
+                    roleIds.push(roleId);
+                }
             }
         }
 
@@ -1248,7 +1353,7 @@ export default class TicketHandler {
         const messages = await UtilityHandler.readAllMessages(channel);
         const messageArray = Array.from(messages.values());
 
-        const isLearnerTicket = channel.parentId === this.client.channelIds.learnerTicketsCategory;
+        const isLearnerTicket = this.isLearnerTicket(channel);
         const displayChannelName = isLearnerTicket ? `learner-${channel.name}` : channel.name;
 
         const transcriptBuffer = await TranscriptGenerator.createTranscript(messages, displayChannelName, this.client);
@@ -1571,9 +1676,10 @@ export default class TicketHandler {
 
             // Re-grant the learner-ticket role stripped on close. (Trialee roles are intentionally
             // not re-added: a passed trial has already swapped the trialee role for the earned tier.)
-            if (this.isLearnerTicket(channel)) {
-                const learnerTicketRoleId = this.client.roleIds.learnerTicket;
-                if (learnerTicketRoleId && learnerTicketRoleId !== '000000000000000000') {
+            const reopenType = this.getLearnerTicketType(channel);
+            if (reopenType) {
+                const learnerTicketRoleId = this.learnerRoleIdForType(reopenType);
+                if (learnerTicketRoleId) {
                     try {
                         const member = await channel.guild.members.fetch(ticketUserId);
                         await member.roles.add(learnerTicketRoleId).catch(() => { });
@@ -1995,7 +2101,13 @@ export default class TicketHandler {
                 ? ticketNumber.toString().padStart(4, '0')
                 : `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
 
-            if (mode != null) {
+            // Learner tickets resolve to a single stream (NM / 100s); the suffix reflects that stream
+            // so the channel name matches its parent category. Other ticket types never pass a mode.
+            const learnerType = ticketType === 'learner' ? this.resolveLearnerType(mode) : null;
+
+            if (learnerType != null) {
+                channelName += `-${learnerType}`;
+            } else if (mode != null) {
                 channelName += `-${mode}`;
             }
 
@@ -2007,7 +2119,7 @@ export default class TicketHandler {
 
             switch (ticketType) {
                 case 'learner':
-                    parentCategoryId = this.client.channelIds.learnerTicketsCategory;
+                    parentCategoryId = this.learnerCategoryIdForType(learnerType ?? 'nm');
                     break;
                 case 'lorebookkill':
                     parentCategoryId = this.client.channelIds.lorebookTicketsCategory;
@@ -2121,9 +2233,9 @@ export default class TicketHandler {
                     }
                 );
 
-                // Grant the learner-ticket role for the lifetime of the ticket (removed on close).
-                const learnerTicketRoleId = this.client.roleIds.learnerTicket;
-                if (learnerTicketRoleId && learnerTicketRoleId !== '000000000000000000') {
+                // Grant the typed learner-ticket role ("tag") for the lifetime of the ticket (removed on close).
+                const learnerTicketRoleId = this.learnerRoleIdForType(learnerType ?? 'nm');
+                if (learnerTicketRoleId) {
                     await member.roles.add(learnerTicketRoleId).catch(() => { });
                 }
             }
@@ -2526,6 +2638,15 @@ export default class TicketHandler {
                             .setCustomId('host_learner_quickfinish')
                             .setLabel('Complete ticket')
                             .setStyle(ButtonStyle.Secondary)
+                    ]
+                ));
+                // Toggle the ticket between the NM and 100s streams (own action row — the rows above are full).
+                container.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    [
+                        new ButtonBuilder()
+                            .setCustomId('ticket:learner_switch')
+                            .setLabel((this.getLearnerTicketType(channel) ?? 'nm') === 'nm' ? 'Switch to 100% Enrage' : 'Switch to Normal Mode')
+                            .setStyle(ButtonStyle.Primary)
                     ]
                 ));
 
