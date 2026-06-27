@@ -1220,17 +1220,13 @@ export default class TicketHandler {
             } catch { /* member left the guild — skip role swap */ }
         }
 
-        // Move the channel to the target category. lockPermissions:false preserves the ticket's overwrites.
+        // Move the channel to the target category — the category is what marks the ticket's stream
+        // (the channel name carries the RSN, not the type). lockPermissions:false preserves overwrites.
         try {
             await channel.setParent(this.learnerCategoryIdForType(target), { lockPermissions: false });
         } catch (error) {
             this.client.logger.error({ message: 'Failed to move learner ticket to new category', error, handler: this.constructor.name });
         }
-
-        // Rename the suffix to match the new stream (best-effort; Discord rate-limits renames to 2/10min).
-        try {
-            await channel.setName(`${channel.name.replace(/-(nm|100)$/, '')}-${target}`);
-        } catch { /* rename rate-limited or failed — non-fatal, the role/category swap already persisted */ }
 
         await interaction.followUp({ content: `Ticket switched to **${targetLabel}**.`, flags: MessageFlags.Ephemeral });
     }
@@ -1299,6 +1295,11 @@ export default class TicketHandler {
     private learnerRoleIdForType(type: 'nm' | '100'): string | null {
         const roleId = type === '100' ? this.client.roleIds.learnerTicket100 : this.client.roleIds.learnerTicketNM;
         return roleId && roleId !== '000000000000000000' ? roleId : null;
+    }
+
+    /** Turn a player's RSN into a channel-name-safe suffix (lowercase, spaces→dashes, invalid chars stripped). */
+    private toChannelNameSuffix(rsn: string): string {
+        return rsn.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     }
 
     /** Trial-application tickets are named `trialee-XXXX`. */
@@ -2101,14 +2102,14 @@ export default class TicketHandler {
                 ? ticketNumber.toString().padStart(4, '0')
                 : `${ticketType}-${ticketNumber.toString().padStart(4, '0')}`;
 
-            // Learner tickets resolve to a single stream (NM / 100s); the suffix reflects that stream
-            // so the channel name matches its parent category. Other ticket types never pass a mode.
+            // Learner tickets still resolve to a single stream (NM / 100s) for their category + role,
+            // but the category already makes the stream obvious, so the name carries the player's RSN
+            // instead. Trial-application tickets get the RSN suffix too for at-a-glance identification.
             const learnerType = ticketType === 'learner' ? this.resolveLearnerType(mode) : null;
 
-            if (learnerType != null) {
-                channelName += `-${learnerType}`;
-            } else if (mode != null) {
-                channelName += `-${mode}`;
+            if ((ticketType === 'learner' || ticketType === 'trialee') && formData?.rsn) {
+                const rsnSuffix = this.toChannelNameSuffix(formData.rsn);
+                if (rsnSuffix) channelName += `-${rsnSuffix}`;
             }
 
             const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
@@ -2645,7 +2646,7 @@ export default class TicketHandler {
                     [
                         new ButtonBuilder()
                             .setCustomId('ticket:learner_switch')
-                            .setLabel((this.getLearnerTicketType(channel) ?? 'nm') === 'nm' ? 'Switch to 100% Enrage' : 'Switch to Normal Mode')
+                            .setLabel('Switch 100s/NM')
                             .setStyle(ButtonStyle.Primary)
                     ]
                 ));
