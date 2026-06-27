@@ -37,6 +37,8 @@ export function getChannels(guildId: string | undefined): Channels {
             learnerWaiting: '1405671688514965615',
             learnerTeaching: '1405671729959014460',
             learnerTicketsCategory: '1412871767932010547',
+            learnerTicketNMCategory: '1520081849903349790',
+            learnerTicket100Category: '1520081884590375043',
             learnerHosts: '1411662134756118569',
             staffTicketsCategory: '1415817949868068976',
             teachersChat: '1405664850469847122',
@@ -93,6 +95,8 @@ export function getChannels(guildId: string | undefined): Channels {
 
             // learner tickets
             learnerTicketsCategory: '1412878315395481782',
+            learnerTicketNMCategory: '1412878315395481782',
+            learnerTicket100Category: '1518758135743910041',
 
             // lore book crew tickets
             lorebookTicketsCategory: '1439305836873777333',
@@ -178,6 +182,8 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             teacher: '1412871872374116463',
             helperLearner: '1412871872374116463',
             learnerTicket: '1517933435140833352',
+            learnerTicketNM: '1517933435140833352',
+            learnerTicket100: '1520081602216988733',
             lorebook: '1441892735144558776',
 
             CONTENT_CREATOR_ROLE: '1391860635456901393',
@@ -275,6 +281,8 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             teacher: '1412881470673916077',
             helperLearner: '1404509333185892422',
             learnerTicket: '1517932957745287321',
+            learnerTicketNM: '1518757606955679754',
+            learnerTicket100: '1518757803194585108',
             lorebook: '1405001670101827617',
             editor: '1389397640533250058',
 
