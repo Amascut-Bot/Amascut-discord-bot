@@ -12,7 +12,7 @@ export default class AddReportBlacklistCommand extends BotInteraction {
     }
 
     get permissions() {
-        return 'ADMIN';
+        return 'MOD';
     }
 
     get slashData() {

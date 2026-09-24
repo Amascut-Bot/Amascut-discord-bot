@@ -184,7 +184,7 @@ export default class ScheduledTrialHandler {
 
     private async canManage(trial: ScheduledTrial): Promise<boolean> {
         if (this.interaction.user.id === trial.hostId) return true;
-        return (await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], this.interaction)) === true;
+        return (await this.client.util.hasRolePermissions(this.client, ['trialTeam','admin', 'owner', 'mod'], this.interaction)) === true;
     }
 
     /**

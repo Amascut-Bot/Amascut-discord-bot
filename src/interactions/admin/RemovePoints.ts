@@ -12,7 +12,7 @@ export default class RemovePoints extends BotInteraction {
     }
 
     get permissions() {
-        return 'ADMIN';
+        return 'MOD';
     }
 
     get featureOptions() {

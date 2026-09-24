@@ -157,6 +157,16 @@ export default class InteractionHandler extends EventEmitter {
                             }, true);
                             return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', flags: MessageFlags.Ephemeral });
                         }
+                        break;
+                    case 'MOD':
+                        if (!(await this.client.util.hasRolePermissions(this.client, ['mod', 'admin', 'owner'], interaction))) {
+                            this.client.logger.log({
+                                message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                                handler: this.constructor.name,
+                            }, true);
+                            return await interaction.reply({ content: 'You do not have permissions to run this command. This incident has been logged.', flags: MessageFlags.Ephemeral });
+                        }
+                        break;                      
                     case 'EDITOR':
                         if (!(await this.client.util.hasRolePermissions(this.client, ['editor', 'admin', 'owner'], interaction))) {
                             this.client.logger.log({

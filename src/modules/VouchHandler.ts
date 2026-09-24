@@ -234,7 +234,7 @@ export default class VouchHandler {
     //#region Vouch Voting
 
     private async handleVote(interaction: ButtonInteraction<'cached'>, voteType: 'approve' | 'reject') {
-        if (!await this.client.util.hasRolePermissions(this.client, ['vouchTeam', 'admin', 'owner'], interaction)) {
+        if (!await this.client.util.hasRolePermissions(this.client, ['mod', 'admin', 'owner'], interaction)) {
             return await interaction.reply({
                 content: 'Only Vouch Team members can vote.',
                 flags: MessageFlags.Ephemeral

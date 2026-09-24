@@ -13,7 +13,7 @@ export default class TimeoutCommand extends BotInteraction {
     }
 
     get permissions() {
-        return 'ADMIN';
+        return 'MOD';
     }
 
     get actionOptions() {
