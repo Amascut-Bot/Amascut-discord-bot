@@ -15,6 +15,7 @@ import { DataSource } from "typeorm"
 import { AppDataSource } from './DataSource';
 import { Roles, Channels, getRoles, getChannels } from './GuildSpecifics';
 import ComponentsV2Utils from './modules/ComponentsV2Utils';
+import { usePrivilegedIntents } from './privilegedIntents';
 
 export default interface Bot extends Client {
     color: number;
@@ -38,7 +39,8 @@ export default interface Bot extends Client {
     tempSubmissionData?: Map<string, any>;
     roles: Roles,
     roleIds: Roles,
-    channelIds: Channels
+    channelIds: Channels,
+    privilegedIntents: boolean
 }
 
 export default class Bot extends Client {
@@ -66,6 +68,7 @@ export default class Bot extends Client {
         this.roles = getRoles(process.env.GUILD_ID, false);
         this.roleIds = getRoles(process.env.GUILD_ID, true);
         this.channelIds = getChannels(process.env.GUILD_ID);
+        this.privilegedIntents = usePrivilegedIntents();
 
         // TODO: might want to move this reaction role stuff to its own handler
         // Direct Reaction Role Listeners

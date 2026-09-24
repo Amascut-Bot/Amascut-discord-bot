@@ -23,7 +23,7 @@ export default class ReminderHandler {
     }
 
     public startReminders() {
-        cron.schedule('0/30 * * * *', async () => {
+        cron.schedule('*/30 * * * *', async () => {
             await this.sendMyvcReminders();
             await this.sendKeepsReminders(); // Uncomment when needed
         });

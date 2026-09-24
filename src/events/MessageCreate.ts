@@ -46,18 +46,20 @@ export default class MessageCreate extends BotEvent {
             return;
         }
 
-        if (await this.client.autoTrigger.customAutomod(message)) {
-            return;
-        }
+        if (this.client.privilegedIntents) {
+            if (await this.client.autoTrigger.customAutomod(message)) {
+                return;
+            }
 
-        // Handle guild-specific auto-triggers
-        if (await this.client.autoTrigger.handleAutoTriggers(message)) {
-            return;
-        }
+            // Handle guild-specific auto-triggers
+            if (await this.client.autoTrigger.handleAutoTriggers(message)) {
+                return;
+            }
 
-        // Handle URL reactions
-        if (await this.client.urlReactionHandler.handleURLReactions(message)) {
-            return;
+            // Handle URL reactions
+            if (await this.client.urlReactionHandler.handleURLReactions(message)) {
+                return;
+            }
         }
 
         // Handle VOD submissions
