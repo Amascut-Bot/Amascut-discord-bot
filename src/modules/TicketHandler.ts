@@ -1095,10 +1095,11 @@ export default class TicketHandler {
             if (!ticketUserId) {
                 for (const [id, overwrite] of channel.permissionOverwrites.cache) {
                     if (overwrite.type === OverwriteType.Member && overwrite.allow.has('ViewChannel')) {
+                        const modRoleID = this.client.roleIds.mod;
                         const adminRoleId = this.client.roleIds.admin;
                         const ownerRoleId = this.client.roleIds.owner;
 
-                        if (id !== adminRoleId && id !== ownerRoleId && id !== this.client.user?.id) {
+                        if (id !== adminRoleId && id !== ownerRoleId && id !== modRoleID && id !== this.client.user?.id) {
                             ticketUserId = id;
                             break;
                         }
@@ -1172,9 +1173,10 @@ export default class TicketHandler {
 
         const adminRoleId = this.client.roleIds.admin;
         const ownerRoleId = this.client.roleIds.owner;
+        const modRoleId = this.client.roleIds.mod;
         for (const [id, overwrite] of channel.permissionOverwrites.cache) {
             if (overwrite.type === OverwriteType.Member && overwrite.allow.has('ViewChannel')) {
-                if (id !== adminRoleId && id !== ownerRoleId && id !== this.client.user?.id) {
+                if (id !== adminRoleId && id !== ownerRoleId && id !== modRoleId && id !== this.client.user?.id) {
                     return id;
                 }
             }
@@ -1232,7 +1234,7 @@ export default class TicketHandler {
     }
 
     private async canCloseTicket(interaction: ButtonInteraction<'cached'>): Promise<boolean> {
-        const hasRolePermissions = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        const hasRolePermissions = await this.client.util.hasRolePermissions(this.client, ['mod', 'admin', 'owner'], interaction);
         if (hasRolePermissions) return true;
 
         const channel = interaction.channel as TextChannel;
@@ -1603,7 +1605,7 @@ export default class TicketHandler {
 
     private async handleTicketOpen(interaction: ButtonInteraction<'cached'>): Promise<void> {
         // Check if user has admin/owner permissions
-        const hasPermission = await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        const hasPermission = await this.client.util.hasRolePermissions(this.client, ['mod', 'admin', 'owner'], interaction);
         if (!hasPermission) {
             await interaction.reply({ content: 'You do not have permission to use this command.', flags: MessageFlags.Ephemeral });
             return;
@@ -2165,6 +2167,7 @@ export default class TicketHandler {
             // Get admin and owner role IDs
             const adminRoleId = this.client.roleIds.admin;
             const ownerRoleId = this.client.roleIds.owner;
+            const modRoleId = this.client.roleIds.mod;
             const teacherRoleId = this.client.roleIds.teacher;
             const lorebookRoleId = this.client.roleIds.lorebook;
             const trialTeamRoleId = this.client.roleIds.trialTeam;
@@ -2194,6 +2197,19 @@ export default class TicketHandler {
                     },
                     {
                         id: adminRoleId,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                            PermissionFlagsBits.AttachFiles,
+                            PermissionFlagsBits.EmbedLinks,
+                            PermissionFlagsBits.ManageMessages,
+                            PermissionFlagsBits.ManageChannels,
+                            PermissionFlagsBits.ManageThreads
+                        ]
+                    },
+                    {
+                        id: modRoleId,
                         allow: [
                             PermissionFlagsBits.ViewChannel,
                             PermissionFlagsBits.SendMessages,
@@ -2402,12 +2418,13 @@ export default class TicketHandler {
         try {
             const { capitalizeFirstLetter } = this.client.util
             const adminRole = this.client.roles.admin;
+            const modRole = this.client.roles.mod;
             const ownerRole = this.client.roles.owner;
             const trialTeamRole = this.client.roles.trialTeam;
             const isStaffTicket = ticketType === 'lorebook' || ticketType === 'support' || ticketType === 'teacher' || ticketType === 'trialteam';
 
             // Create welcome message
-            let welcomeMessage = `<@${userId}>, your ticket has been created. An ${isStaffTicket || ticketType === 'report' ? 'Admin' : adminRole} or ${isStaffTicket ? 'Owner' : ownerRole} will be with you shortly.`;
+            let welcomeMessage = `<@${userId}>, your ticket has been created. An ${isStaffTicket || ticketType === 'report' ? 'Admin' : adminRole} or ${isStaffTicket ? 'Owner' : ownerRole} or ${isStaffTicket ? 'Moderator' : modRole} will be with you shortly.`;
 
             if (ticketType === 'learner') {
                 welcomeMessage = `<@${userId}>, your ticket has been created. Someone will be with you shortly.`;

@@ -12,7 +12,7 @@ export default class GivePoints extends BotInteraction {
     }
 
     get permissions() {
-        return 'ADMIN';
+        return 'MOD';
     }
 
     get featureOptions() {

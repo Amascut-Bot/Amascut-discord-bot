@@ -9,7 +9,7 @@ export default class ContextCreateClearanceTicket extends BotInteraction {
     }
 
     get permissions() {
-        return 'ADMIN';
+        return 'MOD';
     }
 
     get contextCommandData() {

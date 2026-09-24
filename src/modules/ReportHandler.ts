@@ -238,7 +238,7 @@ export default class reportHandler {
 }
 
 private async approveReport(interaction: ButtonInteraction<'cached'>) {
-    if (!await this.client.util.hasRolePermissions(this.client, ['reportPerms', 'admin', 'owner'], interaction)) {
+    if (!await this.client.util.hasRolePermissions(this.client, ['mod', 'admin', 'owner'], interaction)) {
         return await interaction.reply({
             content: 'You don\'t have permission to approve reports.',
             flags: MessageFlags.Ephemeral
@@ -445,9 +445,9 @@ private async approveReport(interaction: ButtonInteraction<'cached'>) {
 }
 
 private async rejectReport(interaction: ButtonInteraction<'cached'>) {
-    if (!await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction)) {
+    if (!await this.client.util.hasRolePermissions(this.client, ['mod', 'admin', 'owner'], interaction)) {
         return await interaction.reply({
-            content: 'Only admin/owner can reject.',
+            content: 'Only mods, admins and owners can reject.',
             flags: MessageFlags.Ephemeral
         });
     }
@@ -473,7 +473,7 @@ private async rejectReport(interaction: ButtonInteraction<'cached'>) {
 
 private async revokeReport(interaction: ButtonInteraction<'cached'>) {
     // Permission gate FIRST - before any defer or state change.
-    if (!await this.client.util.hasRolePermissions(this.client, ['admin', 'owner'], interaction)) {
+    if (!await this.client.util.hasRolePermissions(this.client, ['mod','admin', 'owner'], interaction)) {
         this.client.logger.log(
             {
                 message: `Attempted restricted permissions. { command: Revoke Report, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
@@ -482,7 +482,7 @@ private async revokeReport(interaction: ButtonInteraction<'cached'>) {
             true
         );
         return await interaction.reply({
-            content: 'Only admin/owner can revoke.',
+            content: 'Only mods, admins and owners can revoke.',
             flags: MessageFlags.Ephemeral
         });
     }

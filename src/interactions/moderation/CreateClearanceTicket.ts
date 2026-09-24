@@ -13,7 +13,7 @@ export default class CreateClearanceTicket extends BotInteraction {
     }
 
     get permissions() {
-        return 'ADMIN';
+        return 'MOD';
     }
 
     get slashData() {

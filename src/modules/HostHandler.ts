@@ -216,7 +216,7 @@ export default class HostHandler {
 
         if (type === 2) {
             //check if user is trial team, admin or owner
-            if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
+            if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'mod', 'admin', 'owner'], interaction)) {
                 return await interaction.reply('This action can only be used by Trial Team Members!');
             }
         }
@@ -312,8 +312,8 @@ export default class HostHandler {
         }
 
         if (type === 2) {
-            //check if user is trial team, admin or owner
-            if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
+            //check if user is trial team, mod, admin or owner
+            if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'mod', 'admin', 'owner'], interaction)) {
                 return await interaction.editReply('This action can only be used by Trial Team Members!');
             }
         }
@@ -557,8 +557,8 @@ export default class HostHandler {
         }
 
         if (type === 2) {
-            //check if user is trial team, admin or owner
-            if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'admin', 'owner'], interaction)) {
+            //check if user is trial team, mod, admin or owner
+            if (!await this.client.util.hasRolePermissions(this.client, ['trialTeam', 'mod', 'admin', 'owner'], interaction)) {
                 return await interaction.editReply('This action can only be used by Trial Team Members!');
             }
         }

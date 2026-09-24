@@ -94,7 +94,7 @@ export default class ButtonHandler {
 
         const { hasOverridePermissions, hasRolePermissions } = this.client.util;
 
-        const rolePermissions = await hasRolePermissions(this.client, ['admin', 'owner'], interaction);
+        const rolePermissions = await hasRolePermissions(this.client, ['mod', 'admin', 'owner'], interaction);
         const overridePermissions = await hasOverridePermissions(interaction, 'assign');
 
         if (!(rolePermissions || overridePermissions)) {
