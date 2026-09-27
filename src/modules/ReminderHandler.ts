@@ -23,12 +23,12 @@ export default class ReminderHandler {
     }
 
     public startReminders() {
-        cron.schedule('*/30 * * * *', async () => {
+        cron.schedule('* * * * *', async () => {
             await this.sendMyvcReminders();
             await this.sendKeepsReminders(); // Uncomment when needed
         });
         // Scheduled-trial reminders: check every minute for trials starting within 30 minutes
-        cron.schedule('* * * * *', async () => {
+        cron.schedule('*/30 * * * *', async () => {
             await this.sendScheduledTrialReminders();
         });
         this.client.logger.log({
@@ -100,6 +100,7 @@ export default class ReminderHandler {
             channels.trialedTeams,
             channels.splitsOnly,
             channels.combatAchievements,
+            channels.masterTeams,
         ].filter(Boolean);
 
         for (const channelId of targetChannels) {
@@ -139,9 +140,9 @@ export default class ReminderHandler {
 
                 container.addTextDisplayComponents(reminderText);
 
-                if (channelId === channels.trialedTeams) {
+                if (channelId === channels.trialedTeams || channelId === channels.masterTeams) {
                     container.addSeparatorComponents(sep => sep.setSpacing(SeparatorSpacingSize.Small))
-                        .addTextDisplayComponents(text => text.setContent(`**Note:** Teams formed via <#${channels.trialedTeams}> must be comprised of atleast 4 out of 5 trialed members. Group members recruited from this channel must be notified prior if the group will not meet this requirement.`))
+                        .addTextDisplayComponents(text => text.setContent(`**Note:** Teams formed via <#${channels.trialedTeams}> or <#${channels.masterTeams}> must be comprised of atleast 4 out of 5 trialed members. Group members recruited from this channel must be notified prior if the group will not meet this requirement.`))
                         container.addSeparatorComponents(sep => sep.setSpacing(SeparatorSpacingSize.Small))
                         .addTextDisplayComponents(text => text.setContent(`**Warning:** Please **do not** respond to pings for tags you do not own, unless you own a higher role (e.g Master 1000 is pinged, and you own Master 2000). Violating this may result in your access to trialled teams being removed.`));
                 }

@@ -26,10 +26,11 @@ export function getChannels(guildId: string | undefined): Channels {
             admin: '1391860637369372764',
             leaderboardSubmission: '1401295942027841686',
             hallOfFame: '1401296432916467847',
-            casualTeams: '1391860639584096316',
-            trialedTeams: '1495724268041011383',
+            casualTeams: '1391860639063871585',
+            trialedTeams: '1391860639063871586',
             keepsOnly: '1391860639584096316',
             combatAchievements: '1391860639584096316',
+            masterTeams: '1553868327745753218',
             ticketCategory: '1404433490266816632',
             wipTicketCategory: '1415020430867304480',
             learnerCategory: '1405663718875861052',
@@ -136,6 +137,7 @@ export function getChannels(guildId: string | undefined): Channels {
             trialedTeams: '1401385848993222866',
             splitsOnly: '1403494299903066142',
             combatAchievements: '1422202006793097328',
+            masterTeams: '1510403799817392168',
 
             // voice channels
             tempVCCategory: '885457551397912598',
