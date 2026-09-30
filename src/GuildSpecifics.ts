@@ -163,6 +163,8 @@ export function getChannels(guildId: string | undefined): Channels {
             // event waiting area (archived)
 
             // storage
+
+            // testing testing 1 2 3 inboxed is the goat
         }
     }
 
