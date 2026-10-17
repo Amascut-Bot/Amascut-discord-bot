@@ -171,6 +171,7 @@ export default class ClientReady extends BotEvent {
                     import(`${this.client.location}/src/interactions/${directory.name}/${commandFile.name}`)
                         .then(interactionModule => {
                             const Command: BotInteraction = new interactionModule.default(this.client);
+                            if (Command.enabled === false) return;
                             if (Command.slashData) {
                                 data.push(Command.slashData);
                             } else {

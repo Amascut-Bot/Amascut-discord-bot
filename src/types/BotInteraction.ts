@@ -9,6 +9,7 @@ export default interface BotInteraction {
     category: string;
     get name(): string;
     get description(): string;
+    enabled?: boolean;
     get slashData(): SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder | SlashCommandOptionsOnlyBuilder | Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
     get contextCommandData(): ContextMenuCommandBuilder;
     get permissions(): ApplicationCommandOption[] | string;
