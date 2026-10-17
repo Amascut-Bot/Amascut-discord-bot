@@ -63,6 +63,10 @@ export default class InteractionHandler extends EventEmitter {
                 if (command.isFile()) {
                     const interaction = await import(`${client.location}/src/interactions/${dir}/${command.name}`);
                     const Command: BotInteraction = new interaction.default(client);
+                    if (Command.enabled === false) {
+                        client.logger.log({ message: `Command '${Command.name}' skipped (disabled)`, handler: name, uid: `(@${Command.uid})` }, true);
+                        return resolve(!0);
+                    }
                     commands.set(Command.name, Command);
                     client.logger.log({ message: `Command '${Command.name}' loaded`, handler: name, uid: `(@${Command.uid})` }, true);
                 }

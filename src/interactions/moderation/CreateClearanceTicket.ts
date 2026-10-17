@@ -1,11 +1,14 @@
 import BotInteraction from '../../types/BotInteraction';
-import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import TicketHandler from '../../modules/TicketHandler';
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js';
 
 export default class CreateClearanceTicket extends BotInteraction {
 
     get name() {
         return 'create-clearance-ticket';
+    }
+
+    get enabled() {
+        return false;
     }
 
     get description() {
@@ -26,6 +29,9 @@ export default class CreateClearanceTicket extends BotInteraction {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        return new TicketHandler(this.client, 'slashcommand', interaction);
+        return interaction.reply({
+            content: 'This command is currently disabled.',
+            flags: MessageFlags.Ephemeral
+        });
     }
 }
