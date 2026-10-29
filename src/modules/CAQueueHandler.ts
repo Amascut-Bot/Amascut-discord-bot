@@ -148,13 +148,25 @@ export default class CAQueueHandler {
             return interaction.editReply(`The ${CAQueueHandler.getQueueName(queueType)} queue is empty.`);
         }
 
+        const nextUserId = queue.signups[1];
+        const channel = interaction.channel;
+        if (nextUserId && (!channel || !channel.isSendable())) {
+            return interaction.editReply('This command must be used in a text channel to notify the next person.');
+        }
+
         const removedUserId = queue.signups.shift();
         if (!removedUserId) {
             return interaction.editReply(`The ${CAQueueHandler.getQueueName(queueType)} queue is empty.`);
         }
-        const nextUserId = queue.signups[0];
         await repository.save(queue);
         await CAQueueHandler.updateBoard(client, queue);
+
+        if (nextUserId && channel?.isSendable()) {
+            await channel.send({
+                content: `<@${nextUserId}>, you're up next for your ${queueType.toUpperCase()} kill. Please make sure you are waiting in the CA Waiting room channel.`,
+                allowedMentions: { users: [nextUserId] },
+            });
+        }
 
         const nextMessage = nextUserId ? `Next in queue: <@${nextUserId}>.` : 'There is no one left in the queue.';
         return interaction.editReply(`Removed <@${removedUserId}> from the ${CAQueueHandler.getQueueName(queueType)} queue. ${nextMessage}`);
