@@ -34,7 +34,7 @@ export default class CAQueueHandler {
         return new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
                 .setCustomId(CAQueueHandler.buttonId(queueType))
-                .setLabel(`Join ${CAQueueHandler.getQueueButtonName(queueType)} queue`)
+                .setLabel(`Join/Leave ${CAQueueHandler.getQueueButtonName(queueType)} queue`)
                 .setStyle(ButtonStyle.Primary)
                 .setDisabled(!enabled),
         );
