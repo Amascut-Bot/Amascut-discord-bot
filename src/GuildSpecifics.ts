@@ -19,6 +19,7 @@ export function getChannels(guildId: string | undefined): Channels {
             tempVCCreate: '1391860639584096318',
             afkVC: '1391860639584096319',
             godLogs: '1391860641916260488',
+            casignup: '1565440586004176966',
             godImageStorage: '1391860641916260488',
             tickets: '1397705706358050948',
             cutePets: '1391860639063871579',
@@ -138,6 +139,7 @@ export function getChannels(guildId: string | undefined): Channels {
             splitsOnly: '1403494299903066142',
             combatAchievements: '1422202006793097328',
             masterTeams: '1510403799817392168',
+            casignup: '1565439355831459900',
 
             // voice channels
             tempVCCategory: '885457551397912598',
@@ -181,6 +183,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             owner: '1391860635507363886',
             admin: '1391860635507363883',
             mod: '1552715380374380594',
+            cahelper: '1565367667513106442',
             trialTeam: '1391860635347849375',
             reportPerms: '1494342284207063130',
             vouchTeam: '1484617729515323596',
@@ -281,6 +284,7 @@ export function getRoles(guildId: string | undefined, stripRole: boolean = false
             owner: '1389387255386341386',
             admin: '1389526658167603230',
             mod: '1552714296046129214',
+            cahelper: '1565367755383767080',
             trialTeam: '1436786514922311831',
             reportPerms: '1494316015415328778',
             vouchTeam: '1484617729515323596',

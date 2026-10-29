@@ -7,6 +7,7 @@ import VouchHandler from './VouchHandler';
 import { RoleAssignmentLog } from '../entity/RoleAssignmentLog';
 import ReportHandler from './ReportHandler';
 import ScheduledTrialHandler from './ScheduledTrialHandler';
+import CAQueueHandler from './CAQueueHandler';
 
 // ===============================
 // MAIN CLASS
@@ -28,6 +29,11 @@ export default class ButtonHandler {
 
         if (id.startsWith('ticket')) {
             new TicketHandler(this.client, interaction.customId, interaction);
+            return;
+        }
+
+        if (CAQueueHandler.isQueueButton(id)) {
+            void CAQueueHandler.handleSignup(this.client, id, interaction);
             return;
         }
 
