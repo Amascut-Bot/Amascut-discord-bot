@@ -34,7 +34,7 @@ export default class CAQueueHandler {
         return new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
                 .setCustomId(CAQueueHandler.buttonId(queueType))
-                .setLabel('Join Queue')
+                .setLabel(`Join ${CAQueueHandler.getQueueButtonName(queueType)} queue`)
                 .setStyle(ButtonStyle.Primary)
                 .setDisabled(!enabled),
         );
@@ -213,20 +213,37 @@ export default class CAQueueHandler {
             });
         }
 
-        if (queue.signups.includes(interaction.user.id)) {
-            return interaction.reply({
-                content: `You are already in the ${queueName} queue.`,
-                flags: MessageFlags.Ephemeral,
-            });
+        const signupIndex = queue.signups.indexOf(interaction.user.id);
+        const joined = signupIndex === -1;
+        if (joined) {
+            queue.signups.push(interaction.user.id);
+        } else {
+            queue.signups.splice(signupIndex, 1);
         }
 
-        queue.signups.push(interaction.user.id);
         await repository.save(queue);
         await interaction.update({
             embeds: [CAQueueHandler.createEmbed(queue)],
             components: [CAQueueHandler.createButtonRow(queue.enabled, queueType)],
             allowedMentions: { parse: [] },
         });
+        return interaction.followUp({
+            content: joined
+                ? `You joined the ${queueName} queue.`
+                : `You left the ${queueName} queue.`,
+            flags: MessageFlags.Ephemeral,
+        });
+    }
+
+    private static getQueueButtonName(queueType: CAQueueType) {
+        switch (queueType) {
+            case 'uo':
+                return 'UO';
+            case '4k':
+                return '4K';
+            case 'perf':
+                return 'Perfect';
+        }
     }
 
     private static getQueueName(queueType: CAQueueType) {
