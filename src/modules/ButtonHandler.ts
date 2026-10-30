@@ -32,6 +32,11 @@ export default class ButtonHandler {
             return;
         }
 
+        if (CAQueueHandler.isQueueToggleButton(id)) {
+            void CAQueueHandler.toggleQueue(this.client, id, interaction);
+            return;
+        }
+
         if (CAQueueHandler.isQueueButton(id)) {
             void CAQueueHandler.handleSignup(this.client, id, interaction);
             return;

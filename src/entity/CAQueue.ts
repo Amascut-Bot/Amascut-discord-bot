@@ -16,6 +16,12 @@ export class CAQueue {
     @Column({ type: 'text', nullable: true })
     messageId: string | null;
 
+    @Column({ type: 'text', nullable: true })
+    notificationChannelId: string | null = null;
+
+    @Column({ type: 'text', nullable: true })
+    notificationMessageId: string | null = null;
+
     @Column({ type: 'simple-json' })
     signups: string[];
 

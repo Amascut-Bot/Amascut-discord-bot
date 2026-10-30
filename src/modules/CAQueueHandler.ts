@@ -4,13 +4,22 @@ import { CAQueue, CAQueueType } from '../entity/CAQueue';
 
 export default class CAQueueHandler {
     static readonly legacyButtonId = 'caqueue:signup';
+    static readonly maxSignups = 10;
 
     static buttonId(queueType: CAQueueType) {
         return `caqueue:${queueType}:signup`;
     }
 
+    static toggleButtonId(queueType: CAQueueType) {
+        return `caqueue:${queueType}:toggle`;
+    }
+
     static isQueueButton(id: string) {
         return id === CAQueueHandler.legacyButtonId || /^caqueue:(uo|4k|perf):signup$/.test(id);
+    }
+
+    static isQueueToggleButton(id: string) {
+        return /^caqueue:(uo|4k|perf):toggle$/.test(id);
     }
 
     static createEmbed(queue: CAQueue) {
@@ -27,7 +36,7 @@ export default class CAQueueHandler {
         return new EmbedBuilder()
             .setColor(0x2b2d31)
             .setTitle(`${queueName} Queue`)
-            .setDescription(`**Status:** ${queue.enabled ? 'Open' : 'Closed'}\n**Queue (${queue.signups.length}):**\n${signups}${remainingSignups ? `\n...and ${remainingSignups} more.` : ''}`);
+            .setDescription(`**Status:** ${queue.enabled ? 'Open for sign ups' : 'Sign ups are currently closed'}\n**Queue (${queue.signups.length}):**\n${signups}${remainingSignups ? `\n...and ${remainingSignups} more.` : ''}`);
     }
 
     static createButtonRow(enabled: boolean, queueType: CAQueueType) {
@@ -37,6 +46,10 @@ export default class CAQueueHandler {
                 .setLabel(`Join/Leave ${CAQueueHandler.getQueueButtonName(queueType)} queue`)
                 .setStyle(ButtonStyle.Primary)
                 .setDisabled(!enabled),
+            new ButtonBuilder()
+                .setCustomId(CAQueueHandler.toggleButtonId(queueType))
+                .setLabel(`${enabled ? 'Disable' : 'Enable'} ${CAQueueHandler.getQueueButtonName(queueType)} queue`)
+                .setStyle(enabled ? ButtonStyle.Danger : ButtonStyle.Success),
         );
     }
 
@@ -105,6 +118,7 @@ export default class CAQueueHandler {
             return interaction.editReply(`The ${CAQueueHandler.getQueueName(queueType)} queue is not enabled.`);
         }
 
+        await CAQueueHandler.deleteLastNotification(client, queue, interaction.channel);
         queue.enabled = false;
         queue.signups = [];
         await repository.save(queue);
@@ -144,7 +158,12 @@ export default class CAQueueHandler {
 
         const repository = client.dataSource.getRepository(CAQueue);
         const queue = await repository.findOneBy({ guildId: guild.id, queueType });
-        if (!queue || queue.signups.length === 0) {
+        if (!queue) {
+            return interaction.editReply(`The ${CAQueueHandler.getQueueName(queueType)} queue is empty.`);
+        }
+
+        await CAQueueHandler.deleteLastNotification(client, queue, interaction.channel);
+        if (queue.signups.length === 0) {
             return interaction.editReply(`The ${CAQueueHandler.getQueueName(queueType)} queue is empty.`);
         }
 
@@ -162,14 +181,58 @@ export default class CAQueueHandler {
         await CAQueueHandler.updateBoard(client, queue);
 
         if (nextUserId && channel?.isSendable()) {
-            await channel.send({
-                content: `<@${nextUserId}>, you're up next for your ${queueType.toUpperCase()} kill. Please make sure you are waiting in the CA Waiting room channel.`,
+            const notification = await channel.send({
+                content: `<@${nextUserId}>, you're up next for your ${queueType.toUpperCase()} kill. Please make sure you're ready to go.`,
                 allowedMentions: { users: [nextUserId] },
             });
+            queue.notificationChannelId = channel.id;
+            queue.notificationMessageId = notification.id;
+            await repository.save(queue);
         }
 
         const nextMessage = nextUserId ? `Next in queue: <@${nextUserId}>.` : 'There is no one left in the queue.';
         return interaction.editReply(`Removed <@${removedUserId}> from the ${CAQueueHandler.getQueueName(queueType)} queue. ${nextMessage}`);
+    }
+
+    private static async deleteLastNotification(
+        client: Bot,
+        queue: CAQueue,
+        fallbackChannel: ChatInputCommandInteraction['channel'],
+    ) {
+        const trackedChannel = queue.notificationChannelId
+            ? await client.channels.fetch(queue.notificationChannelId)
+            : null;
+        const channel = trackedChannel?.isTextBased()
+            ? trackedChannel
+            : fallbackChannel?.isTextBased()
+                ? fallbackChannel
+                : null;
+
+        if (channel && queue.notificationMessageId && trackedChannel?.isTextBased()) {
+            try {
+                const message = await channel.messages.fetch(queue.notificationMessageId);
+                await message.delete();
+            } catch (error) {
+                if (!(error instanceof DiscordAPIError) || error.code !== 10008) {
+                    throw error;
+                }
+            }
+        } else if (channel) {
+            const messages = await channel.messages.fetch({ limit: 100 });
+            const previousNotification = messages.find(message =>
+                message.author.id === client.user?.id
+                && message.mentions.users.size > 0
+                && message.content.startsWith(`<@`)
+                && message.content.includes(`, you're up next for your ${queue.queueType.toUpperCase()} kill.`),
+            );
+            if (previousNotification) {
+                await previousNotification.delete();
+            }
+        }
+
+        queue.notificationChannelId = null;
+        queue.notificationMessageId = null;
+        await client.dataSource.getRepository(CAQueue).save(queue);
     }
 
     static async updateBoard(client: Bot, queue: CAQueue) {
@@ -228,6 +291,12 @@ export default class CAQueueHandler {
         const signupIndex = queue.signups.indexOf(interaction.user.id);
         const joined = signupIndex === -1;
         if (joined) {
+            if (queue.signups.length >= CAQueueHandler.maxSignups) {
+                return interaction.reply({
+                    content: `The ${queueName} queue is full (maximum ${CAQueueHandler.maxSignups} people).`,
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
             queue.signups.push(interaction.user.id);
         } else {
             queue.signups.splice(signupIndex, 1);
@@ -245,6 +314,33 @@ export default class CAQueueHandler {
                 : `You left the ${queueName} queue.`,
             flags: MessageFlags.Ephemeral,
         });
+    }
+
+    static async toggleQueue(client: Bot, id: string, interaction: ButtonInteraction<'cached'>) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const hasPermission = await client.util.hasRolePermissions(client, ['cahelper', 'mod', 'admin', 'owner'], interaction);
+        if (!hasPermission) {
+            client.logger.log({
+                message: `Attempted restricted permissions. { action: Toggle CA queue, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
+                handler: CAQueueHandler.name,
+            }, true);
+            return interaction.editReply('You do not have permissions to enable/disable the queue. This incident has been logged.');
+        }
+
+        const queueType = id.split(':')[1] as CAQueueType;
+        const repository = client.dataSource.getRepository(CAQueue);
+        const queue = await repository.findOneBy({ guildId: interaction.guildId, queueType });
+        if (!queue) {
+            return interaction.editReply('This queue is no longer available.');
+        }
+
+        queue.enabled = !queue.enabled;
+        await repository.save(queue);
+        await CAQueueHandler.updateBoard(client, queue);
+
+        const action = queue.enabled ? 'enabled' : 'disabled';
+        return interaction.editReply(`The ${CAQueueHandler.getQueueName(queueType)} queue is now ${action}.`);
     }
 
     private static getQueueButtonName(queueType: CAQueueType) {
