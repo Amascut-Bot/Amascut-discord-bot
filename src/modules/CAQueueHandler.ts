@@ -4,7 +4,6 @@ import { CAQueue, CAQueueType } from '../entity/CAQueue';
 
 export default class CAQueueHandler {
     static readonly legacyButtonId = 'caqueue:signup';
-    static readonly maxSignups = 10;
 
     static buttonId(queueType: CAQueueType) {
         return `caqueue:${queueType}:signup`;
@@ -291,12 +290,6 @@ export default class CAQueueHandler {
         const signupIndex = queue.signups.indexOf(interaction.user.id);
         const joined = signupIndex === -1;
         if (joined) {
-            if (queue.signups.length >= CAQueueHandler.maxSignups) {
-                return interaction.reply({
-                    content: `The ${queueName} queue is full (maximum ${CAQueueHandler.maxSignups} people).`,
-                    flags: MessageFlags.Ephemeral,
-                });
-            }
             queue.signups.push(interaction.user.id);
         } else {
             queue.signups.splice(signupIndex, 1);
