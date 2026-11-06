@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, DiscordAPIError, EmbedBuilder, MessageFlags, TextChannel } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, DiscordAPIError, EmbedBuilder, MessageFlags, TextChannel, User } from 'discord.js';
 import Bot from '../Bot';
 import { CAQueue, CAQueueType } from '../entity/CAQueue';
 
@@ -147,6 +147,73 @@ export default class CAQueueHandler {
         return interaction.editReply(`The ${CAQueueHandler.getQueueName(queueType)} queue has been cleared.`);
     }
 
+    static async manageQueue(
+        client: Bot,
+        interaction: ChatInputCommandInteraction,
+        action: 'add' | 'remove' | 'move',
+        queueType: CAQueueType,
+        user: User,
+        position?: number,
+    ) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const guild = interaction.guild;
+        if (!guild) {
+            return interaction.editReply('This command can only be used in a server.');
+        }
+
+        const repository = client.dataSource.getRepository(CAQueue);
+        const queue = await repository.findOneBy({ guildId: guild.id, queueType });
+        const queueName = CAQueueHandler.getQueueName(queueType);
+        if (!queue) {
+            return interaction.editReply(`There is no ${queueName} queue to manage.`);
+        }
+        if (!queue.enabled) {
+            return interaction.editReply(`The ${queueName} queue is closed.`);
+        }
+
+        const currentPosition = queue.signups.indexOf(user.id);
+        if (action === 'add') {
+            if (currentPosition !== -1) {
+                return interaction.editReply(`<@${user.id}> is already in the ${queueName} queue.`);
+            }
+
+            const insertPosition = position ?? queue.signups.length + 1;
+            if (insertPosition < 1 || insertPosition > queue.signups.length + 1) {
+                return interaction.editReply(`Position must be between 1 and ${queue.signups.length + 1}.`);
+            }
+            queue.signups.splice(insertPosition - 1, 0, user.id);
+        } else if (action === 'remove') {
+            if (currentPosition === -1) {
+                return interaction.editReply(`<@${user.id}> is not in the ${queueName} queue.`);
+            }
+            queue.signups.splice(currentPosition, 1);
+        } else {
+            if (currentPosition === -1) {
+                return interaction.editReply(`<@${user.id}> is not in the ${queueName} queue.`);
+            }
+            if (!position || position < 1 || position > queue.signups.length) {
+                return interaction.editReply(`Position must be between 1 and ${queue.signups.length}.`);
+            }
+            if (currentPosition === position - 1) {
+                return interaction.editReply(`<@${user.id}> is already at position ${position}.`);
+            }
+
+            queue.signups.splice(currentPosition, 1);
+            queue.signups.splice(position - 1, 0, user.id);
+        }
+
+        await repository.save(queue);
+        await CAQueueHandler.updateBoard(client, queue);
+        await CAQueueHandler.refreshNextNotification(client, queue, interaction.channel);
+
+        const updatedPosition = queue.signups.indexOf(user.id) + 1;
+        const result = action === 'remove'
+            ? `Removed <@${user.id}> from the ${queueName} queue.`
+            : `${action === 'add' ? 'Added' : 'Moved'} <@${user.id}> to position ${updatedPosition} in the ${queueName} queue.`;
+        return interaction.editReply(result);
+    }
+
     static async nextInQueue(client: Bot, interaction: ChatInputCommandInteraction, queueType: CAQueueType) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -231,6 +298,40 @@ export default class CAQueueHandler {
 
         queue.notificationChannelId = null;
         queue.notificationMessageId = null;
+        await client.dataSource.getRepository(CAQueue).save(queue);
+    }
+
+    private static async refreshNextNotification(
+        client: Bot,
+        queue: CAQueue,
+        fallbackChannel: ChatInputCommandInteraction['channel'],
+    ) {
+        if (!queue.notificationChannelId && !queue.notificationMessageId) {
+            return;
+        }
+
+        const trackedChannel = queue.notificationChannelId
+            ? await client.channels.fetch(queue.notificationChannelId)
+            : null;
+        const notificationChannel = trackedChannel?.isSendable()
+            ? trackedChannel
+            : fallbackChannel?.isSendable()
+                ? fallbackChannel
+                : null;
+
+        await CAQueueHandler.deleteLastNotification(client, queue, fallbackChannel);
+
+        const nextUserId = queue.signups[0];
+        if (!notificationChannel || !nextUserId) {
+            return;
+        }
+
+        const notification = await notificationChannel.send({
+            content: `<@${nextUserId}>, you're up next for your ${queue.queueType.toUpperCase()} kill. Please make sure you're ready to go.`,
+            allowedMentions: { users: [nextUserId] },
+        });
+        queue.notificationChannelId = notificationChannel.id;
+        queue.notificationMessageId = notification.id;
         await client.dataSource.getRepository(CAQueue).save(queue);
     }
 
