@@ -19,6 +19,7 @@ export function getChannels(guildId: string | undefined): Channels {
             tempVCCreate: '1391860639584096318',
             afkVC: '1391860639584096319',
             godLogs: '1391860641916260488',
+            calogs: '1568592106170228746',
             casignup: '1565440586004176966',
             godImageStorage: '1391860641916260488',
             tickets: '1397705706358050948',
@@ -154,6 +155,7 @@ export function getChannels(guildId: string | undefined): Channels {
             // logs
             roleAssignLogs: '1402724855287255070',
             godLogs: '1389412380626255872',
+            calogs: '1568591451443699742',
             godImageStorage: '1389417236367933470',
             reactionRoleLog: '1389413228794216648',
             autoBanLogs: '1445441478318096598',
