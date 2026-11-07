@@ -25,6 +25,7 @@ import { VouchVote } from "./entity/VouchVote"
 import { RoleAssignmentLog } from "./entity/RoleAssignmentLog"
 import { ScheduledTrial } from "./entity/ScheduledTrial"
 import { CAQueue } from "./entity/CAQueue"
+import { CABlacklist } from "./entity/CABlacklist"
 
 export const AppDataSource = new DataSource({
     type: "sqlite",
@@ -56,7 +57,8 @@ export const AppDataSource = new DataSource({
         ReportVote,
         RoleAssignmentLog,
         ScheduledTrial,
-        CAQueue
+        CAQueue,
+        CABlacklist
     ],
     migrations: [],
     subscribers: [],
