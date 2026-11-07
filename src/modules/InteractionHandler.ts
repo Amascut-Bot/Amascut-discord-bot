@@ -11,6 +11,7 @@ import HostHandler from './HostHandler';
 import VouchHandler from './VouchHandler';
 import ReportHandler from './ReportHandler';
 import ScheduledTrialHandler from './ScheduledTrialHandler';
+import CAQueueHandler from './CAQueueHandler';
 
 export default interface InteractionHandler {
     client: Bot;
@@ -134,6 +135,15 @@ export default class InteractionHandler extends EventEmitter {
             try {
                 const command = this.commands.get(interaction.commandName);
                 if (!command) return;
+
+                if (interaction.isChatInputCommand() && command.permissions === 'CAHELPER') {
+                    const options = CAQueueHandler.formatCommandOptions(interaction.options.data);
+                    void CAQueueHandler.logInteraction(
+                        this.client,
+                        interaction,
+                        `Ran /${command.name}${options ? ` ${options}` : ''}`,
+                    );
+                }
 
                 switch (command.permissions) {
                     case 'BOT_OWNER':

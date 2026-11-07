@@ -1,10 +1,54 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, DiscordAPIError, EmbedBuilder, MessageFlags, TextChannel, User } from 'discord.js';
+import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, DiscordAPIError, EmbedBuilder, MessageFlags, TextChannel, User } from 'discord.js';
 import Bot from '../Bot';
 import { CAQueue, CAQueueType } from '../entity/CAQueue';
 import { CABlacklist } from '../entity/CABlacklist';
 
+type CommandOptionData = {
+    name: string;
+    type: ApplicationCommandOptionType;
+    value?: string | number | boolean;
+    options?: readonly CommandOptionData[];
+};
+
 export default class CAQueueHandler {
     static readonly legacyButtonId = 'caqueue:signup';
+
+    static formatCommandOptions(options: readonly CommandOptionData[]): string {
+        return options.map(option => {
+            if (option.options) {
+                return `${option.name} ${CAQueueHandler.formatCommandOptions(option.options)}`;
+            }
+
+            const value = option.type === ApplicationCommandOptionType.User
+                ? `<@${option.value}>`
+                : option.value;
+            return `${option.name}: ${value}`;
+        }).join(', ');
+    }
+
+    static async logInteraction(
+        client: Bot,
+        interaction: ChatInputCommandInteraction | ButtonInteraction,
+        action: string,
+    ) {
+        try {
+            const logChannel = await client.channels.fetch(client.channelIds.calogs);
+            if (!(logChannel instanceof TextChannel)) {
+                throw new Error('Configured CA logs channel is not a text channel.');
+            }
+
+            await logChannel.send({
+                content: `${action} by ${interaction.user.username} (<@${interaction.user.id}>)`,
+                allowedMentions: { parse: [] },
+            });
+        } catch (error) {
+            client.logger.error({
+                message: 'Failed to send Combat Achievement interaction log.',
+                handler: CAQueueHandler.name,
+                error: error as Error,
+            });
+        }
+    }
 
     static buttonId(queueType: CAQueueType) {
         return `caqueue:${queueType}:signup`;
