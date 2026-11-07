@@ -172,7 +172,7 @@ export default class InteractionHandler extends EventEmitter {
                         }
                         break;
                     case 'CAHELPER':
-                        if (!(await this.client.util.hasRolePermissions(this.client, ['cahelper', 'mod', 'admin', 'owner'], interaction))) {
+                        if (!(await this.client.util.hasRolePermissions(this.client, ['cahelper', 'owner'], interaction))) {
                             this.client.logger.log({
                                 message: `Attempted restricted permissions. { command: ${command.name}, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
                                 handler: this.constructor.name,

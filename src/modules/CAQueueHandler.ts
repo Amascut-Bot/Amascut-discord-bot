@@ -1,6 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, DiscordAPIError, EmbedBuilder, MessageFlags, TextChannel, User } from 'discord.js';
 import Bot from '../Bot';
 import { CAQueue, CAQueueType } from '../entity/CAQueue';
+import { CABlacklist } from '../entity/CABlacklist';
 
 export default class CAQueueHandler {
     static readonly legacyButtonId = 'caqueue:signup';
@@ -391,6 +392,16 @@ export default class CAQueueHandler {
         const signupIndex = queue.signups.indexOf(interaction.user.id);
         const joined = signupIndex === -1;
         if (joined) {
+            const isBlacklisted = await client.dataSource.getRepository(CABlacklist).findOneBy({
+                guildId: interaction.guildId,
+                userId: interaction.user.id,
+            });
+            if (isBlacklisted) {
+                return interaction.reply({
+                    content: 'You are unable to join CA queues because you are blacklisted.',
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
             queue.signups.push(interaction.user.id);
         } else {
             queue.signups.splice(signupIndex, 1);
