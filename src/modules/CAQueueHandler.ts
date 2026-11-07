@@ -424,7 +424,7 @@ export default class CAQueueHandler {
     static async toggleQueue(client: Bot, id: string, interaction: ButtonInteraction<'cached'>) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const hasPermission = await client.util.hasRolePermissions(client, ['cahelper', 'mod', 'admin', 'owner'], interaction);
+        const hasPermission = await client.util.hasRolePermissions(client, ['cahelper', 'owner'], interaction);
         if (!hasPermission) {
             client.logger.log({
                 message: `Attempted restricted permissions. { action: Toggle CA queue, user: ${interaction.user.username}, channel: ${interaction.channel} }`,
