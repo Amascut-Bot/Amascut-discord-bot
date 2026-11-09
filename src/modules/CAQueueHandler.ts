@@ -30,24 +30,43 @@ export default class CAQueueHandler {
         client: Bot,
         interaction: ChatInputCommandInteraction | ButtonInteraction,
         action: string,
+        channelId: string = client.channelIds.calogs,
+        details?: string,
     ) {
         try {
-            const logChannel = await client.channels.fetch(client.channelIds.calogs);
-            if (!(logChannel instanceof TextChannel)) {
-                throw new Error('Configured CA logs channel is not a text channel.');
+            const logChannel = await client.channels.fetch(channelId);
+            if (!logChannel?.isSendable()) {
+                throw new Error(`Configured log channel ${channelId} is not sendable.`);
             }
 
             await logChannel.send({
-                content: `${action} by ${interaction.user.username} (<@${interaction.user.id}>)`,
+                content: `${action} by ${interaction.user.username} (<@${interaction.user.id}>)${details ? `. ${details}` : ''}`,
                 allowedMentions: { parse: [] },
             });
         } catch (error) {
             client.logger.error({
-                message: 'Failed to send Combat Achievement interaction log.',
+                message: `Failed to send Combat Achievement interaction log to channel ${channelId}.`,
                 handler: CAQueueHandler.name,
                 error: error as Error,
             });
         }
+    }
+
+    static async logNextQueueUse(
+        client: Bot,
+        interaction: ChatInputCommandInteraction,
+        nextUserId?: string,
+    ) {
+        const nextUser = nextUserId ? `<@${nextUserId}>` : 'no one';
+        const action = `/${interaction.commandName} was used`;
+        const details = `Person removed from the queue and pinged: ${nextUser}.`;
+        const logs = [
+            CAQueueHandler.logInteraction(client, interaction, action, client.channelIds.calogs, details),
+        ];
+        if (interaction.commandName === 'next_uo') {
+            logs.push(CAQueueHandler.logInteraction(client, interaction, action, client.channelIds.nextlogs, details));
+        }
+        await Promise.all(logs);
     }
 
     static buttonId(queueType: CAQueueType) {
@@ -264,45 +283,50 @@ export default class CAQueueHandler {
 
         const guild = interaction.guild;
         if (!guild) {
+            await CAQueueHandler.logNextQueueUse(client, interaction);
             return interaction.editReply('This command can only be used in a server.');
         }
 
         const repository = client.dataSource.getRepository(CAQueue);
         const queue = await repository.findOneBy({ guildId: guild.id, queueType });
         if (!queue) {
+            await CAQueueHandler.logNextQueueUse(client, interaction);
             return interaction.editReply(`The ${CAQueueHandler.getQueueName(queueType)} queue is empty.`);
         }
 
         await CAQueueHandler.deleteLastNotification(client, queue, interaction.channel);
         if (queue.signups.length === 0) {
+            await CAQueueHandler.logNextQueueUse(client, interaction);
             return interaction.editReply(`The ${CAQueueHandler.getQueueName(queueType)} queue is empty.`);
         }
 
-        const nextUserId = queue.signups[1];
+        const calledUserId = queue.signups[0];
         const channel = interaction.channel;
-        if (nextUserId && (!channel || !channel.isSendable())) {
+        if (!channel || !channel.isSendable()) {
+            await CAQueueHandler.logNextQueueUse(client, interaction, calledUserId);
             return interaction.editReply('This command must be used in a text channel to notify the next person.');
         }
 
         const removedUserId = queue.signups.shift();
-        if (!removedUserId) {
+        if (!removedUserId || !calledUserId) {
             return interaction.editReply(`The ${CAQueueHandler.getQueueName(queueType)} queue is empty.`);
         }
         await repository.save(queue);
         await CAQueueHandler.updateBoard(client, queue);
 
-        if (nextUserId && channel?.isSendable()) {
-            const notification = await channel.send({
-                content: `<@${nextUserId}>, you're up next for your ${queueType.toUpperCase()} kill. Please make sure you're ready to go.`,
-                allowedMentions: { users: [nextUserId] },
-            });
-            queue.notificationChannelId = channel.id;
-            queue.notificationMessageId = notification.id;
-            await repository.save(queue);
-        }
+        const notification = await channel.send({
+            content: `<@${calledUserId}>, you're up next for your ${queueType.toUpperCase()} kill. Please make sure you're ready to go.`,
+            allowedMentions: { users: [calledUserId] },
+        });
+        queue.notificationChannelId = channel.id;
+        queue.notificationMessageId = notification.id;
+        await repository.save(queue);
 
-        const nextMessage = nextUserId ? `Next in queue: <@${nextUserId}>.` : 'There is no one left in the queue.';
-        return interaction.editReply(`Removed <@${removedUserId}> from the ${CAQueueHandler.getQueueName(queueType)} queue. ${nextMessage}`);
+        await CAQueueHandler.logNextQueueUse(client, interaction, calledUserId);
+        const nextMessage = queue.signups.length > 0
+            ? `Next in queue: <@${queue.signups[0]}>.`
+            : 'There is no one left in the queue.';
+        return interaction.editReply(`Removed <@${removedUserId}> from the ${CAQueueHandler.getQueueName(queueType)} queue and notified them. ${nextMessage}`);
     }
 
     private static async deleteLastNotification(
