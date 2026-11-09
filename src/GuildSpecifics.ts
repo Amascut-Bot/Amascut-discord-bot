@@ -14,12 +14,14 @@ export function getChannels(guildId: string | undefined): Channels {
         result = {
             contentCreators: '1391860639063871581',
             achievements: '1391860638577594528',
+            general: '1391860638577594525',
             roleAssignLogs: '1391860640674484227',
             tempVCCategory: '1391860639584096317',
             tempVCCreate: '1391860639584096318',
             afkVC: '1391860639584096319',
             godLogs: '1391860641916260488',
             calogs: '1568592106170228746',
+            nextlogs: '1569315726894960760',
             casignup: '1565440586004176966',
             godImageStorage: '1391860641916260488',
             tickets: '1397705706358050948',
@@ -92,6 +94,7 @@ export function getChannels(guildId: string | undefined): Channels {
             trialApplications: '1389392070820630611',
 
             // community
+            general: '1389379873348255864',
             achievements: '1389393398829682739',
             cutePets: '1389643125408010290',
             contentCreators: '1390391961172836494',
@@ -156,6 +159,7 @@ export function getChannels(guildId: string | undefined): Channels {
             roleAssignLogs: '1402724855287255070',
             godLogs: '1389412380626255872',
             calogs: '1568591451443699742',
+            nextlogs: '1569024123147919501',
             godImageStorage: '1389417236367933470',
             reactionRoleLog: '1389413228794216648',
             autoBanLogs: '1445441478318096598',

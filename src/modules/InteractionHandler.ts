@@ -137,12 +137,14 @@ export default class InteractionHandler extends EventEmitter {
                 if (!command) return;
 
                 if (interaction.isChatInputCommand() && command.permissions === 'CAHELPER') {
-                    const options = CAQueueHandler.formatCommandOptions(interaction.options.data);
-                    void CAQueueHandler.logInteraction(
-                        this.client,
-                        interaction,
-                        `Ran /${command.name}${options ? ` ${options}` : ''}`,
-                    );
+                    if (!['next_4k', 'next_uo', 'next_perf'].includes(command.name)) {
+                        const options = CAQueueHandler.formatCommandOptions(interaction.options.data);
+                        void CAQueueHandler.logInteraction(
+                            this.client,
+                            interaction,
+                            `Ran /${command.name}${options ? ` ${options}` : ''}`,
+                        );
+                    }
                 }
 
                 switch (command.permissions) {
