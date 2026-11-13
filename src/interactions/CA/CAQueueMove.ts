@@ -28,6 +28,7 @@ export default class CAQueueMove extends BotInteraction {
                         { name: 'Unorthodox', value: 'uo' },
                         { name: '4K', value: '4k' },
                         { name: 'Perfect', value: 'perf' },
+                        { name: 'GM Timer', value: 'gmtimer' },
                     ))
             .addUserOption(option =>
                 option.setName('user')
@@ -42,7 +43,7 @@ export default class CAQueueMove extends BotInteraction {
 
     async run(interaction: ChatInputCommandInteraction) {
         const selectedQueueType = interaction.options.getString('type', true);
-        if (selectedQueueType !== 'uo' && selectedQueueType !== '4k' && selectedQueueType !== 'perf') {
+        if (selectedQueueType !== 'uo' && selectedQueueType !== '4k' && selectedQueueType !== 'perf' && selectedQueueType !== 'gmtimer') {
             throw new Error(`Unknown CA queue type: ${selectedQueueType}`);
         }
         const queueType: CAQueueType = selectedQueueType;
