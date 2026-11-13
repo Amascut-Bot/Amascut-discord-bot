@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-export type CAQueueType = 'uo' | '4k' | 'perf';
+export type CAQueueType = 'uo' | '4k' | 'perf' | 'gmtimer';
 
 @Entity()
 export class CAQueue {

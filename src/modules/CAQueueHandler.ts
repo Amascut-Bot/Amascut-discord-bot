@@ -78,11 +78,11 @@ export default class CAQueueHandler {
     }
 
     static isQueueButton(id: string) {
-        return id === CAQueueHandler.legacyButtonId || /^caqueue:(uo|4k|perf):signup$/.test(id);
+        return id === CAQueueHandler.legacyButtonId || /^caqueue:(uo|4k|perf|gmtimer):signup$/.test(id);
     }
 
     static isQueueToggleButton(id: string) {
-        return /^caqueue:(uo|4k|perf):toggle$/.test(id);
+        return /^caqueue:(uo|4k|perf|gmtimer):toggle$/.test(id);
     }
 
     static createEmbed(queue: CAQueue) {
@@ -315,7 +315,7 @@ export default class CAQueueHandler {
         await CAQueueHandler.updateBoard(client, queue);
 
         const notification = await channel.send({
-            content: `<@${calledUserId}>, you're up next for your ${queueType.toUpperCase()} kill. Please make sure you're ready to go.`,
+            content: `<@${calledUserId}>, you're up next for your ${CAQueueHandler.getQueueNotificationLabel(queueType)}. Please make sure you're ready to go.`,
             allowedMentions: { users: [calledUserId] },
         });
         queue.notificationChannelId = channel.id;
@@ -358,7 +358,7 @@ export default class CAQueueHandler {
                 message.author.id === client.user?.id
                 && message.mentions.users.size > 0
                 && message.content.startsWith(`<@`)
-                && message.content.includes(`, you're up next for your ${queue.queueType.toUpperCase()} kill.`),
+                && message.content.includes(`, you're up next for your ${CAQueueHandler.getQueueNotificationLabel(queue.queueType)}.`),
             );
             if (previousNotification) {
                 await previousNotification.delete();
@@ -396,7 +396,7 @@ export default class CAQueueHandler {
         }
 
         const notification = await notificationChannel.send({
-            content: `<@${nextUserId}>, you're up next for your ${queue.queueType.toUpperCase()} kill. Please make sure you're ready to go.`,
+            content: `<@${nextUserId}>, you're up next for your ${CAQueueHandler.getQueueNotificationLabel(queue.queueType)}. Please make sure you're ready to go.`,
             allowedMentions: { users: [nextUserId] },
         });
         queue.notificationChannelId = notificationChannel.id;
@@ -524,7 +524,13 @@ export default class CAQueueHandler {
                 return '4K';
             case 'perf':
                 return 'Perfect';
+            case 'gmtimer':
+                return 'GM Timer';
         }
+    }
+
+    private static getQueueNotificationLabel(queueType: CAQueueType) {
+        return queueType === 'gmtimer' ? 'GM timer' : `${queueType.toUpperCase()} kill`;
     }
 
     private static getQueueName(queueType: CAQueueType) {
@@ -535,6 +541,8 @@ export default class CAQueueHandler {
                 return '4K';
             case 'perf':
                 return 'Perfect';
+            case 'gmtimer':
+                return 'GM Timer';
         }
     }
 
@@ -546,6 +554,8 @@ export default class CAQueueHandler {
                 return '4K Combat Achievement is not currently being hosted';
             case 'perf':
                 return 'Perfect Combat Achievement is not currently being hosted';
+            case 'gmtimer':
+                return 'GM timer is not currently being hosted';
         }
     }
 }
