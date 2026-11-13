@@ -26,7 +26,7 @@ export default class TempChannelManager {
 
     private async loadTempChannelIds(): Promise<void> {
         const channels = this.client.channelIds;
-        const excludedChannels = [channels.tempVCCreate, channels.afkVC, channels.learnerWaiting, channels.learnerTempVCCreate, channels.learnerTeaching, channels.cakills, channels.cawaiting]; // join to create and afk, learner join to create, waiting room, drop in room, ca kills, ca waiting room
+        const excludedChannels = [channels.tempVCCreate, channels.afkVC, channels.learnerWaiting, channels.learnerTempVCCreate, channels.learnerTeaching, channels.caKills, channels.caWaiting, channels.caKills2]; // join to create and afk, learner join to create, waiting room, drop in room, ca kills/2, ca waiting room
 
         try {
             const primaryCategory = await this.client.channels.fetch(channels.tempVCCategory);

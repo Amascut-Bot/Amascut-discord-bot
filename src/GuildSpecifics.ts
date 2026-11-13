@@ -149,8 +149,9 @@ export function getChannels(guildId: string | undefined): Channels {
             tempVCCategory: '885457551397912598',
             tempVCCreate: '1389392880518566138',
             afkVC: '1389391295130374237',
-            cakills: '1565673942545604678',
-            cawaiting: '1565493108253261974',
+            caKills: '1570757589262798848',
+            caKills2: '1570757887771418645',
+            caWaiting: '1570757851436032120',
 
             // editor hub
             editorHub: '1389394110686953472',
